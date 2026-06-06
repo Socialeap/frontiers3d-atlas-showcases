@@ -7,6 +7,9 @@
 <meta name="description" content="A public, free gallery exhibition at NYU&amp;#39;s Gallatin School tracing 50 years of the school&amp;#39;s history through faculty-donated photographs, correspondence, curricula, and publications dating to its 1972 founding. Curated from Gallatin&amp;#39;s digital archive, the show opens a space for reflecting on the school&amp;#39;s interdisciplinary legacy and continuing evolution." />
 <meta property="og:title" content="NYU Gallatin Galleries | 50 Years: The Gallatin History Project — Frontiers3D" />
 <meta property="og:description" content="A public, free gallery exhibition at NYU&amp;#39;s Gallatin School tracing 50 years of the school&amp;#39;s history through faculty-donated photographs, correspondence, curricula, and publications dating to its 1972 founding. Curated from Gallatin&amp;#39;s digital archive, the show opens a space for reflecting on the school&amp;#39;s interdisciplinary legacy and continuing evolution." />
+<meta name="f3d-package-schema" content="2" />
+<meta name="f3d-runtime" content="2.0.1" />
+<meta name="f3d-capabilities" content="" />
 <style>
   *{box-sizing:border-box}
   /* overflow-x:hidden — the page must never scroll horizontally (it is a
@@ -52,18 +55,18 @@
 :root{--lt-accent:#818cf8}
 
 /* ── Letterbox + annotation overlay ───────────────────────────────── */
-#anno-letterbox-wrap{position:absolute;inset:0}
+#anno-letterbox-wrap{position:absolute;inset:0;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 #anno-letterbox-wrap iframe{width:100%;height:100%;border:none;display:block}
-#anno-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;z-index:5;touch-action:none}
+#anno-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;z-index:5;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 #anno-canvas.pointer-mode,#anno-canvas.draw-mode,#anno-canvas.rope-mode{pointer-events:auto;cursor:crosshair}
 #remote-pointer{position:absolute;left:0;top:0;width:18px;height:18px;border-radius:50%;background:var(--lt-accent);border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,0.45);pointer-events:none;transform:translate(-50%,-50%);z-index:6;display:none}
-#lt-navlock{position:absolute;inset:0;z-index:4;background:transparent;cursor:not-allowed;display:none;touch-action:none}
+#lt-navlock{position:absolute;inset:0;z-index:4;background:transparent;cursor:not-allowed;display:none;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 body.live-tour-active #lt-navlock.locked{display:block}
 body.live-tour-active #anno-letterbox-wrap:has(#lt-navlock.locked) #matterport-frame{pointer-events:none}
 
-#anno-toolbar{display:none;justify-content:center;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 12px;background:rgba(10,12,20,0.92);border-bottom:1px solid rgba(255,255,255,0.08);position:relative;z-index:1250}
+#anno-toolbar{display:none;justify-content:center;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 12px;background:rgba(10,12,20,0.92);border-bottom:1px solid rgba(255,255,255,0.08);position:relative;z-index:1250;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 body.live-tour-active #anno-toolbar{display:flex}
-.anno-tool-btn{appearance:none;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border-radius:6px;padding:6px 10px;font:600 12px/1 inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.15s,border-color 0.15s,color 0.15s;font-family:inherit}
+.anno-tool-btn{appearance:none;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border-radius:6px;padding:6px 10px;font:600 12px/1 inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.15s,border-color 0.15s,color 0.15s;font-family:inherit;-webkit-tap-highlight-color:transparent}
 .anno-tool-btn:hover{background:rgba(255,255,255,0.14);color:#fff}
 .anno-tool-btn.active{background:var(--lt-accent);border-color:var(--lt-accent);color:#fff}
 .anno-color-wrap{display:inline-flex;align-items:center;gap:4px;padding:0 2px 0 6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);border-radius:6px}
@@ -103,7 +106,7 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
 .lt-panel-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
 .lt-intro{margin:0 0 4px;font-size:12.5px;line-height:1.55;color:rgba(255,255,255,0.78)}
 .lt-role-choose{display:flex;flex-direction:column;gap:8px}
-.lt-btn{appearance:none;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.07);color:#fff;border-radius:8px;padding:10px 12px;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;transition:background 0.2s,opacity 0.2s,transform 0.1s}
+.lt-btn{appearance:none;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.07);color:#fff;border-radius:8px;padding:10px 12px;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;transition:background 0.2s,opacity 0.2s,transform 0.1s;-webkit-tap-highlight-color:transparent}
 .lt-btn:hover{background:rgba(255,255,255,0.14)}
 .lt-btn:active{transform:scale(0.99)}
 .lt-btn:disabled{opacity:0.45;cursor:not-allowed}
@@ -142,8 +145,27 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
 .lt-manual-input::placeholder{color:rgba(255,255,255,0.35)}
 
 @media(max-width:640px){
-  #lt-panel{top:auto;bottom:0;right:0;left:0;width:100%;height:auto;max-height:82vh;border-radius:16px 16px 0 0;border-left:none;border-top:1px solid rgba(255,255,255,0.08);transform:translateY(100%)}
+  #lt-panel{top:auto;bottom:0;right:0;left:0;width:100%;height:auto;max-height:82vh;border-radius:16px 16px 0 0;border-left:none;border-top:1px solid rgba(255,255,255,0.08);transform:translateY(100%);padding-bottom:env(safe-area-inset-bottom,0px)}
   #lt-panel.open{transform:translateY(0)}
+  @supports(height:100dvh){#lt-panel{max-height:82dvh}}
+}
+
+/* ── Touch ergonomics (coarse pointers): ≥44px targets + safe areas ── */
+@media(pointer: coarse){
+  #anno-toolbar{gap:8px;padding:10px calc(12px + env(safe-area-inset-right,0px)) 10px calc(12px + env(safe-area-inset-left,0px))}
+  .anno-tool-btn{min-height:44px;min-width:44px;padding:10px 14px;font-size:14px}
+  .anno-exit-btn{font-size:20px}
+  .anno-color-wrap,.anno-shape-wrap{min-height:44px}
+  .anno-color-select,.anno-shape-select{min-height:42px;font-size:14px}
+  .lt-btn{min-height:44px}
+  .lt-stop-btn{min-height:44px}
+  .lt-panel-close{width:44px;height:44px;font-size:20px}
+}
+
+/* dvh letterbox: track the iOS visual viewport instead of the largest
+   layout viewport so URL-bar collapse never misaligns the canvas. */
+@supports(height:100dvh){
+  body.live-tour-active #anno-letterbox-wrap{width:min(100%,calc((100dvh - 100px) * 16 / 9))}
 }
 
 /* ── Location-sync pulse pill (both roles) ────────────────────────── */
@@ -166,14 +188,20 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 #loc-sync-tips ol{margin:0;padding-left:20px}
 #loc-sync-tips li{margin-bottom:3px;color:rgba(255,255,255,0.94)}
 #loc-sync-tips kbd{display:inline-block;padding:1px 7px;border-radius:4px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.26);font:700 11px/1.4 ui-monospace,Menlo,monospace;color:#fff}
+/* Safe-area offsets (notch/Dynamic Island); falls back to the base
+   top/left above where env() is unsupported. */
+#loc-sync{top:calc(60px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px))}
+#loc-sync-tips{top:calc(96px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px))}
 
 #lt-audio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 </style>
 <!-- PeerJS UMD bundle (deferred CDN load). Consumed by the Explore
      Together controller below. Failure to load is tolerated: the
      controller surfaces a friendly error state and the static tour
-     keeps working. -->
-<script src="https://unpkg.com/peerjs@1.5/dist/peerjs.min.js" crossorigin="anonymous" defer></script>
+     keeps working. Pinned to an exact version with SRI so the CDN
+     cannot serve different bytes than the ones this package was
+     generated against (floating @1.5 had no integrity check). -->
+<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" integrity="sha384-x0YgkOr/3UOZP2CRDxGW9e0Q+2Qjyr3uJrm4xU32Y7ZCNAo7Cc7bjhrZMi/dwczu" crossorigin="anonymous" defer></script>
 </head>
 <body>
 <header class="f3d-bar">
@@ -201,7 +229,7 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 </header>
 <div id="anno-toolbar" role="toolbar" aria-label="Shared tour annotations">
   <button type="button" class="anno-tool-btn" data-tool="pointer" title="Pointer (P)" aria-keyshortcuts="P">Pointer</button>
-  <button type="button" class="anno-tool-btn" data-tool="draw" title="Draw (D)" aria-keyshortcuts="D">Draw</button>
+  <button type="button" class="anno-tool-btn" data-tool="draw" id="anno-draw-btn" title="Draw (D)" aria-keyshortcuts="D">Draw</button>
   <label class="anno-color-wrap" title="Stroke color">
     <span class="anno-color-swatch" id="anno-color-swatch" aria-hidden="true"></span>
     <select class="anno-color-select" id="anno-color-select" aria-label="Stroke color">
@@ -1175,14 +1203,239 @@ function createLiveSession(options) {
 }
 
 
+// Shared mobile-input hardening for the live-tour annotation canvas.
+//
+// Injected (via ?raw + stripExports, same as live-session.mjs) BETWEEN the
+// live-session controller and the surface glue inside the generated HTML
+// IIFE, so the glue can call these helpers as plain locals. Designed to be
+// consumed by BOTH glue surfaces (atlas-live-tour-runtime.mjs today, the
+// portal export glue when it adopts the v2 input path) so the input state
+// machine never forks.
+//
+// Same browser-safety constraints as the sibling runtime .mjs modules
+// (enforced by scripts/verify-portal-html.mjs and the node:test gates):
+// no imports, no TypeScript syntax, no single-quote string literals,
+// ES5-ish style, ONE trailing export block stripped at injection time.
+//
+// What this fixes on iOS/iPadOS (each helper is independent):
+//   - multi-touch corrupting strokes (single-owner pointer guard)
+//   - palm-then-Pencil input fighting (pen takeover with clean commit)
+//   - stuck strokes/ropes after system gestures (cancel-aware ownership)
+//   - jagged 120Hz Pencil ink (coalesced pointer events)
+//   - oversized canvas buffers on 3x phones (device-pixel-ratio clamp)
+//   - misaligned canvas after URL-bar collapse / rotation (visualViewport
+//     + orientationchange bindings)
+
+// Normalize a pointerId for comparison. Real ids may legitimately be 0
+// (Firefox mouse), so null is the only "no owner" sentinel; an undefined
+// id (exotic synthetic events) maps to -1 so claim/owns stay consistent.
+function _annoPointerId(e) {
+  if (!e) return -1;
+  var id = e.pointerId;
+  return id === undefined || id === null ? -1 : id;
+}
+
+// Single-owner gesture guard for the annotation canvas.
+//
+// Rules:
+//   - Only one pointer may own a gesture at a time.
+//   - A non-primary touch can never START a gesture (second finger).
+//   - A pen arriving while a touch owns the gesture takes over (palm
+//     rejection): `onTakeover` fires FIRST so the caller can commit the
+//     in-flight touch stroke cleanly, then the pen claims ownership.
+//   - Everything else while a gesture is active is rejected.
+//
+// options:
+//   onTakeover: function — called synchronously before a pen steals
+//     ownership from a touch. Must leave the surface gesture-free.
+function createAnnoPointerGuard(options) {
+  var opts = options || {};
+  var onTakeover = typeof opts.onTakeover === "function" ? opts.onTakeover : null;
+  var activeId = null;
+  var activeType = "";
+
+  function claim(e) {
+    if (!e) return false;
+    var id = _annoPointerId(e);
+    var type = typeof e.pointerType === "string" ? e.pointerType : "";
+    if (activeId === null) {
+      if (type === "touch" && e.isPrimary === false) return false;
+      activeId = id;
+      activeType = type;
+      return true;
+    }
+    if (type === "pen" && activeType === "touch") {
+      if (onTakeover) {
+        try {
+          onTakeover();
+        } catch (_e) {
+          // the takeover hook must never block the pen from claiming
+        }
+      }
+      activeId = id;
+      activeType = type;
+      return true;
+    }
+    return false;
+  }
+
+  function owns(e) {
+    return activeId !== null && !!e && _annoPointerId(e) === activeId;
+  }
+
+  function release(e) {
+    if (!owns(e)) return false;
+    activeId = null;
+    activeType = "";
+    return true;
+  }
+
+  function reset() {
+    activeId = null;
+    activeType = "";
+  }
+
+  function isActive() {
+    return activeId !== null;
+  }
+
+  function activePointerType() {
+    return activeType;
+  }
+
+  return {
+    claim: claim,
+    owns: owns,
+    release: release,
+    reset: reset,
+    isActive: isActive,
+    activePointerType: activePointerType,
+  };
+}
+
+// Map a pointermove (plus its coalesced history, when the browser exposes
+// one) through `mapFn`, oldest first. A 120Hz Pencil delivers several raw
+// samples per rendered frame; using only the dispatched event drops them
+// and produces visibly segmented ink. Falls back to the single event.
+function annoCollectPoints(e, mapFn) {
+  if (!e || typeof mapFn !== "function") return [];
+  var list = null;
+  try {
+    if (typeof e.getCoalescedEvents === "function") list = e.getCoalescedEvents();
+  } catch (_e) {
+    list = null;
+  }
+  var out = [];
+  if (list && list.length > 0) {
+    for (var i = 0; i < list.length; i++) {
+      var p = mapFn(list[i]);
+      if (p) out.push(p);
+    }
+  }
+  if (out.length === 0) {
+    var single = mapFn(e);
+    if (single) out.push(single);
+  }
+  return out;
+}
+
+// Clamp the device pixel ratio used for canvas buffer sizing. A 3x phone
+// triples the backing-store pixels per CSS pixel in each axis (9x memory
+// + redraw cost) for no visible gain on annotation strokes; 2.5 keeps
+// retina-class sharpness with a bounded buffer.
+function annoClampDpr(raw, max) {
+  var dpr = typeof raw === "number" && isFinite(raw) && raw > 0 ? raw : 1;
+  var cap = typeof max === "number" && isFinite(max) && max > 0 ? max : 2.5;
+  return Math.min(dpr, cap);
+}
+
+// iOS / iPadOS WebKit detection — every browser on iOS (Safari, Chrome,
+// Edge, Firefox) is WebKit and shares its clipboard behavior: ANY
+// navigator.clipboard.readText() raises the native Paste callout, which
+// interrupts in-flight canvas gestures. Callers use this to disable all
+// ambient clipboard reads on these devices. Covers:
+//   - classic identifiers (platform/userAgent containing iPhone/iPad/iPod,
+//     which iOS Chrome "CriOS" and Firefox "FxiOS" UAs also carry), and
+//   - iPad "desktop mode", which masquerades as macOS:
+//     platform === "MacIntel" with maxTouchPoints > 1.
+// Fails closed to false (not iOS) — callers that need the safe direction
+// for ambient reads must ALSO gate on the module being present at all.
+function annoIsIosWebKit(nav) {
+  try {
+    var n = nav || (typeof navigator !== "undefined" ? navigator : null);
+    if (!n) return false;
+    var p = typeof n.platform === "string" ? n.platform : "";
+    var ua = typeof n.userAgent === "string" ? n.userAgent : "";
+    if (/iPhone|iPad|iPod/i.test(p)) return true;
+    if (/iPhone|iPad|iPod/i.test(ua)) return true;
+    if (p === "MacIntel" && typeof n.maxTouchPoints === "number" && n.maxTouchPoints > 1) {
+      return true;
+    }
+    return false;
+  } catch (_e) {
+    return false;
+  }
+}
+
+// Best-effort coarse-pointer detection (touch-first devices). Used for
+// runtime affordance sizing (e.g. the Focus Rope latch); the CSS side
+// uses the equivalent @media (pointer: coarse) block.
+function annoIsCoarsePointer(win) {
+  try {
+    var w = win || (typeof window !== "undefined" ? window : null);
+    if (!w || typeof w.matchMedia !== "function") return false;
+    var q = w.matchMedia("(pointer: coarse)");
+    return !!(q && q.matches);
+  } catch (_e) {
+    return false;
+  }
+}
+
+// Bind the viewport-geometry events that a plain window `resize` listener
+// (and an element ResizeObserver) can miss on mobile: visualViewport
+// resize (iOS URL-bar collapse, keyboard, pinch-zoom UI) and
+// orientationchange. Returns an unbind function; binding failures are
+// tolerated (the caller keeps its ResizeObserver path regardless).
+function annoBindViewportEvents(win, cb) {
+  var w = win || (typeof window !== "undefined" ? window : null);
+  if (!w || typeof cb !== "function") {
+    return function () {};
+  }
+  var bound = [];
+  function on(target, ev) {
+    if (!target || typeof target.addEventListener !== "function") return;
+    try {
+      target.addEventListener(ev, cb);
+      bound.push([target, ev]);
+    } catch (_e) {
+      // tolerated — see header
+    }
+  }
+  on(w.visualViewport, "resize");
+  on(w, "orientationchange");
+  return function () {
+    for (var i = 0; i < bound.length; i++) {
+      try {
+        bound[i][0].removeEventListener(bound[i][1], cb);
+      } catch (_e) {
+        // already torn down
+      }
+    }
+    bound.length = 0;
+  };
+}
+
+
 // Atlas Curated Showcase — "Explore Together" (Shared Tour) runtime glue.
 //
 // Self-contained controller binding for the Atlas curated showcase page.
 // It REUSES the tested createLiveSession() controller (injected verbatim
 // just before this file inside the same <script> via getLiveSessionRuntimeJS)
-// and wires it to a minimal, portal-free DOM. The wire protocol and the
-// normalized-[0,1] annotation pipeline are identical to the builder export,
-// so the same controller drives both surfaces.
+// and the shared mobile-input helpers from portal/anno-input.mjs (injected
+// between the controller and this glue via getAnnoInputJS), and wires them
+// to a minimal, portal-free DOM. The wire protocol and the normalized-[0,1]
+// annotation pipeline are identical to the builder export, so the same
+// controller drives both surfaces.
 //
 // Roles map to user-facing language: the controller "agent" is the Host,
 // the controller "visitor" is the Guest. The controller role strings are
@@ -1288,6 +1541,14 @@ function createLiveSession(options) {
   var ANNO_COLOR_WHITELIST = { "#ff3b30": 1, "#1e90ff": 1, "#22c55e": 1, "#ffffff": 1 };
   var ANNO_ROPE_CIRCLE_SAMPLES = 48;
   var ANNO_LATCH_PX = 10;
+  var ANNO_DPR_MAX = 2.5;
+
+  // Coarse-pointer (touch-first) detection drives runtime affordance
+  // sizing (latch size/hit radius); the CSS @media (pointer: coarse)
+  // block handles the toolbar/panel controls.
+  var IS_COARSE_POINTER =
+    typeof annoIsCoarsePointer === "function" ? annoIsCoarsePointer(window) : false;
+  var ANNO_LATCH_DRAW_PX = IS_COARSE_POINTER ? 14 : ANNO_LATCH_PX;
 
   var toolMode = "none";
   var currentViewKey = "";
@@ -1305,6 +1566,48 @@ function createLiveSession(options) {
   var ropeDragging = false;
   var ropeLatchDragging = false;
   var ropeFlushScheduled = false;
+  var ropeMoveDragging = false;
+  var ropeMoveLast = null;
+  var annoAppliedDpr = 1;
+
+  // Single-owner pointer guard (anno-input.mjs, injected just above this
+  // glue). FAIL CLOSED if script assembly ever regresses (Codex review
+  // 2026-06-06): a permissive fallback would silently restore the unsafe
+  // multi-touch behavior the guard exists to prevent, so when any helper
+  // is missing the Draw / Focus Rope tools are disabled outright (see
+  // setToolMode + the toolbar disable block below) while Matterport
+  // viewing, voice, pointer, clear, and location sync stay fully
+  // functional — the same shape as the createLiveSession hard guard.
+  // finalizeActiveGesture is a hoisted declaration (rope helpers below).
+  var ANNO_INPUT_OK =
+    typeof createAnnoPointerGuard === "function" &&
+    typeof annoCollectPoints === "function" &&
+    typeof annoClampDpr === "function" &&
+    typeof annoIsIosWebKit === "function" &&
+    typeof annoIsCoarsePointer === "function" &&
+    typeof annoBindViewportEvents === "function";
+  var annoGuard = ANNO_INPUT_OK
+    ? createAnnoPointerGuard({ onTakeover: finalizeActiveGesture })
+    : null;
+
+  // iOS/iPadOS WebKit (incl. iPad desktop mode and iOS Chrome): ANY
+  // navigator.clipboard.readText() raises the native Paste callout, so
+  // ambient clipboard sync must never run there — see
+  // ambientClipboardAllowed() in the location-sync section, which also
+  // fails closed when this detector is unavailable (ANNO_INPUT_OK false).
+  var IS_IOS_WEBKIT =
+    typeof annoIsIosWebKit === "function" ? annoIsIosWebKit(navigator) : false;
+
+  function collectNormPoints(e) {
+    if (typeof annoCollectPoints === "function") return annoCollectPoints(e, clientToNorm);
+    return [clientToNorm(e)];
+  }
+
+  function clampedDpr() {
+    var raw = window.devicePixelRatio || 1;
+    if (typeof annoClampDpr === "function") return annoClampDpr(raw, ANNO_DPR_MAX);
+    return Math.min(raw, ANNO_DPR_MAX);
+  }
 
   // ── Small helpers ───────────────────────────────────────────────────
   function setText(el, text) {
@@ -1400,6 +1703,9 @@ function createLiveSession(options) {
 
   // ── Annotation rendering ────────────────────────────────────────────
   function setToolMode(mode) {
+    // Fail closed: gesture tools require the anno-input guard. Gating
+    // here covers the toolbar, the hotkeys, and any future entry point.
+    if ((mode === "draw" || mode === "rope") && !ANNO_INPUT_OK) return;
     var prev = toolMode;
     toolMode = mode;
     if (annoCanvas) {
@@ -1451,7 +1757,8 @@ function createLiveSession(options) {
     var rect = letterboxWrap.getBoundingClientRect();
     var w = Math.max(1, Math.round(rect.width));
     var h = Math.max(1, Math.round(rect.height));
-    var dpr = window.devicePixelRatio || 1;
+    var dpr = clampedDpr();
+    annoAppliedDpr = dpr;
     annoCanvas.width = Math.max(1, Math.round(w * dpr));
     annoCanvas.height = Math.max(1, Math.round(h * dpr));
     annoCanvas.style.width = w + "px";
@@ -1464,7 +1771,9 @@ function createLiveSession(options) {
 
   function redrawAllStrokes() {
     if (!annoCtx || !annoCanvas) return;
-    var dpr = window.devicePixelRatio || 1;
+    // Back out the SAME (clamped) ratio resizeAnnoCanvas applied — using
+    // the raw devicePixelRatio here would misscale on capped displays.
+    var dpr = annoAppliedDpr || 1;
     var w = annoCanvas.width / dpr;
     var h = annoCanvas.height / dpr;
     annoCtx.clearRect(0, 0, w, h);
@@ -1574,12 +1883,23 @@ function createLiveSession(options) {
     var b = ropeBBox(rope);
     return { x: b.x1, y: b.y1 };
   }
+  function ropePointInBBox(rope, pt) {
+    var b = ropeBBox(rope);
+    return pt.x >= b.x0 && pt.x <= b.x1 && pt.y >= b.y0 && pt.y <= b.y1;
+  }
+  // Latch hit radius: 24px (48px target) for touch/pen so the resize
+  // handle meets the 44px minimum; mouse keeps the precise 20px zone.
+  function latchHitRadiusPx(e) {
+    var t = e && typeof e.pointerType === "string" ? e.pointerType : "";
+    if (t === "touch" || t === "pen" || IS_COARSE_POINTER) return 24;
+    return ANNO_LATCH_PX * 2;
+  }
   function drawRopeLatch(rope, w, h) {
     if (!annoCtx) return;
     var lp = ropeLatchPos(rope);
     var px = lp.x * w,
       py = lp.y * h;
-    var r = Math.max(5, Math.min(ANNO_LATCH_PX, 12));
+    var r = Math.max(5, Math.min(ANNO_LATCH_DRAW_PX, 16));
     annoCtx.beginPath();
     annoCtx.arc(px, py, r, 0, Math.PI * 2);
     annoCtx.fillStyle = rope.color || ANNO_STROKE_COLOR;
@@ -1629,7 +1949,57 @@ function createLiveSession(options) {
     activeRope = null;
     ropeDragging = false;
     ropeLatchDragging = false;
+    ropeMoveDragging = false;
+    ropeMoveLast = null;
     redrawAllStrokes();
+  }
+
+  // Finish the in-flight freehand stroke: flush queued points, commit on
+  // the wire, and promote it to localStrokes. Idempotent (no-op when no
+  // stroke is active) so pointerup / pointercancel / lostpointercapture
+  // can all route here without double-sending.
+  function finishActiveDraw() {
+    if (!activeStroke) return;
+    if (pendingStrokePoints && pendingStrokePoints.length > 0) {
+      session.sendStrokePatch(currentViewKey, pendingStrokeId, pendingStrokePoints);
+    }
+    pendingStrokePoints = null;
+    session.sendStrokeCommit(currentViewKey, activeStroke.strokeId);
+    localStrokes.push(activeStroke);
+    activeStroke = null;
+    pendingStrokeId = null;
+  }
+
+  // End the in-flight rope drag (initial draw / latch-resize / move) and
+  // resend the final shape. The rope itself stays active so its latch
+  // remains grabbable; commitActiveRope() seals it on tool exit.
+  function finishActiveRopeDrag() {
+    if (!activeRope) return;
+    if (!ropeDragging && !ropeLatchDragging && !ropeMoveDragging) return;
+    ropeDragging = false;
+    ropeLatchDragging = false;
+    ropeMoveDragging = false;
+    ropeMoveLast = null;
+    var s = session.getState();
+    if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+      session.sendStrokeBegin(
+        currentViewKey,
+        activeRope.strokeId,
+        activeRope.color,
+        activeRope.width,
+        activeRope.points,
+      );
+    }
+    redrawAllStrokes();
+  }
+
+  // Commit-or-abort for pen takeover, pointercancel, and
+  // lostpointercapture. We COMMIT the in-flight gesture: the remote side
+  // already holds its begin/patch packets, so committing is the only path
+  // that leaves no orphan stroke on either end.
+  function finalizeActiveGesture() {
+    if (toolMode === "draw") finishActiveDraw();
+    else if (toolMode === "rope") finishActiveRopeDrag();
   }
 
   function wipeAnnotations() {
@@ -1640,6 +2010,9 @@ function createLiveSession(options) {
     activeRope = null;
     ropeDragging = false;
     ropeLatchDragging = false;
+    ropeMoveDragging = false;
+    ropeMoveLast = null;
+    if (annoGuard) annoGuard.reset();
     if (remotePointer) remotePointer.style.display = "none";
     if (remotePointerHideTimer) {
       try {
@@ -1675,6 +2048,13 @@ function createLiveSession(options) {
   if (annoCanvas) {
     annoCanvas.addEventListener("pointerdown", function (e) {
       if (!canAnnotateLocal()) return;
+      if (toolMode !== "draw" && toolMode !== "rope") return;
+      // Single-owner guard: rejects secondary touches outright; a Pencil
+      // arriving mid-touch fires finalizeActiveGesture() first (clean
+      // commit of the in-flight stroke) and then claims the gesture.
+      // No guard (failed assembly) means no gesture, ever — setToolMode
+      // already refuses draw/rope, this is the belt to that suspender.
+      if (!annoGuard || !annoGuard.claim(e)) return;
       if (toolMode === "draw") {
         var pt = clientToNorm(e);
         var sid = String(Date.now()) + "_" + Math.random().toString(36).slice(2, 8);
@@ -1696,8 +2076,19 @@ function createLiveSession(options) {
           var rect = letterboxWrap ? letterboxWrap.getBoundingClientRect() : { width: 1, height: 1 };
           var dx = (rpt.x - lp.x) * rect.width;
           var dy = (rpt.y - lp.y) * rect.height;
-          if (Math.sqrt(dx * dx + dy * dy) <= ANNO_LATCH_PX * 2) {
+          if (Math.sqrt(dx * dx + dy * dy) <= latchHitRadiusPx(e)) {
             ropeLatchDragging = true;
+            try {
+              annoCanvas.setPointerCapture(e.pointerId);
+            } catch (_e) {}
+            e.preventDefault();
+            return;
+          }
+          // Inside the rope body (off the latch): drag moves the whole
+          // rope — the touch affordance the resize-only latch lacked.
+          if (ropePointInBBox(activeRope, rpt)) {
+            ropeMoveDragging = true;
+            ropeMoveLast = rpt;
             try {
               annoCanvas.setPointerCapture(e.pointerId);
             } catch (_e) {}
@@ -1732,18 +2123,49 @@ function createLiveSession(options) {
     });
     annoCanvas.addEventListener("pointermove", function (e) {
       if (!canAnnotateLocal()) return;
-      var pt = clientToNorm(e);
       if (toolMode === "pointer") {
-        session.sendPointer(currentViewKey, pt.x, pt.y);
-      } else if (toolMode === "draw" && activeStroke) {
-        activeStroke.points.push([pt.x, pt.y]);
+        // Hover-driven; on touch only the primary finger drives the dot.
+        if (e.isPrimary === false) return;
+        var hp = clientToNorm(e);
+        session.sendPointer(currentViewKey, hp.x, hp.y);
+        return;
+      }
+      if (!annoGuard || !annoGuard.owns(e)) return;
+      // Owned gesture: suppress any default WebKit handling for the move.
+      e.preventDefault();
+      if (toolMode === "draw" && activeStroke) {
+        // Coalesced samples (120Hz Pencil) — oldest first, all appended
+        // to the stroke and to the same outbound patch batch.
+        var batch = collectNormPoints(e);
         if (!pendingStrokePoints) pendingStrokePoints = [];
-        pendingStrokePoints.push([pt.x, pt.y]);
+        for (var bi = 0; bi < batch.length; bi++) {
+          activeStroke.points.push([batch[bi].x, batch[bi].y]);
+          pendingStrokePoints.push([batch[bi].x, batch[bi].y]);
+        }
         scheduleStrokeFlush();
         redrawAllStrokes();
+      } else if (toolMode === "rope" && activeRope && ropeMoveDragging) {
+        var mpt = clientToNorm(e);
+        var b = ropeBBox(activeRope);
+        var mdx = mpt.x - ropeMoveLast.x;
+        var mdy = mpt.y - ropeMoveLast.y;
+        // Clamp the translation so the bbox never leaves [0,1] space.
+        if (mdx < -b.x0) mdx = -b.x0;
+        if (mdx > 1 - b.x1) mdx = 1 - b.x1;
+        if (mdy < -b.y0) mdy = -b.y0;
+        if (mdy > 1 - b.y1) mdy = 1 - b.y1;
+        activeRope.x0 += mdx;
+        activeRope.x1 += mdx;
+        activeRope.y0 += mdy;
+        activeRope.y1 += mdy;
+        ropeMoveLast = mpt;
+        ropeRegenerate(activeRope);
+        scheduleRopeFlush();
+        redrawAllStrokes();
       } else if (toolMode === "rope" && activeRope && (ropeDragging || ropeLatchDragging)) {
-        activeRope.x1 = pt.x;
-        activeRope.y1 = pt.y;
+        var rpt2 = clientToNorm(e);
+        activeRope.x1 = rpt2.x;
+        activeRope.y1 = rpt2.y;
         ropeRegenerate(activeRope);
         scheduleRopeFlush();
         redrawAllStrokes();
@@ -1751,35 +2173,77 @@ function createLiveSession(options) {
     });
     annoCanvas.addEventListener("pointerup", function (e) {
       if (!canAnnotateLocal()) return;
+      if (!annoGuard || !annoGuard.owns(e)) return;
+      e.preventDefault();
       if (toolMode === "draw" && activeStroke) {
-        if (pendingStrokePoints && pendingStrokePoints.length > 0) {
-          session.sendStrokePatch(currentViewKey, pendingStrokeId, pendingStrokePoints);
-          pendingStrokePoints = null;
-        }
-        session.sendStrokeCommit(currentViewKey, activeStroke.strokeId);
-        localStrokes.push(activeStroke);
-        activeStroke = null;
-        pendingStrokeId = null;
-        try {
-          annoCanvas.releasePointerCapture(e.pointerId);
-        } catch (_e) {}
-      } else if (toolMode === "rope" && activeRope && (ropeDragging || ropeLatchDragging)) {
-        ropeDragging = false;
-        ropeLatchDragging = false;
-        var s = session.getState();
-        if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
-          session.sendStrokeBegin(currentViewKey, activeRope.strokeId, activeRope.color, activeRope.width, activeRope.points);
-        }
-        try {
-          annoCanvas.releasePointerCapture(e.pointerId);
-        } catch (_e) {}
-        redrawAllStrokes();
+        finishActiveDraw();
+      } else if (toolMode === "rope" && activeRope && (ropeDragging || ropeLatchDragging || ropeMoveDragging)) {
+        finishActiveRopeDrag();
       }
+      annoGuard.release(e);
+      try {
+        annoCanvas.releasePointerCapture(e.pointerId);
+      } catch (_e) {}
     });
+    // iOS system gestures can abort a touch mid-stroke (pointercancel) or
+    // strip capture without a matching up (lostpointercapture). Both
+    // finalize the in-flight gesture so neither side is left with an
+    // orphan stroke, a stuck rope drag, or a permanently-claimed pointer.
+    // A normal pointerup also fires lostpointercapture — by then the
+    // guard has released, so this is a no-op on the happy path.
+    function handlePointerAbort(e) {
+      if (!annoGuard || !annoGuard.owns(e)) return;
+      try {
+        e.preventDefault();
+      } catch (_e) {}
+      finalizeActiveGesture();
+      annoGuard.release(e);
+      try {
+        annoCanvas.releasePointerCapture(e.pointerId);
+      } catch (_e) {}
+    }
+    annoCanvas.addEventListener("pointercancel", handlePointerAbort);
+    annoCanvas.addEventListener("lostpointercapture", handlePointerAbort);
     annoCanvas.addEventListener("pointerleave", function () {
       if (!canAnnotateLocal()) return;
       if (toolMode === "pointer") session.sendPointer(currentViewKey, null, null);
     });
+
+    // WebKit gesture defenses: while Draw or Focus Rope is active, swallow
+    // the raw touch sequence at the canvas (non-passive on purpose) so
+    // Safari cannot run its long-press / magnifier / text-interaction
+    // recognizers alongside the pointer stream. Pointer events are not
+    // synthesized from touch, so drawing is unaffected. Scoped to the
+    // canvas — never to inputs or the manual paste field.
+    function blockTouchDuringGesture(e) {
+      if (toolMode !== "draw" && toolMode !== "rope") return;
+      try {
+        e.preventDefault();
+      } catch (_e) {}
+    }
+    try {
+      var nonPassive = { passive: false };
+      annoCanvas.addEventListener("touchstart", blockTouchDuringGesture, nonPassive);
+      annoCanvas.addEventListener("touchmove", blockTouchDuringGesture, nonPassive);
+      annoCanvas.addEventListener("touchend", blockTouchDuringGesture, nonPassive);
+      annoCanvas.addEventListener("touchcancel", blockTouchDuringGesture, nonPassive);
+    } catch (_e) {}
+  }
+
+  // Stage-scoped selection/menu defenses: the annotation stage is a
+  // drawing surface, not a document — context menus, text selection, and
+  // drag-start inside it fight the gesture recognizers on WebKit. Scoped
+  // to the letterbox wrap only (the panel and its inputs live outside).
+  if (letterboxWrap) {
+    var killStageEvent = function (e) {
+      try {
+        e.preventDefault();
+      } catch (_e) {}
+      return false;
+    };
+    letterboxWrap.addEventListener("contextmenu", killStageEvent);
+    letterboxWrap.addEventListener("selectstart", killStageEvent);
+    letterboxWrap.addEventListener("dragstart", killStageEvent);
   }
 
   // Toolbar buttons (shown to both roles).
@@ -1808,6 +2272,21 @@ function createLiveSession(options) {
         return;
       }
     });
+  }
+
+  // Annotation-unavailable surface for the fail-closed state: the gesture
+  // tools are visibly disabled (setToolMode refuses them regardless), so
+  // a broken assembly degrades to an obvious, honest "drawing is off"
+  // rather than a quietly unsafe canvas. Pointer + Clear stay usable.
+  if (!ANNO_INPUT_OK) {
+    var annoDisabledIds = ["anno-draw-btn", "anno-rope-btn"];
+    for (var adi = 0; adi < annoDisabledIds.length; adi++) {
+      var adBtn = document.getElementById(annoDisabledIds[adi]);
+      if (adBtn) {
+        adBtn.disabled = true;
+        adBtn.setAttribute("title", "Annotation drawing unavailable in this session");
+      }
+    }
   }
 
   // Stroke color picker (whitelist-guarded).
@@ -1888,6 +2367,12 @@ function createLiveSession(options) {
   } else if (letterboxWrap) {
     window.addEventListener("resize", resizeAnnoCanvas);
   }
+  // visualViewport + orientation: geometry changes the ResizeObserver /
+  // window-resize paths can miss on mobile (iOS URL-bar collapse,
+  // rotation, keyboard). Page-lifetime binding, like the listeners above.
+  if (typeof annoBindViewportEvents === "function") {
+    annoBindViewportEvents(window, resizeAnnoCanvas);
+  }
 
   // ── Location sync (clipboard auto-share, both roles) ─────────────────
   var LOC_SYNC_POLL_THROTTLE_MS = 800;
@@ -1908,6 +2393,62 @@ function createLiveSession(options) {
     success: "Synced",
     waiting: "Connecting…",
   };
+  // Honest copy on iOS: ambient clipboard sync is disabled there (Paste
+  // callout would interrupt annotation gestures), so the pill must not
+  // claim an ambient "Sync ready" that cannot happen. Manual paste is
+  // the supported path and works the same on both roles.
+  if (IS_IOS_WEBKIT) LOC_SYNC_LABELS.idle = "Manual view sync";
+
+  // Whether ANY ambient (non-manual) clipboard read may run right now.
+  // Layered, all fail-closed:
+  //   - missing anno-input module → cannot verify the platform → never;
+  //   - iOS/iPadOS WebKit → never (native Paste callout, the root cause
+  //     of the annotation-interruption bug);
+  //   - any annotation tool active (Draw / Focus Rope / Pointer) → never,
+  //     on EVERY platform — a clipboard prompt mid-gesture is exactly the
+  //     interruption this exists to prevent.
+  // The manual paste field bypasses this on purpose: it reads its own
+  // input value, never the clipboard API.
+  function annotationToolActive() {
+    return toolMode === "draw" || toolMode === "rope" || toolMode === "pointer";
+  }
+  function ambientClipboardAllowed() {
+    if (!ANNO_INPUT_OK) return false;
+    if (IS_IOS_WEBKIT) return false;
+    if (annotationToolActive()) return false;
+    return true;
+  }
+
+  // Desktop clipboard-read permission, tracked WITHOUT calling readText()
+  // — probing via read is exactly what raises the Paste callout / prompt.
+  // "unknown" (Permissions API absent or query unsupported) keeps the
+  // mouse pointerenter fast-path OFF; focus/visibility ambient reads keep
+  // their legacy desktop behavior behind ambientClipboardAllowed().
+  var clipPermissionState = "unknown";
+  (function trackClipboardPermission() {
+    if (IS_IOS_WEBKIT) return;
+    try {
+      if (navigator && navigator.permissions && typeof navigator.permissions.query === "function") {
+        var q = navigator.permissions.query({ name: "clipboard-read" });
+        if (q && typeof q.then === "function") {
+          q.then(
+            function (st) {
+              if (!st || typeof st.state !== "string") return;
+              clipPermissionState = st.state;
+              try {
+                st.onchange = function () {
+                  clipPermissionState = st.state;
+                };
+              } catch (_e) {}
+            },
+            function () {
+              // query rejected (name unsupported) — stay "unknown"
+            },
+          );
+        }
+      }
+    } catch (_e) {}
+  })();
 
   function showTips() {
     if (!tipsEl) return;
@@ -2131,6 +2672,7 @@ function createLiveSession(options) {
   }
 
   function readClipboardAndSend() {
+    if (!ambientClipboardAllowed()) return;
     var s = session.getState();
     if ((s.role !== "visitor" && s.role !== "agent") || !s.isConnected) return;
     if (!navigator || !navigator.clipboard || typeof navigator.clipboard.readText !== "function") return;
@@ -2160,6 +2702,7 @@ function createLiveSession(options) {
   }
 
   function schedulePoll() {
+    if (!ambientClipboardAllowed()) return;
     if (document.hidden) return;
     var s = session.getState();
     if ((s.role !== "visitor" && s.role !== "agent") || !s.isConnected) return;
@@ -2184,7 +2727,15 @@ function createLiveSession(options) {
     if (!document.hidden) schedulePoll();
   });
   if (letterboxWrap) {
-    letterboxWrap.addEventListener("pointerenter", schedulePoll);
+    // Ambient read on stage entry: a REAL mouse only, and only when the
+    // desktop clipboard-read permission is already confirmed granted via
+    // the Permissions API — never as a readText() permission probe, and
+    // never for touch/pen (those are annotation hands, not sync intent).
+    letterboxWrap.addEventListener("pointerenter", function (e) {
+      if (!e || e.pointerType !== "mouse") return;
+      if (clipPermissionState !== "granted") return;
+      schedulePoll();
+    });
     letterboxWrap.addEventListener("pointerenter", function () {
       var st = session.getState();
       if (st.role !== "visitor" && st.role !== "agent") return;
@@ -2208,6 +2759,12 @@ function createLiveSession(options) {
   } catch (_e) {}
 
   function preGrantClipboard() {
+    // NEVER on iOS/iPadOS: this readText() probe IS the native Paste
+    // callout. Also skipped when the platform detector is unavailable
+    // (fail closed). Desktop keeps the session-start prompt (it runs
+    // inside the Host/Join click gesture) so later ambient reads are
+    // silent instead of prompting mid-tour.
+    if (IS_IOS_WEBKIT || !ANNO_INPUT_OK) return;
     try {
       if (navigator && navigator.clipboard && typeof navigator.clipboard.readText === "function") {
         navigator.clipboard.readText().then(
@@ -2470,6 +3027,10 @@ function createLiveSession(options) {
       reportVoiceCapability();
       if (!clipboardReadAvailable()) {
         setManualStatus("Clipboard read is unavailable here — paste the Matterport link below to sync.");
+      } else if (IS_IOS_WEBKIT) {
+        // readText exists on iOS but ambient use is disabled by design;
+        // say so honestly instead of implying automatic sync.
+        setManualStatus("On iPhone or iPad, paste the Matterport link below to sync views.");
       } else {
         setManualStatus("");
       }
