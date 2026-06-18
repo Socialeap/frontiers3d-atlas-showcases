@@ -1,0 +1,4202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Even Hotel Times Square S. — Frontiers3D</title>
+<meta name="description" content="This sleek modern hotel is a 2-minute walk from 34th Street-Penn Station subway station, a 13-minute walk from the Empire State Building and less than a mile from the High Line, an elevated walkway.
+Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
+Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
+<meta property="og:title" content="Even Hotel Times Square S. — Frontiers3D" />
+<meta property="og:description" content="This sleek modern hotel is a 2-minute walk from 34th Street-Penn Station subway station, a 13-minute walk from the Empire State Building and less than a mile from the High Line, an elevated walkway.
+Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
+Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
+<meta name="f3d-package-schema" content="2" />
+<meta name="f3d-runtime" content="2.2.5" />
+<meta name="f3d-capabilities" content="" />
+<meta name="f3d-package-family" content="atlas" />
+<style>
+  *{box-sizing:border-box}
+  /* overflow-x:hidden — the page must never scroll horizontally (it is a
+     full-viewport app, often embedded in the Atlas modal iframe). The Live
+     Tour drawer parks off-screen right via translateX(100%), which would
+     otherwise widen the scrollable area and surface a horizontal scrollbar. */
+  html,body{margin:0;height:100%;overflow-x:hidden;background:#0a0e27;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  body{display:flex;flex-direction:column}
+  .f3d-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem .75rem;max-width:100%;padding:.5rem 1rem;background:rgba(10,14,39,.92);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px);position:relative;z-index:1300}
+  .f3d-logo{font-weight:800;letter-spacing:.18em;font-size:.8rem;flex-shrink:0}
+  .f3d-logo span{background:linear-gradient(90deg,#67e8f9,#818cf8);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .f3d-meta{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+  .f3d-title{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .f3d-loc{font-size:.7rem;color:#94a3b8}
+  .f3d-actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:.4rem;max-width:100%}
+  .f3d-iconbtn{appearance:none;display:inline-flex;align-items:center;gap:.35rem;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:#fff;border-radius:7px;padding:.4rem .7rem;font:600 12px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none;transition:background .18s,opacity .18s}
+  .f3d-iconbtn:hover{background:rgba(255,255,255,.15)}
+  .f3d-iconbtn svg{width:14px;height:14px}
+  .f3d-iconbtn.lt-launch{background:#818cf8;border-color:#818cf8}
+  .f3d-iconbtn.lt-launch:hover{opacity:.9;background:#818cf8}
+  .f3d-claim{border-color:rgba(129,140,248,.45);background:rgba(129,140,248,.14);color:#c7d2fe}
+  .f3d-claim:hover{background:rgba(129,140,248,.24)}
+  @media(max-width:560px){.f3d-iconbtn .f3d-btn-label{display:none}.f3d-iconbtn{padding:.4rem .5rem}}
+  .f3d-stage{position:relative;flex:1;min-height:0}
+  .f3d-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#020617}
+  .f3d-foot{padding:.5rem 1rem;font-size:.72rem;color:#94a3b8;background:#070b1f;border-top:1px solid rgba(255,255,255,.05)}
+  body.live-tour-active .f3d-foot{display:none}
+
+  /* ── About / Summary panel ─────────────────────────────────────── */
+  .about-backdrop{position:fixed;inset:0;z-index:2200;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:16px}
+  .about-backdrop.open{display:flex}
+  .about-box{position:relative;width:min(520px,94vw);max-height:84vh;overflow-y:auto;background:rgba(18,20,34,.96);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:20px 22px;box-shadow:0 25px 80px -15px rgba(0,0,0,.75)}
+  .about-close{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.75);font-size:16px;cursor:pointer}
+  .about-close:hover{background:rgba(255,255,255,.2)}
+  .about-title{font-size:18px;font-weight:700;margin:0 4px 2px 0;padding-right:28px}
+  .about-loc{font-size:12px;color:#94a3b8;margin-bottom:12px}
+  .about-summary{font-size:13.5px;line-height:1.6;color:rgba(255,255,255,.85);white-space:pre-wrap;margin:0 0 14px}
+  .about-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .about-tag{font-size:11px;font-weight:600;color:#c7d2fe;background:rgba(129,140,248,.12);border:1px solid rgba(129,140,248,.25);padding:3px 9px;border-radius:999px}
+  .about-claim{display:inline-block;margin-top:4px;font-size:12.5px;font-weight:600;color:#c7d2fe;text-decoration:none;border-bottom:1px solid rgba(199,210,254,.4)}
+  .about-claim:hover{color:#fff}
+
+/* f3d:runtime-css BEGIN v=1 family=atlas */
+:root{--lt-accent:#818cf8}
+
+/* ── Letterbox + annotation overlay ───────────────────────────────── */
+#anno-letterbox-wrap{position:absolute;inset:0}
+/* 2.0.2 wrapper fix: stage gesture hardening engages ONLY while an
+   annotation tool is active (body.anno-tool-active, toggled by
+   setToolMode) so Matterport navigation is untouched otherwise. */
+body.anno-tool-active #anno-letterbox-wrap{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#anno-letterbox-wrap iframe{width:100%;height:100%;border:none;display:block}
+#anno-canvas{position:absolute;inset:0;display:block;width:100%;height:100%;pointer-events:none;z-index:5;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+#anno-canvas.pointer-mode,#anno-canvas.draw-mode,#anno-canvas.rope-mode,#anno-canvas.eraser-mode{pointer-events:auto;cursor:crosshair}
+#anno-canvas.eraser-mode{cursor:cell}
+#remote-pointer{position:absolute;left:0;top:0;width:18px;height:18px;border-radius:50%;background:var(--lt-accent);border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,0.45);pointer-events:none;transform:translate(-50%,-50%);z-index:6;display:none}
+#lt-navlock{position:absolute;inset:0;z-index:4;background:transparent;cursor:not-allowed;display:none;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body.live-tour-active #lt-navlock.locked{display:block}
+body.live-tour-active #anno-letterbox-wrap:has(#lt-navlock.locked) #matterport-frame{pointer-events:none}
+
+#anno-toolbar{display:none;justify-content:center;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 12px;background:rgba(10,12,20,0.92);border-bottom:1px solid rgba(255,255,255,0.08);position:relative;z-index:1250;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body.live-tour-active #anno-toolbar{display:flex}
+.anno-tool-btn{appearance:none;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border-radius:6px;padding:6px 10px;font:600 12px/1 inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.15s,border-color 0.15s,color 0.15s;font-family:inherit;-webkit-tap-highlight-color:transparent}
+.anno-tool-btn:hover{background:rgba(255,255,255,0.14);color:#fff}
+.anno-tool-btn.active{background:var(--lt-accent);border-color:var(--lt-accent);color:#fff}
+.anno-color-wrap{display:inline-flex;align-items:center;gap:4px;padding:0 2px 0 6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);border-radius:6px}
+.anno-color-swatch{display:inline-block;width:12px;height:12px;border-radius:50%;background:#ff3b30;border:1px solid rgba(255,255,255,0.6);box-shadow:0 0 0 1px rgba(0,0,0,0.3)}
+.anno-color-select{appearance:none;-webkit-appearance:none;background:transparent;border:none;color:rgba(255,255,255,0.85);padding:6px 6px 6px 2px;font:600 12px/1 inherit;cursor:pointer;outline:none}
+.anno-color-select option{background:#11141d;color:#fff}
+.anno-rope-group{display:inline-flex;align-items:center;gap:4px}
+.anno-rope-group .anno-shape-wrap{display:none}
+body.anno-rope-active .anno-rope-group .anno-shape-wrap{display:inline-flex}
+.anno-shape-wrap{align-items:center;gap:4px;padding:0 2px 0 6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);border-radius:6px}
+.anno-shape-select{appearance:none;-webkit-appearance:none;background:transparent;border:none;color:rgba(255,255,255,0.85);padding:6px 6px 6px 2px;font:600 12px/1 inherit;cursor:pointer;outline:none;font-family:inherit}
+.anno-shape-select option{background:#11141d;color:#fff}
+.anno-exit-btn{font-size:16px;line-height:1;padding:4px 9px 6px}
+.anno-exit-btn:hover{background:rgba(255,107,107,0.18);border-color:rgba(255,107,107,0.45);color:#ff6b6b}
+
+/* Engage the 16:9 letterbox once a session is live. */
+body.live-tour-active #viewer{display:flex;align-items:center;justify-content:center;background:#000}
+body.live-tour-active #anno-letterbox-wrap{position:relative;inset:auto;aspect-ratio:16/9;width:min(100%,calc((100vh - 100px) * 16 / 9));height:auto;max-height:100%}
+body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shadow:0 0 0 3px var(--lt-accent),0 0 0 6px rgba(129,140,248,0.2);transition:box-shadow 1.5s ease-out}
+
+/* ── Explore Together launch button (top bar) ─────────────────────── */
+.lt-launch{position:relative}
+.lt-launch .lt-dot{width:7px;height:7px;border-radius:50%;background:transparent;display:inline-block}
+.lt-launch.is-waiting .lt-dot{background:#fff;opacity:0.9}
+.lt-launch.connected .lt-dot{background:#fff;animation:lt-pulse 1.6s ease-in-out infinite}
+@keyframes lt-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0.5)}50%{box-shadow:0 0 0 6px rgba(255,255,255,0)}}
+@media(max-width:560px){.lt-launch .lt-launch-label{display:none}}
+
+/* ── Control panel (right drawer) ─────────────────────────────────── */
+#lt-panel{position:fixed;top:0;right:0;width:min(340px,92vw);height:100%;z-index:2000;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s ease;background:rgba(10,12,20,0.62);-webkit-backdrop-filter:blur(28px) saturate(160%);backdrop-filter:blur(28px) saturate(160%);border-left:1px solid rgba(255,255,255,0.08);box-shadow:-8px 0 32px rgba(0,0,0,0.25)}
+#lt-panel.open{transform:translateX(0)}
+.lt-panel-head{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.lt-panel-title{font-size:14px;font-weight:700;color:#fff}
+.lt-status-chip{font:600 10px/1 system-ui,-apple-system,sans-serif;color:#fff;padding:3px 8px;border-radius:999px;background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.45)}
+.lt-panel-close{margin-left:auto;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.75);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
+.lt-panel-close:hover{background:rgba(255,255,255,0.2)}
+.lt-panel-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.lt-intro{margin:0 0 4px;font-size:12.5px;line-height:1.55;color:rgba(255,255,255,0.78)}
+.lt-role-choose{display:flex;flex-direction:column;gap:8px}
+.lt-btn{appearance:none;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.07);color:#fff;border-radius:8px;padding:10px 12px;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;transition:background 0.2s,opacity 0.2s,transform 0.1s;-webkit-tap-highlight-color:transparent}
+.lt-btn:hover{background:rgba(255,255,255,0.14)}
+.lt-btn:active{transform:scale(0.99)}
+.lt-btn:disabled{opacity:0.45;cursor:not-allowed}
+.lt-btn.primary{background:var(--lt-accent);border-color:var(--lt-accent)}
+.lt-btn.primary:hover{opacity:0.9;background:var(--lt-accent)}
+.lt-leave-btn{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.18)}
+.lt-leave-btn:hover{background:rgba(220,38,38,0.85);border-color:rgba(220,38,38,0.85)}
+.lt-pin-display{background:rgba(0,0,0,0.28);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px;text-align:center}
+.lt-pin-label{font-size:10px;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px}
+.lt-pin-value{font-size:30px;font-weight:700;color:#fff;letter-spacing:0.22em;font-variant-numeric:tabular-nums}
+.lt-status{font-size:11.5px;color:rgba(255,255,255,0.62);min-height:14px;line-height:1.45}
+.lt-mini-status{font-size:11px;color:rgba(255,255,255,0.55);min-height:13px}
+.lt-field-label,.lt-stops-label{font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.45)}
+.lt-join-row{display:flex;gap:6px}
+.lt-input{flex:1;border:1px solid rgba(255,255,255,0.16);border-radius:8px;background:rgba(255,255,255,0.07);color:#fff;padding:9px 10px;font:600 16px/1 inherit;letter-spacing:0.22em;text-align:center;font-variant-numeric:tabular-nums;outline:none}
+.lt-input:focus{border-color:var(--lt-accent)}
+.lt-input::placeholder{color:rgba(255,255,255,0.35);letter-spacing:0.22em}
+.lt-stops{display:flex;flex-direction:column;gap:4px;max-height:34vh;overflow-y:auto}
+.lt-stop-btn{border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#fff;border-radius:6px;padding:8px 10px;font:500 12px/1.3 inherit;font-family:inherit;cursor:pointer;text-align:left;transition:background 0.2s}
+.lt-stop-btn:hover:not(:disabled){background:rgba(255,255,255,0.14)}
+.lt-stop-btn:disabled{opacity:0.45;cursor:not-allowed}
+.lt-stops-empty{font-size:11px;color:rgba(255,255,255,0.5);font-style:italic;line-height:1.5}
+.lt-back-link{align-self:flex-start;background:transparent;border:none;color:rgba(255,255,255,0.5);font-size:11px;cursor:pointer;padding:4px 0;font-family:inherit}
+.lt-back-link:hover{color:rgba(255,255,255,0.85)}
+
+/* ── Live extras: voice status + manual paste-to-sync fallback ────── */
+#lt-live-extras{display:flex;flex-direction:column;gap:10px;margin-top:6px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08)}
+.lt-voice-status{display:flex;align-items:center;gap:7px;font-size:11.5px;line-height:1.45;color:rgba(255,255,255,0.7);min-height:14px}
+.lt-voice-status::before{content:"";width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0}
+.lt-voice-status[data-voice="ok"]::before{background:#22c55e}
+.lt-voice-status[data-voice="live"]::before{background:#22c55e;animation:lt-pulse 1.6s ease-in-out infinite}
+.lt-voice-status[data-voice="warn"]::before{background:#f59e0b}
+
+@media(max-width:640px){
+  #lt-panel{top:auto;bottom:0;right:0;left:0;width:100%;height:auto;max-height:82vh;border-radius:16px 16px 0 0;border-left:none;border-top:1px solid rgba(255,255,255,0.08);transform:translateY(100%);padding-bottom:env(safe-area-inset-bottom,0px)}
+  #lt-panel.open{transform:translateY(0)}
+  @supports(height:100dvh){#lt-panel{max-height:82dvh}}
+}
+
+/* ── Touch ergonomics (coarse pointers): ≥44px targets + safe areas ── */
+@media(pointer: coarse){
+  #anno-toolbar{gap:8px;padding:10px calc(12px + env(safe-area-inset-right,0px)) 10px calc(12px + env(safe-area-inset-left,0px))}
+  .anno-tool-btn{min-height:44px;min-width:44px;padding:10px 14px;font-size:14px}
+  .anno-exit-btn{font-size:20px}
+  .anno-color-wrap,.anno-shape-wrap{min-height:44px}
+  .anno-color-select,.anno-shape-select{min-height:42px;font-size:14px}
+  .lt-btn{min-height:44px}
+  .lt-stop-btn{min-height:44px}
+  .lt-panel-close{width:44px;height:44px;font-size:20px}
+}
+
+/* dvh letterbox: track the iOS visual viewport instead of the largest
+   layout viewport so URL-bar collapse never misaligns the canvas. */
+@supports(height:100dvh){
+  body.live-tour-active #anno-letterbox-wrap{width:min(100%,calc((100dvh - 100px) * 16 / 9))}
+}
+
+/* ── Location-sync pulse pill (both roles) ────────────────────────── */
+#loc-sync{position:fixed;top:60px;left:12px;z-index:1240;display:none;align-items:center;gap:8px;padding:6px 14px 6px 10px;border-radius:999px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.18);color:#fff;font:600 12px/1 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);box-shadow:0 6px 20px rgba(0,0,0,0.32);cursor:help;user-select:none;max-width:min(280px,calc(100vw - 24px))}
+body.live-tour-active #loc-sync{display:inline-flex}
+#loc-sync:hover,#loc-sync:focus-visible{background:rgba(0,0,0,0.72)}
+#loc-sync:focus-visible{outline:2px solid var(--lt-accent);outline-offset:2px}
+.loc-sync-dot{position:relative;display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;border-radius:50%;background:var(--lt-accent);flex-shrink:0;animation:loc-sync-breath 2.2s ease-in-out infinite}
+.loc-sync-label{color:rgba(255,255,255,0.94);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes loc-sync-breath{0%,100%{box-shadow:0 0 0 0 rgba(129,140,248,0.4)}50%{box-shadow:0 0 0 6px rgba(129,140,248,0)}}
+@keyframes loc-sync-spin{to{transform:rotate(360deg)}}
+#loc-sync[data-state="syncing"] .loc-sync-dot{background:transparent;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;animation:loc-sync-spin 0.7s linear infinite;box-shadow:none}
+#loc-sync[data-state="success"]{background:rgba(22,163,74,0.85);border-color:rgba(22,163,74,0.95)}
+#loc-sync[data-state="success"] .loc-sync-dot{background:#fff;animation:none;box-shadow:none}
+#loc-sync[data-state="success"] .loc-sync-dot::after{content:"";position:absolute;width:6px;height:3px;border-left:2px solid #16a34a;border-bottom:2px solid #16a34a;transform:rotate(-45deg) translate(0.5px,-1px)}
+#loc-sync[data-state="waiting"]{opacity:0.65}
+#loc-sync[data-state="waiting"] .loc-sync-dot{background:rgba(255,255,255,0.5)}
+#loc-sync-tips{position:fixed;top:96px;left:12px;z-index:1245;display:none;flex-direction:column;width:min(264px,calc(100vw - 24px));padding:10px 14px 12px;border-radius:12px;background:rgba(0,0,0,0.82);border:1px solid rgba(255,255,255,0.16);color:#fff;font:500 12px/1.45 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%);box-shadow:0 12px 28px rgba(0,0,0,0.42);pointer-events:auto}
+body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
+#loc-sync-tips ol{margin:0;padding-left:20px}
+#loc-sync-tips li{margin-bottom:3px;color:rgba(255,255,255,0.94)}
+#loc-sync-tips kbd{display:inline-block;padding:1px 7px;border-radius:4px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.26);font:700 11px/1.4 ui-monospace,Menlo,monospace;color:#fff}
+/* Safe-area offsets (notch/Dynamic Island); falls back to the base
+   top/left above where env() is unsupported. */
+#loc-sync{top:calc(60px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px))}
+#loc-sync-tips{top:calc(96px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px))}
+
+#lt-audio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+/* f3d:runtime-css END */
+</style>
+<!-- f3d:runtime-dep:peerjs BEGIN v=1 family=atlas -->
+<!-- PeerJS UMD bundle config (lazy CDN load). Pinned to an exact
+     version with SRI so the CDN cannot serve different bytes than the
+     ones this package was generated against. type="text/plain" keeps
+     it inert: the Explore Together glue reads data-src/data-integrity
+     and injects a real script tag on first Host/Join intent, desktop
+     only (Live Tour is a desktop-only product; see annoCollabEligible).
+     Phones and tablets never download or execute PeerJS. Load failure
+     is tolerated: the controller surfaces a friendly error state and
+     the static tour keeps working. -->
+<script type="text/plain" id="f3d-peerjs-loader" data-src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" data-integrity="sha384-x0YgkOr/3UOZP2CRDxGW9e0Q+2Qjyr3uJrm4xU32Y7ZCNAo7Cc7bjhrZMi/dwczu" data-crossorigin="anonymous"></script>
+<!-- f3d:runtime-dep:peerjs END -->
+</head>
+<body>
+<header class="f3d-bar">
+  <span class="f3d-logo">FRONTIERS<span>3D</span></span>
+  <div class="f3d-meta">
+    <span class="f3d-title">Even Hotel Times Square S.</span>
+    <span class="f3d-loc">New York, NY</span>
+  </div>
+  <div class="f3d-actions">
+    <button id="lt-launch-btn" type="button" class="f3d-iconbtn lt-launch" hidden aria-expanded="false" aria-controls="lt-panel" title="Explore Together — live shared tour with voice, synced views & annotations">
+  <span class="lt-dot" aria-hidden="true"></span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+  <span class="lt-launch-label">Explore Together</span>
+</button>
+    <button id="about-btn" type="button" class="f3d-iconbtn" title="About this showcase">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span class="f3d-btn-label">About</span>
+    </button>
+    <button id="share-btn" type="button" class="f3d-iconbtn" title="Share this showcase">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      <span class="f3d-btn-label">Share</span>
+    </button>
+    
+  </div>
+</header>
+<!-- f3d:runtime-markup:toolbar BEGIN v=1 family=atlas -->
+<div id="anno-toolbar" role="toolbar" aria-label="Shared tour annotations">
+  <button type="button" class="anno-tool-btn" data-tool="pointer" title="Pointer (P)" aria-keyshortcuts="P">Pointer</button>
+  <button type="button" class="anno-tool-btn" data-tool="draw" id="anno-draw-btn" title="Draw (D)" aria-keyshortcuts="D">Draw</button>
+  <label class="anno-color-wrap" title="Stroke color">
+    <span class="anno-color-swatch" id="anno-color-swatch" aria-hidden="true"></span>
+    <select class="anno-color-select" id="anno-color-select" aria-label="Stroke color">
+      <option value="#ff3b30">Red</option>
+      <option value="#1e90ff">Blue</option>
+      <option value="#22c55e">Green</option>
+      <option value="#ffffff">White</option>
+    </select>
+  </label>
+  <span class="anno-rope-group" role="group" aria-label="Focus Rope">
+    <button type="button" class="anno-tool-btn" data-tool="rope" id="anno-rope-btn" title="Focus Rope (R)" aria-keyshortcuts="R">Focus Rope</button>
+    <label class="anno-shape-wrap" title="Rope shape">
+      <select class="anno-shape-select" id="anno-shape-select" aria-label="Rope shape">
+        <option value="circle">Circle</option>
+        <option value="box">Box</option>
+      </select>
+    </label>
+  </span>
+  <button type="button" class="anno-tool-btn" data-tool="eraser" id="anno-eraser-btn" title="Eraser (E)" aria-keyshortcuts="E">Eraser</button>
+  <button type="button" class="anno-tool-btn" id="anno-clear-btn" title="Clear annotations (C)" aria-keyshortcuts="C">Clear</button>
+  <button type="button" class="anno-tool-btn anno-exit-btn" id="anno-exit-btn" title="Exit annotation mode" aria-label="Exit annotation mode">&times;</button>
+</div>
+<!-- f3d:runtime-markup:toolbar END -->
+<main class="f3d-stage" id="viewer">
+  <div id="anno-letterbox-wrap">
+    <iframe id="matterport-frame" class="f3d-frame" src="https://my.matterport.com/show/?m=QMcEVpDLoaR&play=1" title="Even Hotel Times Square S. — 3D tour"
+      allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen; autoplay; clipboard-write; web-share"
+      allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+    <!-- f3d:runtime-markup:stage BEGIN v=1 family=atlas -->
+<div id="lt-navlock" aria-hidden="true"></div>
+    <canvas id="anno-canvas"></canvas>
+    <div id="remote-pointer" aria-hidden="true"></div>
+<!-- f3d:runtime-markup:stage END -->
+  </div>
+</main>
+<footer class="f3d-foot">This sleek modern hotel is a 2-minute walk from 34th Street-Penn Station subway station, a 13-minute walk from the Empire State Building and less than a mile from the High Line, an elevated walkway.
+Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
+Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym.</footer>
+
+<!-- About / Summary panel -->
+<div id="about-panel" class="about-backdrop" role="dialog" aria-modal="true" aria-label="About this showcase">
+  <div class="about-box">
+    <button id="about-close" class="about-close" type="button" aria-label="Close">&times;</button>
+    <h2 class="about-title">Even Hotel Times Square S.</h2>
+    <div class="about-loc">New York, NY</div>
+    <p class="about-summary">This sleek modern hotel is a 2-minute walk from 34th Street-Penn Station subway station, a 13-minute walk from the Empire State Building and less than a mile from the High Line, an elevated walkway.
+Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
+Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym.</p>
+    <div class="about-tags"><span class="about-tag">curated</span><span class="about-tag">hotel</span><span class="about-tag">establishment</span><span class="about-tag">gym</span><span class="about-tag">health</span></div>
+    
+  </div>
+</div>
+
+<!-- f3d:runtime-markup:panel BEGIN v=1 family=atlas -->
+<aside id="lt-panel" class="lt-panel" role="dialog" aria-label="Explore Together" aria-modal="false">
+  <div class="lt-panel-head">
+    <span class="lt-panel-title">Explore Together</span>
+    <span id="lt-status-chip" class="lt-status-chip" hidden>Live</span>
+    <button id="lt-panel-close" class="lt-panel-close" type="button" aria-label="Close">&times;</button>
+  </div>
+  <div class="lt-panel-body">
+    <p class="lt-intro">Tour this space together in real time — voice chat, synced views, and pointer / draw / focus-rope annotations.</p>
+    <div id="lt-diag" class="lt-mini-status" hidden></div>
+    <div id="lt-role-choose" class="lt-role-choose">
+      <button id="lt-host-start-btn" type="button" class="lt-btn primary">Host a tour</button>
+      <button id="lt-guest-choose-btn" type="button" class="lt-btn">Join with a PIN</button>
+    </div>
+    <div id="lt-host-block" hidden>
+      <div class="lt-pin-display">
+        <div class="lt-pin-label">Your tour PIN</div>
+        <div id="lt-pin-value" class="lt-pin-value">----</div>
+      </div>
+      <button id="lt-invite-btn" type="button" class="lt-btn primary">Share invite</button>
+      <div id="lt-invite-status" class="lt-mini-status" aria-live="polite"></div>
+      <div id="lt-host-status" class="lt-status" aria-live="polite"></div>
+      <div class="lt-stops-label">Tour stops</div>
+      <div id="lt-stops" class="lt-stops"></div>
+      <button type="button" class="lt-back-link">&larr; Back</button>
+      <button type="button" class="lt-btn lt-leave-btn" hidden>Leave tour</button>
+    </div>
+    <div id="lt-guest-block" hidden>
+      <label class="lt-field-label" for="lt-pin-input">Enter the 4-digit PIN from your host</label>
+      <div class="lt-join-row">
+        <input id="lt-pin-input" class="lt-input" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Tour PIN" />
+        <button id="lt-join-btn" type="button" class="lt-btn primary">Join</button>
+      </div>
+      <div id="lt-guest-status" class="lt-status" aria-live="polite"></div>
+      <button type="button" class="lt-back-link">&larr; Back</button>
+      <button type="button" class="lt-btn lt-leave-btn" hidden>Leave tour</button>
+    </div>
+    <div id="lt-live-extras" hidden>
+      <button id="lt-enable-voice-btn" type="button" class="lt-btn primary" hidden>Enable voice</button>
+      <div id="lt-voice-status" class="lt-voice-status" data-voice="off" aria-live="polite"></div>
+    </div>
+  </div>
+</aside>
+
+<div id="loc-sync" data-state="waiting" tabindex="0" aria-label="Tour sync status — hover for instructions">
+  <span class="loc-sync-dot" aria-hidden="true"></span>
+  <span class="loc-sync-label" aria-live="polite">Connecting…</span>
+</div>
+<div id="loc-sync-tips" role="status" aria-live="polite" hidden>
+  <ol>
+    <li>In Matterport, open <strong>Share &rarr; Current Location</strong> and tap <strong>Copy</strong>.</li>
+    <li>Press <kbd>U</kbd> then <strong>Copy to clipboard</strong> &mdash; it syncs automatically.</li>
+  </ol>
+</div>
+<audio id="lt-audio" autoplay playsinline></audio>
+<!-- f3d:runtime-markup:panel END -->
+<script>window.__ATLAS_LT_CONFIG={"accent":"#818cf8","matterportBaseUrl":"https://my.matterport.com/show/?m=QMcEVpDLoaR\u0026play=1","shareTitle":"Even Hotel Times Square S.","stops":[]};</script>
+<script>
+(function(){
+// f3d:runtime-js:kernel BEGIN v=1 family=atlas
+// Live Guided Tour P2P controller. Loaded into the exported HTML
+// runtime. Wraps the global `Peer` constructor (PeerJS UMD bundle,
+// loaded via CDN <script> tag) to drive a single Agent <-> Visitor
+// session: a reliable WebRTC DataChannel for teleport + annotation
+// packets and a MediaConnection for two-way voice.
+//
+// Wire format (DataChannel JSON, all packets share the channel):
+//   { type: "teleport", ss, sr }
+//   { type: "pointer", viewKey, seq, x, y, ts }
+//   { type: "stroke_begin", viewKey, seq, strokeId, color, width, points, ts }
+//   { type: "stroke_patch", viewKey, seq, strokeId, points, ts }
+//   { type: "stroke_commit", viewKey, seq, strokeId, ts }
+//   { type: "stroke_delete", viewKey, seq, strokeIds, ts }
+//   { type: "clear", viewKey, seq, ts }
+//   { type: "nav_lock", viewKey, seq, locked, ts }
+//
+// `viewKey` is derived from the most recent teleport (ss + "|" + sr)
+// on both ends; receivers drop annotation packets whose viewKey
+// differs from their current one — kills late-arriving frames from a
+// previous Matterport sweep. `seq` is a single monotonic counter per
+// sender; receivers drop any packet with seq <= last seen. Pointer
+// sends are coalesced through a frame-rate scheduler (rAF in the
+// browser) and are additionally guarded by dataConn.bufferedAmount so
+// the channel never backs up under a flood of mousemove events.
+//
+// Same constraints as the other .mjs runtime modules in this folder:
+// no imports, no TypeScript syntax, no single-quote string literals,
+// ES5-ish style (var, function). The single trailing `export { ... }`
+// block is stripped at injection time so this source can be inlined
+// verbatim into the outer IIFE of the generated HTML.
+
+var LIVE_SESSION_AGENT_PREFIX = "TourAgent-";
+var LIVE_SESSION_VISITOR_PREFIX = "TourGuest-";
+
+// 4-digit numeric PIN, zero-padded so a leading-zero PIN like 0123
+// stays 4 chars wide on the wire and on screen.
+function _generatePin() {
+  var n = Math.floor(Math.random() * 10000);
+  var s = String(n);
+  while (s.length < 4) s = "0" + s;
+  return s;
+}
+
+function _generateVisitorSuffix() {
+  // 8-char base36 random tail. Collision chance is negligible for the
+  // ephemeral lifetime of a single tour session.
+  return Math.random().toString(36).slice(2, 10) || "anon";
+}
+
+function _isPlainObject(v) {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+function _coerceString(v) {
+  if (typeof v === "string") return v;
+  if (v == null) return "";
+  return String(v);
+}
+
+// Acquire the local microphone with consistent audio constraints.
+// Resolves to `null` (never rejects) if the user declines, the API is
+// unavailable, or the page is not in a secure context — callers fall
+// back to a silent track so PeerJS still establishes the audio path.
+// `diag` (optional) receives the mic_requested / mic_granted /
+// mic_denied diagnostic milestones (unavailable counts as denied).
+function _getMicStream(diag) {
+  var emit = typeof diag === "function" ? diag : function () {};
+  if (
+    typeof navigator === "undefined" ||
+    !navigator.mediaDevices ||
+    !navigator.mediaDevices.getUserMedia
+  ) {
+    emit("mic_denied");
+    return Promise.resolve(null);
+  }
+  emit("mic_requested");
+  return navigator.mediaDevices
+    .getUserMedia({ audio: true, video: false })
+    .then(function (stream) {
+      emit("mic_granted");
+      return stream;
+    })
+    .catch(function () {
+      emit("mic_denied");
+      return null;
+    });
+}
+
+// Some browsers reject `peer.call(id)` without a real MediaStream.
+// Build a single silent audio track via the WebAudio API as a graceful
+// fallback when the mic is unavailable. Returns `null` if even that
+// fails (e.g. WebAudio blocked) — callers must tolerate a null stream.
+function _silentTrackStream() {
+  try {
+    var Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    var ctx = new Ctor();
+    var dst = ctx.createMediaStreamDestination();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    gain.gain.value = 0;
+    osc.connect(gain);
+    gain.connect(dst);
+    osc.start();
+    return dst.stream;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Best-effort console logger gated by `debug` option. Never throws.
+function _makeLogger(debug) {
+  return function () {
+    if (!debug) return;
+    try {
+      var args = ["[live-session]"];
+      for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
+      if (typeof console !== "undefined" && console.log) {
+        console.log.apply(console, args);
+      }
+    } catch (e) {
+      // swallow — logging must never break the tour
+    }
+  };
+}
+
+// Drop a pointer send when the DataChannel has more than this many
+// bytes already queued. 64 KiB is well below the SCTP send buffer cap
+// in every browser PeerJS supports — staying under it keeps latency
+// low enough for live cursor tracking. Stroke packets ignore this
+// guard so we never lose ink.
+var LIVE_SESSION_POINTER_BACKPRESSURE_BYTES = 65536;
+
+// Factory for a single live-session controller. Each call returns an
+// independent state machine; the page is expected to keep at most one
+// alive at a time.
+//
+// options:
+//   debug: boolean — verbose console output for development
+//   pinAttempts: number — how many random PINs to try if the broker
+//     reports the id is taken (default 5)
+//   PeerCtor: function — dependency injection seam used by tests; in
+//     the browser we read `window.Peer` if not provided.
+//   schedule: function(cb) — frame scheduler for the pointer
+//     coalescer. Defaults to `requestAnimationFrame` in the browser,
+//     `setTimeout(cb, 16)` otherwise. Tests pass a manual scheduler
+//     to drive coalescing deterministically.
+//   deferVoice: boolean — P0 iPad stability policy (the glue passes
+//     true on iOS/iPadOS WebKit): NEVER acquire the microphone, build
+//     the silent AudioContext fallback, or place/answer a media call
+//     automatically during the connect transition. Voice starts only
+//     via startVoice(), i.e. from a direct user gesture. Incoming
+//     calls are held (pendingIncomingCall) until then. The data
+//     channel is fully independent of all of it.
+//   onDiagnostic: function(name) — milestone hook (data_connected,
+//     mic_requested/granted/denied, media_call_started,
+//     remote_stream). Must never throw into the controller; guarded.
+function createLiveSession(options) {
+  var opts = options || {};
+  var log = _makeLogger(!!opts.debug);
+  var pinAttempts = typeof opts.pinAttempts === "number" ? opts.pinAttempts : 5;
+  var deferVoice = opts.deferVoice === true;
+  var _diag = typeof opts.onDiagnostic === "function" ? opts.onDiagnostic : null;
+  function _diagSafe(name) {
+    if (!_diag) return;
+    try {
+      _diag(name);
+    } catch (e) {
+      log("diagnostic hook threw", e);
+    }
+  }
+  var PeerCtor =
+    typeof opts.PeerCtor === "function"
+      ? opts.PeerCtor
+      : typeof Peer === "function"
+        ? Peer
+        : null;
+  var scheduler =
+    typeof opts.schedule === "function"
+      ? opts.schedule
+      : typeof requestAnimationFrame === "function"
+        ? function (cb) {
+            requestAnimationFrame(cb);
+          }
+        : function (cb) {
+            setTimeout(cb, 16);
+          };
+
+  var state = {
+    role: null,
+    status: "idle",
+    pin: null,
+    peerId: null,
+    error: null,
+    isConnected: false,
+    remoteStream: null,
+    voiceCallActive: false,
+    incomingTeleportEvent: null,
+    incomingPointerEvent: null,
+    incomingStrokeEvent: null,
+    incomingClearEvent: null,
+    incomingNavLockEvent: null,
+    incomingStrokeDeleteEvent: null,
+    incomingLocationShareEvent: null,
+  };
+
+  var listeners = [];
+  var peer = null;
+  var dataConn = null;
+  var mediaCall = null;
+  var localMicStream = null;
+  var pendingIncomingCall = null;
+  var voiceEnabledByUser = false;
+  var disposed = false;
+
+  // Annotation channel bookkeeping. _sendSeq is the agent's monotonic
+  // counter stamped on every outbound annotation packet. _lastRecvSeq
+  // is the receiver's watermark — any packet whose seq doesn't exceed
+  // it is dropped (out-of-order arrival under a reliable channel
+  // shouldn't happen, but we guard so a buggy peer can't replay).
+  // _currentViewKey is updated automatically from teleport packets on
+  // both ends; annotation packets whose viewKey diverges are dropped
+  // so late frames from a stale Matterport sweep don't leak through.
+  var _sendSeq = 0;
+  var _lastRecvSeq = 0;
+  var _currentViewKey = "";
+
+  // Pointer coalescer. The runtime can call sendPointer many times
+  // per frame (mousemove fires at the input device's poll rate); we
+  // only flush the latest position on the next scheduler tick.
+  var _pendingPointer = null;
+  var _flushScheduled = false;
+
+  function _patch(next) {
+    var merged = {};
+    for (var k in state) {
+      if (Object.prototype.hasOwnProperty.call(state, k)) merged[k] = state[k];
+    }
+    for (var p in next) {
+      if (Object.prototype.hasOwnProperty.call(next, p)) merged[p] = next[p];
+    }
+    state = merged;
+    _emit();
+  }
+
+  function _emit() {
+    var snapshot = state;
+    for (var i = 0; i < listeners.length; i++) {
+      try {
+        listeners[i](snapshot);
+      } catch (e) {
+        log("listener threw", e);
+      }
+    }
+  }
+
+  function getState() {
+    return state;
+  }
+
+  function subscribe(fn) {
+    if (typeof fn !== "function") {
+      return function () {};
+    }
+    listeners.push(fn);
+    try {
+      fn(state);
+    } catch (e) {
+      log("initial subscribe fire threw", e);
+    }
+    return function () {
+      var idx = listeners.indexOf(fn);
+      if (idx >= 0) listeners.splice(idx, 1);
+    };
+  }
+
+  function _ensurePeerCtor() {
+    if (typeof PeerCtor === "function") return true;
+    var late =
+      typeof Peer === "function"
+        ? Peer
+        : typeof window !== "undefined" && typeof window.Peer === "function"
+          ? window.Peer
+          : null;
+    if (typeof late === "function") {
+      PeerCtor = late;
+      return true;
+    }
+    _patch({
+      status: "error",
+      error: "PeerJS isn't loaded yet. Check your network connection.",
+    });
+    return false;
+  }
+
+  // ── Agent ──────────────────────────────────────────────────────────
+  function initializeAsAgent() {
+    if (disposed) return Promise.reject(new Error("session disposed"));
+    if (!_ensurePeerCtor()) {
+      return Promise.reject(new Error(state.error || "peer-unavailable"));
+    }
+    if (peer && state.role === "agent") {
+      return Promise.resolve({ pin: state.pin, peerId: state.peerId });
+    }
+    _patch({ role: "agent", status: "initializing", error: null });
+    return _claimAgentPin(0);
+  }
+
+  function _claimAgentPin(attempt) {
+    if (attempt >= pinAttempts) {
+      var msg = "Could not reserve a session PIN. Please try again.";
+      _patch({ status: "error", error: msg });
+      return Promise.reject(new Error(msg));
+    }
+    var pin = _generatePin();
+    var id = LIVE_SESSION_AGENT_PREFIX + pin;
+    return new Promise(function (resolve, reject) {
+      var p;
+      try {
+        p = new PeerCtor(id);
+      } catch (e) {
+        reject(e);
+        return;
+      }
+
+      var settled = false;
+
+      function _onOpen() {
+        if (settled) return;
+        settled = true;
+        peer = p;
+        _wireAgentPeer();
+        _patch({ pin: pin, peerId: id, status: "waiting" });
+        resolve({ pin: pin, peerId: id });
+      }
+
+      function _onError(err) {
+        if (settled) return;
+        var t = err && err.type ? err.type : (err && err.message) || "unknown";
+        log("agent peer error", t);
+        try {
+          p.destroy();
+        } catch (e) {
+          // ignore — we're tearing down regardless
+        }
+        if (t === "unavailable-id") {
+          settled = true;
+          _claimAgentPin(attempt + 1).then(resolve, reject);
+          return;
+        }
+        settled = true;
+        _patch({
+          status: "error",
+          error: "Couldn't connect to the live-tour signaling service.",
+        });
+        reject(err instanceof Error ? err : new Error(t));
+      }
+
+      p.on("open", _onOpen);
+      p.on("error", _onError);
+    });
+  }
+
+  function _wireAgentPeer() {
+    if (!peer) return;
+    peer.on("connection", function (conn) {
+      _attachDataConnection(conn);
+    });
+    peer.on("call", function (call) {
+      _answerIncomingCall(call);
+    });
+    peer.on("disconnected", function () {
+      log("peer disconnected from broker");
+    });
+    peer.on("close", function () {
+      _patch({ status: "ended", isConnected: false });
+    });
+    peer.on("error", function (err) {
+      var t = (err && err.type) || (err && err.message) || "peer-error";
+      log("peer error", t);
+      _patch({ error: t });
+    });
+  }
+
+  function _attachDataConnection(conn) {
+    // Candidate adoption: a newly offered connection must NOT displace a
+    // live dataConn until it actually emits "open". PeerJS can hand the
+    // agent a duplicate inbound connection (visitor tab refresh, network
+    // flap, ICE restart) that never opens; assigning it eagerly left
+    // isConnected=true with a dead OUTBOUND channel while the old
+    // connection's handlers kept delivering INBOUND data — the exact
+    // one-way host→guest failure this guards against. Until the
+    // candidate opens, the existing connection stays authoritative; on
+    // open the candidate is adopted and the previous channel is closed.
+    // A candidate that errors/closes before opening leaves the existing
+    // connection and the connected state untouched.
+    conn.on("open", function () {
+      var previous = dataConn !== conn ? dataConn : null;
+      dataConn = conn;
+      if (previous) {
+        try {
+          previous.close();
+        } catch (e) {
+          log("stale conn close failed", e);
+        }
+      }
+      _diagSafe("data_connected");
+      _patch({ status: "connected", isConnected: true });
+    });
+    conn.on("data", function (data) {
+      _handleIncomingData(data);
+    });
+    conn.on("close", function () {
+      if (dataConn === conn) {
+        dataConn = null;
+        _patch({ isConnected: false, status: "ended" });
+      }
+    });
+    conn.on("error", function (err) {
+      var t = (err && err.type) || (err && err.message) || "data-error";
+      log("data conn error", t);
+      // A failing CANDIDATE must not surface an error over a healthy
+      // active channel; only the authoritative conn (or the very first,
+      // below) reports.
+      if (dataConn === conn) _patch({ error: t });
+    });
+    // First connection (nothing live yet): make it the provisional
+    // channel immediately — preserves the visitor-side join behavior
+    // where the outbound conn is tracked from creation, before "open".
+    if (!dataConn) dataConn = conn;
+  }
+
+  // Shared media-call plumbing: stream/close/error handlers. Media
+  // failure only patches state — it must never close or corrupt the
+  // data connection. `voiceCallActive` tracks the attempt lifecycle so
+  // the UI can re-offer "Enable voice" when a call dies BEFORE a remote
+  // stream ever arrived (negotiation failure, peer hung up); the error
+  // path also clears mediaCall, otherwise a dead call would make every
+  // startVoice() retry a no-op.
+  function _wireMediaCall(call) {
+    mediaCall = call;
+    _patch({ voiceCallActive: true });
+    call.on("stream", function (remoteStream) {
+      _diagSafe("remote_stream");
+      _patch({ remoteStream: remoteStream });
+    });
+    call.on("close", function () {
+      if (mediaCall === call) {
+        mediaCall = null;
+        _patch({ remoteStream: null, voiceCallActive: false });
+      }
+    });
+    call.on("error", function (err) {
+      var t = (err && err.type) || (err && err.message) || "call-error";
+      log("call error", t);
+      if (mediaCall === call) {
+        mediaCall = null;
+        _patch({ error: t, remoteStream: null, voiceCallActive: false });
+      } else {
+        _patch({ error: t });
+      }
+    });
+  }
+
+  function _answerIncomingCall(call) {
+    // Deferred-voice sessions hold the offer until the user explicitly
+    // enables voice (startVoice) — unless they already did, in which
+    // case the offer is answered immediately below with the stream the
+    // user already granted.
+    if (deferVoice && !voiceEnabledByUser) {
+      pendingIncomingCall = call;
+      call.on("close", function () {
+        if (pendingIncomingCall === call) pendingIncomingCall = null;
+      });
+      return;
+    }
+    _getMicStream(_diagSafe).then(function (stream) {
+      // deferVoice: NEVER build the silent AudioContext fallback — a
+      // mic-less answer is receive-only instead.
+      localMicStream = stream || (deferVoice ? localMicStream : _silentTrackStream());
+      try {
+        if (localMicStream) call.answer(localMicStream);
+        else call.answer();
+      } catch (e) {
+        log("call.answer failed", e);
+      }
+      _diagSafe("media_call_started");
+      _wireMediaCall(call);
+    });
+  }
+
+  // ── Visitor ────────────────────────────────────────────────────────
+  function joinAsVisitor(pinInput) {
+    if (disposed) return Promise.reject(new Error("session disposed"));
+    if (!_ensurePeerCtor()) {
+      return Promise.reject(new Error(state.error || "peer-unavailable"));
+    }
+    var clean = _coerceString(pinInput).replace(/\D/g, "").slice(0, 4);
+    if (clean.length !== 4) {
+      var msg = "Enter the 4-digit PIN from your agent.";
+      _patch({ status: "error", error: msg });
+      return Promise.reject(new Error(msg));
+    }
+    if (peer && state.role === "visitor") {
+      return Promise.resolve({ pin: state.pin, peerId: state.peerId });
+    }
+    var visitorId = LIVE_SESSION_VISITOR_PREFIX + _generateVisitorSuffix();
+    var agentId = LIVE_SESSION_AGENT_PREFIX + clean;
+    _patch({
+      role: "visitor",
+      status: "connecting",
+      pin: clean,
+      peerId: visitorId,
+      error: null,
+    });
+    return new Promise(function (resolve, reject) {
+      var p;
+      try {
+        p = new PeerCtor(visitorId);
+      } catch (e) {
+        reject(e);
+        return;
+      }
+      peer = p;
+      var settled = false;
+
+      p.on("open", function () {
+        var conn = p.connect(agentId, { reliable: true });
+        _attachDataConnection(conn);
+        // Deferred voice (P0 iPad): the connect transition stays
+        // data-only — no getUserMedia, no AudioContext, no media call.
+        // startVoice() (a user gesture) initiates voice later.
+        if (!deferVoice) {
+          _getMicStream(_diagSafe).then(function (stream) {
+            localMicStream = stream || _silentTrackStream();
+            var call = null;
+            try {
+              if (localMicStream) {
+                call = p.call(agentId, localMicStream);
+              }
+            } catch (e) {
+              log("p.call failed", e);
+            }
+            if (call) {
+              _diagSafe("media_call_started");
+              _wireMediaCall(call);
+            }
+          });
+        }
+        if (!settled) {
+          settled = true;
+          resolve({ pin: clean, peerId: visitorId });
+        }
+      });
+
+      p.on("error", function (err) {
+        var t = (err && err.type) || (err && err.message) || "peer-error";
+        log("visitor peer error", t);
+        var human =
+          t === "peer-unavailable"
+            ? "No active session for that PIN. Ask your agent to start one."
+            : "Couldn't connect to the live tour. " + t;
+        _patch({ status: "error", error: human, isConnected: false });
+        if (!settled) {
+          settled = true;
+          reject(err instanceof Error ? err : new Error(t));
+        }
+      });
+
+      p.on("close", function () {
+        _patch({ status: "ended", isConnected: false });
+      });
+    });
+  }
+
+  // ── Shared ─────────────────────────────────────────────────────────
+  function _handleIncomingData(payload) {
+    if (!_isPlainObject(payload)) return;
+    var type = payload.type;
+    if (type === "teleport") {
+      var ss = _coerceString(payload.ss).trim();
+      var sr = _coerceString(payload.sr).trim();
+      if (!ss) return;
+      // Always update the internal viewKey so the annotation receive
+      // filter stays correct — annotation packets carry the viewKey
+      // and we drop stale ones regardless of role.
+      _currentViewKey = ss + "|" + sr;
+      // Role-direction guard: `teleport` is an agent → visitor packet.
+      // An agent receiving its own teleport (echo / loopback / test
+      // arrangement) must NOT patch incomingTeleportEvent — doing so
+      // would trigger the agent's parent-code reload branch and cause
+      // an unintended iframe refresh on the wrong side.
+      if (state.role !== "visitor") return;
+      _patch({
+        incomingTeleportEvent: { ss: ss, sr: sr, ts: Date.now() },
+      });
+      return;
+    }
+    if (type === "location_share") {
+      // Visitor → Agent: an offered location. Receiver-side validation
+      // mirrors `teleport` (non-empty ss required); we deliberately do
+      // NOT update _currentViewKey here — accepting the share is the
+      // agent's UX decision, not an automatic protocol action.
+      var lss = _coerceString(payload.ss).trim();
+      var lsr = _coerceString(payload.sr).trim();
+      if (!lss) return;
+      // Role-direction guard: `location_share` is a visitor → agent
+      // packet. A visitor receiving its own share bounced back (echo /
+      // loopback) must NOT patch incomingLocationShareEvent — even
+      // though the parent code's auto-follow branch is also role-gated,
+      // sealing this at the controller boundary is the strongest
+      // defense against the visitor's iframe reloading unexpectedly.
+      if (state.role !== "agent") return;
+      _patch({
+        incomingLocationShareEvent: { ss: lss, sr: lsr, ts: Date.now() },
+      });
+      return;
+    }
+    if (
+      type === "pointer" ||
+      type === "stroke_begin" ||
+      type === "stroke_patch" ||
+      type === "stroke_commit" ||
+      type === "stroke_delete" ||
+      type === "clear" ||
+      type === "nav_lock"
+    ) {
+      var seq = +payload.seq || 0;
+      if (seq <= _lastRecvSeq) return;
+      var vk = _coerceString(payload.viewKey);
+      // Empty viewKey on either end means "no teleport yet" — accept;
+      // mismatch when both sides have a key means stale frame, drop.
+      if (vk && _currentViewKey && vk !== _currentViewKey) return;
+      _lastRecvSeq = seq;
+      var ts = +payload.ts || Date.now();
+      if (type === "pointer") {
+        _patch({
+          incomingPointerEvent: {
+            viewKey: vk,
+            seq: seq,
+            x: typeof payload.x === "number" ? payload.x : null,
+            y: typeof payload.y === "number" ? payload.y : null,
+            ts: ts,
+          },
+        });
+        return;
+      }
+      if (type === "clear") {
+        _patch({
+          incomingClearEvent: { viewKey: vk, seq: seq, ts: ts },
+        });
+        return;
+      }
+      if (type === "nav_lock") {
+        _patch({
+          incomingNavLockEvent: {
+            viewKey: vk,
+            locked: payload.locked === true,
+            seq: seq,
+            ts: ts,
+          },
+        });
+        return;
+      }
+      if (type === "stroke_delete") {
+        // Idempotent erase of one or more committed strokes. Unknown /
+        // already-removed ids are a harmless no-op on the consumer side.
+        var delIds = [];
+        if (Array.isArray(payload.strokeIds)) {
+          for (var di = 0; di < payload.strokeIds.length; di++) {
+            var sid = _coerceString(payload.strokeIds[di]);
+            if (sid) delIds.push(sid);
+          }
+        }
+        _patch({
+          incomingStrokeDeleteEvent: {
+            viewKey: vk,
+            strokeIds: delIds,
+            seq: seq,
+            ts: ts,
+          },
+        });
+        return;
+      }
+      var kind =
+        type === "stroke_begin"
+          ? "begin"
+          : type === "stroke_patch"
+            ? "patch"
+            : "commit";
+      var ev = {
+        kind: kind,
+        viewKey: vk,
+        seq: seq,
+        strokeId: _coerceString(payload.strokeId),
+        ts: ts,
+      };
+      if (typeof payload.color === "string") ev.color = payload.color;
+      if (typeof payload.width === "number") ev.width = payload.width;
+      if (Array.isArray(payload.points)) ev.points = payload.points;
+      _patch({ incomingStrokeEvent: ev });
+    }
+  }
+
+  // User-gesture voice startup (deferred-voice sessions tap "Enable
+  // voice"; safe as a retry on any session). Resolves true when a media
+  // call is answered or placed, false when voice cannot start yet (no
+  // mic AND nothing to answer, or the other side has not offered). The
+  // data connection is untouched on every path.
+  function startVoice() {
+    if (disposed) return Promise.resolve(false);
+    if (!state.isConnected) return Promise.resolve(false);
+    if (state.remoteStream) return Promise.resolve(true);
+    if (mediaCall && !pendingIncomingCall) return Promise.resolve(true);
+    voiceEnabledByUser = true;
+    return _getMicStream(_diagSafe).then(function (stream) {
+      if (disposed) return false;
+      if (stream) localMicStream = stream;
+      if (state.role === "agent") {
+        var pending = pendingIncomingCall;
+        if (pending) {
+          pendingIncomingCall = null;
+          try {
+            // Receive-only when the mic is unavailable — never the
+            // silent AudioContext fallback on a deferred session.
+            if (localMicStream) pending.answer(localMicStream);
+            else pending.answer();
+          } catch (e) {
+            log("pending answer failed", e);
+            return false;
+          }
+          _diagSafe("media_call_started");
+          _wireMediaCall(pending);
+          return true;
+        }
+        // No offer yet — the visitor has not started voice. The grant is
+        // remembered (voiceEnabledByUser), so the offer is answered the
+        // moment it arrives.
+        return false;
+      }
+      if (state.role === "visitor") {
+        if (!localMicStream || !peer) return false;
+        var call = null;
+        try {
+          call = peer.call(LIVE_SESSION_AGENT_PREFIX + (state.pin || ""), localMicStream);
+        } catch (e) {
+          log("startVoice call failed", e);
+          return false;
+        }
+        if (!call) return false;
+        _diagSafe("media_call_started");
+        _wireMediaCall(call);
+        return true;
+      }
+      return false;
+    });
+  }
+
+  // Agent-only: send a teleport packet to the connected visitor. Returns
+  // true on a successful send. Silently fails (returns false) when not
+  // in agent role, when no data channel is open, or when the underlying
+  // send throws — callers should treat the boolean as a hint, not as an
+  // ack of delivery.
+  function teleportVisitor(ss, sr) {
+    if (state.role !== "agent") return false;
+    if (!dataConn || !state.isConnected) return false;
+    var ssClean = _coerceString(ss).trim();
+    var srClean = _coerceString(sr).trim();
+    if (!ssClean) return false;
+    var packet = { type: "teleport", ss: ssClean, sr: srClean };
+    try {
+      dataConn.send(packet);
+      _currentViewKey = ssClean + "|" + srClean;
+      return true;
+    } catch (e) {
+      log("send failed", e);
+      return false;
+    }
+  }
+
+  // Visitor-only: hand the agent the visitor's current Matterport
+  // coordinates (typically parsed from the clipboard URL Matterport
+  // emits when the user presses `U` → "Copy to clipboard"). The agent
+  // does NOT auto-teleport on receive — they get a notification and
+  // choose to follow — so this is a soft, opt-in offer over the wire.
+  function shareLocationWithAgent(ss, sr) {
+    if (state.role !== "visitor") return false;
+    if (!dataConn || !state.isConnected) return false;
+    var ssClean = _coerceString(ss).trim();
+    var srClean = _coerceString(sr).trim();
+    if (!ssClean) return false;
+    var packet = { type: "location_share", ss: ssClean, sr: srClean, ts: Date.now() };
+    try {
+      dataConn.send(packet);
+      // Send methods own the sender-side view key (same contract as
+      // teleportVisitor): the visitor shares the view they are standing
+      // in, so their annotation packets must be stamped with it from
+      // this moment — otherwise the agent's filter drops them once the
+      // agent follows.
+      _currentViewKey = ssClean + "|" + srClean;
+      return true;
+    } catch (e) {
+      log("location_share send failed", e);
+      return false;
+    }
+  }
+
+  // Explicit view-key synchronization from the embedding runtime (glue).
+  // The send methods above stamp _currentViewKey on their own successful
+  // outbound sends; this API covers the view changes the controller
+  // cannot see — the glue applying a view locally (applyTeleport for an
+  // inbound teleport/share-follow or a local tour stop). Keeping the key
+  // current on BOTH ends is what lets the annotation receive filter drop
+  // genuinely stale frames without dropping live ones.
+  function noteCurrentView(ss, sr) {
+    var ssClean = _coerceString(ss).trim();
+    var srClean = _coerceString(sr).trim();
+    if (!ssClean) return false;
+    _currentViewKey = ssClean + "|" + srClean;
+    return true;
+  }
+
+  function _canSendAnnotation() {
+    // Bidirectional annotations: both agent and visitor may emit
+    // pointer / stroke / clear / nav_lock packets. _sendSeq and
+    // _lastRecvSeq are per-peer so monotonicity holds either way.
+    return (state.role === "agent" || state.role === "visitor")
+      && !!dataConn && state.isConnected;
+  }
+
+  function _bufferedAmount() {
+    if (!dataConn) return 0;
+    var ba = dataConn.bufferedAmount;
+    return typeof ba === "number" ? ba : 0;
+  }
+
+  function _scheduleFlush() {
+    if (_flushScheduled) return;
+    _flushScheduled = true;
+    try {
+      scheduler(_flushPendingPointer);
+    } catch (e) {
+      _flushScheduled = false;
+      log("scheduler threw", e);
+    }
+  }
+
+  function _flushPendingPointer() {
+    _flushScheduled = false;
+    var p = _pendingPointer;
+    _pendingPointer = null;
+    if (!p) return;
+    if (!_canSendAnnotation()) return;
+    if (_bufferedAmount() > LIVE_SESSION_POINTER_BACKPRESSURE_BYTES) return;
+    var seq = ++_sendSeq;
+    var packet = {
+      type: "pointer",
+      viewKey: _coerceString(p.viewKey),
+      seq: seq,
+      x: typeof p.x === "number" ? p.x : null,
+      y: typeof p.y === "number" ? p.y : null,
+      ts: Date.now(),
+    };
+    try {
+      dataConn.send(packet);
+    } catch (e) {
+      log("pointer send failed", e);
+    }
+  }
+
+  // Agent-only: queue a pointer update. Coalesced through `scheduler`
+  // so a flood of mousemove events still produces at most one packet
+  // per frame. Returns true if the call was queued, false if the
+  // session isn't in a position to send (wrong role, no channel).
+  function sendPointer(viewKey, x, y) {
+    if (!_canSendAnnotation()) return false;
+    _pendingPointer = { viewKey: viewKey, x: x, y: y };
+    _scheduleFlush();
+    return true;
+  }
+
+  function _sendStroke(type, viewKey, strokeId, extra) {
+    if (!_canSendAnnotation()) return false;
+    var sid = _coerceString(strokeId);
+    if (!sid) return false;
+    var seq = ++_sendSeq;
+    var packet = {
+      type: type,
+      viewKey: _coerceString(viewKey),
+      seq: seq,
+      strokeId: sid,
+      ts: Date.now(),
+    };
+    if (extra) {
+      for (var k in extra) {
+        if (Object.prototype.hasOwnProperty.call(extra, k)) packet[k] = extra[k];
+      }
+    }
+    try {
+      dataConn.send(packet);
+      return true;
+    } catch (e) {
+      log("stroke send failed", e);
+      return false;
+    }
+  }
+
+  function sendStrokeBegin(viewKey, strokeId, color, width, points) {
+    var extra = {};
+    if (typeof color === "string") extra.color = color;
+    if (typeof width === "number") extra.width = width;
+    if (Array.isArray(points) && points.length > 0) extra.points = points;
+    return _sendStroke("stroke_begin", viewKey, strokeId, extra);
+  }
+
+  function sendStrokePatch(viewKey, strokeId, points) {
+    if (!Array.isArray(points) || points.length === 0) return false;
+    return _sendStroke("stroke_patch", viewKey, strokeId, { points: points });
+  }
+
+  function sendStrokeCommit(viewKey, strokeId) {
+    return _sendStroke("stroke_commit", viewKey, strokeId, null);
+  }
+
+  function sendClear(viewKey) {
+    if (!_canSendAnnotation()) return false;
+    var seq = ++_sendSeq;
+    var packet = {
+      type: "clear",
+      viewKey: _coerceString(viewKey),
+      seq: seq,
+      ts: Date.now(),
+    };
+    try {
+      dataConn.send(packet);
+      return true;
+    } catch (e) {
+      log("clear send failed", e);
+      return false;
+    }
+  }
+
+  function sendNavLock(viewKey, locked) {
+    if (!_canSendAnnotation()) return false;
+    var seq = ++_sendSeq;
+    var packet = {
+      type: "nav_lock",
+      viewKey: _coerceString(viewKey),
+      locked: locked === true,
+      seq: seq,
+      ts: Date.now(),
+    };
+    try {
+      dataConn.send(packet);
+      return true;
+    } catch (e) {
+      log("nav_lock send failed", e);
+      return false;
+    }
+  }
+
+  // Idempotent erase of one or more committed strokes in a view. The peer
+  // removes any matching ids (no-op for unknown / already-removed ones).
+  function sendStrokeDelete(viewKey, strokeIds) {
+    if (!_canSendAnnotation()) return false;
+    var ids = [];
+    if (Array.isArray(strokeIds)) {
+      for (var i = 0; i < strokeIds.length; i++) {
+        var sid = _coerceString(strokeIds[i]);
+        if (sid) ids.push(sid);
+      }
+    }
+    if (ids.length === 0) return false;
+    var seq = ++_sendSeq;
+    var packet = {
+      type: "stroke_delete",
+      viewKey: _coerceString(viewKey),
+      strokeIds: ids,
+      seq: seq,
+      ts: Date.now(),
+    };
+    try {
+      dataConn.send(packet);
+      return true;
+    } catch (e) {
+      log("stroke_delete send failed", e);
+      return false;
+    }
+  }
+
+  function dispose() {
+    if (disposed) return;
+    disposed = true;
+    listeners.length = 0;
+    if (mediaCall) {
+      try {
+        mediaCall.close();
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (pendingIncomingCall) {
+      try {
+        pendingIncomingCall.close();
+      } catch (e) {
+        // ignore
+      }
+      pendingIncomingCall = null;
+    }
+    voiceEnabledByUser = false;
+    if (dataConn) {
+      try {
+        dataConn.close();
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (localMicStream && typeof localMicStream.getTracks === "function") {
+      try {
+        var tracks = localMicStream.getTracks();
+        for (var i = 0; i < tracks.length; i++) {
+          try {
+            tracks[i].stop();
+          } catch (e) {
+            // ignore
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    if (peer) {
+      try {
+        peer.destroy();
+      } catch (e) {
+        // ignore
+      }
+    }
+    peer = null;
+    dataConn = null;
+    mediaCall = null;
+    localMicStream = null;
+    _sendSeq = 0;
+    _lastRecvSeq = 0;
+    _currentViewKey = "";
+    _pendingPointer = null;
+    _flushScheduled = false;
+    state = {
+      role: null,
+      status: "idle",
+      pin: null,
+      peerId: null,
+      error: null,
+      isConnected: false,
+      remoteStream: null,
+      voiceCallActive: false,
+      incomingTeleportEvent: null,
+      incomingPointerEvent: null,
+      incomingStrokeEvent: null,
+      incomingClearEvent: null,
+      incomingNavLockEvent: null,
+      incomingStrokeDeleteEvent: null,
+      incomingLocationShareEvent: null,
+    };
+  }
+
+  return {
+    getState: getState,
+    subscribe: subscribe,
+    initializeAsAgent: initializeAsAgent,
+    joinAsVisitor: joinAsVisitor,
+    startVoice: startVoice,
+    teleportVisitor: teleportVisitor,
+    shareLocationWithAgent: shareLocationWithAgent,
+    noteCurrentView: noteCurrentView,
+    sendPointer: sendPointer,
+    sendStrokeBegin: sendStrokeBegin,
+    sendStrokePatch: sendStrokePatch,
+    sendStrokeCommit: sendStrokeCommit,
+    sendClear: sendClear,
+    sendNavLock: sendNavLock,
+    sendStrokeDelete: sendStrokeDelete,
+    dispose: dispose,
+  };
+}
+
+
+// Shared mobile-input hardening for the live-tour annotation canvas.
+//
+// Injected (via ?raw + stripExports, same as live-session.mjs) BETWEEN the
+// live-session controller and the surface glue inside the generated HTML
+// IIFE, so the glue can call these helpers as plain locals. Designed to be
+// consumed by BOTH glue surfaces (atlas-live-tour-runtime.mjs today, the
+// portal export glue when it adopts the v2 input path) so the input state
+// machine never forks.
+//
+// Same browser-safety constraints as the sibling runtime .mjs modules
+// (enforced by scripts/verify-portal-html.mjs and the node:test gates):
+// no imports, no TypeScript syntax, no single-quote string literals,
+// ES5-ish style, ONE trailing export block stripped at injection time.
+//
+// What this fixes on iOS/iPadOS (each helper is independent):
+//   - multi-touch corrupting strokes (single-owner pointer guard)
+//   - palm-then-Pencil input fighting (pen takeover with clean commit)
+//   - stuck strokes/ropes after system gestures (cancel-aware ownership)
+//   - jagged 120Hz Pencil ink (coalesced pointer events)
+//   - oversized canvas buffers on 3x phones (device-pixel-ratio clamp)
+//   - misaligned canvas after URL-bar collapse / rotation (visualViewport
+//     + orientationchange bindings)
+
+// Normalize a pointerId for comparison. Real ids may legitimately be 0
+// (Firefox mouse), so null is the only "no owner" sentinel; an undefined
+// id (exotic synthetic events) maps to -1 so claim/owns stay consistent.
+function _annoPointerId(e) {
+  if (!e) return -1;
+  var id = e.pointerId;
+  return id === undefined || id === null ? -1 : id;
+}
+
+// Single-owner gesture guard for the annotation canvas.
+//
+// Rules:
+//   - Only one pointer may own a gesture at a time.
+//   - A non-primary touch can never START a gesture (second finger).
+//   - A pen arriving while a touch owns the gesture takes over (palm
+//     rejection): `onTakeover` fires FIRST so the caller can commit the
+//     in-flight touch stroke cleanly, then the pen claims ownership.
+//   - Everything else while a gesture is active is rejected.
+//
+// options:
+//   onTakeover: function — called synchronously before a pen steals
+//     ownership from a touch. Must leave the surface gesture-free.
+function createAnnoPointerGuard(options) {
+  var opts = options || {};
+  var onTakeover = typeof opts.onTakeover === "function" ? opts.onTakeover : null;
+  var activeId = null;
+  var activeType = "";
+
+  function claim(e) {
+    if (!e) return false;
+    var id = _annoPointerId(e);
+    var type = typeof e.pointerType === "string" ? e.pointerType : "";
+    if (activeId === null) {
+      if (type === "touch" && e.isPrimary === false) return false;
+      activeId = id;
+      activeType = type;
+      return true;
+    }
+    if (type === "pen" && activeType === "touch") {
+      if (onTakeover) {
+        try {
+          onTakeover();
+        } catch (_e) {
+          // the takeover hook must never block the pen from claiming
+        }
+      }
+      activeId = id;
+      activeType = type;
+      return true;
+    }
+    return false;
+  }
+
+  function owns(e) {
+    return activeId !== null && !!e && _annoPointerId(e) === activeId;
+  }
+
+  function release(e) {
+    if (!owns(e)) return false;
+    activeId = null;
+    activeType = "";
+    return true;
+  }
+
+  function reset() {
+    activeId = null;
+    activeType = "";
+  }
+
+  function isActive() {
+    return activeId !== null;
+  }
+
+  function activePointerType() {
+    return activeType;
+  }
+
+  return {
+    claim: claim,
+    owns: owns,
+    release: release,
+    reset: reset,
+    isActive: isActive,
+    activePointerType: activePointerType,
+  };
+}
+
+// Map a pointermove (plus its coalesced history, when the browser exposes
+// one) through `mapFn`, oldest first. A 120Hz Pencil delivers several raw
+// samples per rendered frame; using only the dispatched event drops them
+// and produces visibly segmented ink. Falls back to the single event.
+function annoCollectPoints(e, mapFn) {
+  if (!e || typeof mapFn !== "function") return [];
+  var list = null;
+  try {
+    if (typeof e.getCoalescedEvents === "function") list = e.getCoalescedEvents();
+  } catch (_e) {
+    list = null;
+  }
+  var out = [];
+  if (list && list.length > 0) {
+    for (var i = 0; i < list.length; i++) {
+      var p = mapFn(list[i]);
+      if (p) out.push(p);
+    }
+  }
+  if (out.length === 0) {
+    var single = mapFn(e);
+    if (single) out.push(single);
+  }
+  return out;
+}
+
+// Clamp the device pixel ratio used for canvas buffer sizing. A 3x phone
+// triples the backing-store pixels per CSS pixel in each axis (9x memory
+// + redraw cost) for no visible gain on annotation strokes; 2.5 keeps
+// retina-class sharpness with a bounded buffer. Callers pass a tighter
+// cap (1.5) on iOS, where the WebKit process runs under jetsam limits
+// alongside the Matterport WebGL context.
+function annoClampDpr(raw, max) {
+  var dpr = typeof raw === "number" && isFinite(raw) && raw > 0 ? raw : 1;
+  var cap = typeof max === "number" && isFinite(max) && max > 0 ? max : 2.5;
+  return Math.min(dpr, cap);
+}
+
+// Enforce an absolute backing-store pixel budget on top of the DPR clamp:
+// given the CSS size and a candidate DPR, scale the DPR down so
+// (w*dpr)*(h*dpr) never exceeds maxPixels (RGBA bytes = pixels * 4).
+// Floors at 1 — below-native scaling trades too much stroke quality for
+// memory that the realistic letterbox sizes never need anyway.
+function annoBudgetDpr(cssW, cssH, dpr, maxPixels) {
+  var w = typeof cssW === "number" && isFinite(cssW) && cssW > 0 ? cssW : 1;
+  var h = typeof cssH === "number" && isFinite(cssH) && cssH > 0 ? cssH : 1;
+  var d = typeof dpr === "number" && isFinite(dpr) && dpr > 0 ? dpr : 1;
+  var budget = typeof maxPixels === "number" && isFinite(maxPixels) && maxPixels > 0 ? maxPixels : 4194304;
+  if (w * d * (h * d) <= budget) return d;
+  var scaled = Math.sqrt(budget / (w * h));
+  if (!isFinite(scaled) || scaled <= 0) return 1;
+  return Math.max(1, Math.min(d, scaled));
+}
+
+// iOS / iPadOS WebKit detection — every browser on iOS (Safari, Chrome,
+// Edge, Firefox) is WebKit and shares its clipboard behavior: ANY
+// navigator.clipboard.readText() raises the native Paste callout, which
+// interrupts in-flight canvas gestures. Callers use this to disable all
+// ambient clipboard reads on these devices. Covers:
+//   - classic identifiers (platform/userAgent containing iPhone/iPad/iPod,
+//     which iOS Chrome "CriOS" and Firefox "FxiOS" UAs also carry), and
+//   - iPad "desktop mode", which masquerades as macOS:
+//     platform === "MacIntel" with maxTouchPoints > 1.
+// Fails closed to false (not iOS) — callers that need the safe direction
+// for ambient reads must ALSO gate on the module being present at all.
+function annoIsIosWebKit(nav) {
+  try {
+    var n = nav || (typeof navigator !== "undefined" ? navigator : null);
+    if (!n) return false;
+    var p = typeof n.platform === "string" ? n.platform : "";
+    var ua = typeof n.userAgent === "string" ? n.userAgent : "";
+    if (/iPhone|iPad|iPod/i.test(p)) return true;
+    if (/iPhone|iPad|iPod/i.test(ua)) return true;
+    if (p === "MacIntel" && typeof n.maxTouchPoints === "number" && n.maxTouchPoints > 1) {
+      return true;
+    }
+    return false;
+  } catch (_e) {
+    return false;
+  }
+}
+
+// Best-effort coarse-pointer detection (touch-first devices). Used for
+// runtime affordance sizing (e.g. the Focus Rope latch); the CSS side
+// uses the equivalent @media (pointer: coarse) block.
+function annoIsCoarsePointer(win) {
+  try {
+    var w = win || (typeof window !== "undefined" ? window : null);
+    if (!w || typeof w.matchMedia !== "function") return false;
+    var q = w.matchMedia("(pointer: coarse)");
+    return !!(q && q.matches);
+  } catch (_e) {
+    return false;
+  }
+}
+
+// Collaboration eligibility — the desktop-only Live Tour policy gate.
+// Live Tour / Explore Together (PeerJS, voice, view sync, collaborative
+// Draw / Focus Rope, session PIN) is a DESKTOP-ONLY product. Both family
+// glues call this ONCE at startup; ineligible pages remove every
+// collaboration affordance and never load PeerJS, construct a session,
+// or touch the mic/clipboard.
+//
+// Conservative, fail-closed (any error / missing API => ineligible):
+//   1. UA-Client-Hints says mobile                          -> ineligible
+//   2. Phone/tablet UA or platform markers                  -> ineligible
+//   3. iPadOS desktop mode (MacIntel + maxTouchPoints > 1,
+//      which also covers iPad with a keyboard/trackpad)     -> ineligible
+//   4. Primary pointer not fine, or no hover capability     -> ineligible
+//   5. Primary pointer coarse (belt-and-braces with 4)      -> ineligible
+// A Windows touchscreen laptop stays ELIGIBLE: its primary pointer is
+// fine + hover-capable and it carries no mobile identity, regardless of
+// maxTouchPoints. Viewport width is deliberately not an input.
+function annoCollabEligible(win, nav) {
+  try {
+    var w = win || (typeof window !== "undefined" ? window : null);
+    var n = nav || (typeof navigator !== "undefined" ? navigator : null);
+    if (!w || !n) return false;
+    if (n.userAgentData && n.userAgentData.mobile === true) return false;
+    var ua = typeof n.userAgent === "string" ? n.userAgent : "";
+    if (/Android|iPhone|iPod|iPad|Mobile|Silk|Kindle|Tablet/i.test(ua)) return false;
+    var p = typeof n.platform === "string" ? n.platform : "";
+    if (/iPhone|iPad|iPod/i.test(p)) return false;
+    if (p === "MacIntel" && typeof n.maxTouchPoints === "number" && n.maxTouchPoints > 1) {
+      return false;
+    }
+    if (typeof w.matchMedia !== "function") return false;
+    var fine = w.matchMedia("(pointer: fine)");
+    if (!fine || !fine.matches) return false;
+    var hover = w.matchMedia("(hover: hover)");
+    if (!hover || !hover.matches) return false;
+    var coarse = w.matchMedia("(pointer: coarse)");
+    if (coarse && coarse.matches) return false;
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
+// Bind the viewport-geometry events that a plain window `resize` listener
+// (and an element ResizeObserver) can miss on mobile: visualViewport
+// resize (iOS URL-bar collapse, keyboard, pinch-zoom UI) and
+// orientationchange. Returns an unbind function; binding failures are
+// tolerated (the caller keeps its ResizeObserver path regardless).
+function annoBindViewportEvents(win, cb) {
+  var w = win || (typeof window !== "undefined" ? window : null);
+  if (!w || typeof cb !== "function") {
+    return function () {};
+  }
+  var bound = [];
+  function on(target, ev) {
+    if (!target || typeof target.addEventListener !== "function") return;
+    try {
+      target.addEventListener(ev, cb);
+      bound.push([target, ev]);
+    } catch (_e) {
+      // tolerated — see header
+    }
+  }
+  on(w.visualViewport, "resize");
+  on(w, "orientationchange");
+  return function () {
+    for (var i = 0; i < bound.length; i++) {
+      try {
+        bound[i][0].removeEventListener(bound[i][1], cb);
+      } catch (_e) {
+        // already torn down
+      }
+    }
+    bound.length = 0;
+  };
+}
+
+
+// f3d:runtime-js:kernel END
+// f3d:runtime-js:glue BEGIN v=1 family=atlas
+// Atlas Curated Showcase — "Explore Together" (Shared Tour) runtime glue.
+//
+// Self-contained controller binding for the Atlas curated showcase page.
+// It REUSES the tested createLiveSession() controller (injected verbatim
+// just before this file inside the same <script> via getLiveSessionRuntimeJS)
+// and the shared mobile-input helpers from portal/anno-input.mjs (injected
+// between the controller and this glue via getAnnoInputJS), and wires them
+// to a minimal, portal-free DOM. The wire protocol and the normalized-[0,1]
+// annotation pipeline are identical to the builder export, so the same
+// controller drives both surfaces.
+//
+// Roles map to user-facing language: the controller "agent" is the Host,
+// the controller "visitor" is the Guest. The controller role strings are
+// internal and never shown.
+//
+// Browser-safety constraints (shared with the other runtime .mjs modules,
+// enforced by scripts/verify-portal-html.mjs): NO single-quote string
+// literals, NO import/export, NO TypeScript syntax. Single backslashes are
+// correct here because this file is injected via ?raw, not nested inside a
+// TS template literal.
+//
+// Graceful degradation:
+//   - PeerJS missing / blocked CDN  -> createLiveSession is absent OR
+//     init resolves to an error state; the static tour stays fully usable
+//     and only the Explore Together button is disabled / shows a message.
+//   - Microphone denied / unavailable -> the controller falls back to a
+//     silent track; session + annotation + location sync still work.
+//   - Clipboard read unavailable (Safari/Firefox) -> ambient location sync
+//     degrades silently; everything else is unaffected.
+
+(function initAtlasLiveTour() {
+  if (typeof document === "undefined") return;
+
+  var launchBtn = document.getElementById("lt-launch-btn");
+
+  // Desktop-only Live Tour: collaboration is gated by the shared fail-closed
+  // predicate from the anno-input kernel. Ineligible devices (phones,
+  // tablets, iPad even with a keyboard/trackpad, ambiguous touch-first
+  // environments) get EVERY collaboration affordance removed before any
+  // wiring: no PeerJS download, no session controller, no mic, no clipboard
+  // sync, no annotation surfaces, nothing focusable. Solo viewing, sharing,
+  // fullscreen and PWA behavior are untouched. Fails closed if the kernel
+  // is missing.
+  var COLLAB_ELIGIBLE =
+    typeof annoCollabEligible === "function" &&
+    annoCollabEligible(
+      typeof window !== "undefined" ? window : null,
+      typeof navigator !== "undefined" ? navigator : null,
+    );
+  if (!COLLAB_ELIGIBLE) {
+    var collabIds = [
+      "lt-launch-btn",
+      "lt-panel",
+      "anno-toolbar",
+      "anno-canvas",
+      "remote-pointer",
+      "lt-navlock",
+      "loc-sync",
+      "loc-sync-tips",
+      "lt-audio",
+    ];
+    for (var ci = 0; ci < collabIds.length; ci++) {
+      var cn = document.getElementById(collabIds[ci]);
+      if (!cn) continue;
+      if (cn.parentNode && typeof cn.parentNode.removeChild === "function") {
+        cn.parentNode.removeChild(cn);
+      } else {
+        cn.hidden = true;
+      }
+    }
+    return;
+  }
+
+  // Hard guard: the controller factory is injected just above. If it is
+  // missing (script assembly bug) the page must still work as a plain
+  // tour — disable only the live-tour affordance.
+  if (typeof createLiveSession !== "function") {
+    if (launchBtn) {
+      launchBtn.disabled = true;
+      launchBtn.hidden = false;
+      launchBtn.setAttribute("title", "Live tour unavailable in this browser");
+    }
+    return;
+  }
+  // Eligible desktop: reveal the launch button (ships hidden so ineligible
+  // devices never flash it before this glue runs).
+  if (launchBtn) launchBtn.hidden = false;
+
+  var CONFIG =
+    window.__ATLAS_LT_CONFIG && typeof window.__ATLAS_LT_CONFIG === "object"
+      ? window.__ATLAS_LT_CONFIG
+      : {};
+  var ACCENT = typeof CONFIG.accent === "string" ? CONFIG.accent : "#818cf8";
+  var MP_BASE = typeof CONFIG.matterportBaseUrl === "string" ? CONFIG.matterportBaseUrl : "";
+  var SHARE_TITLE = typeof CONFIG.shareTitle === "string" ? CONFIG.shareTitle : "Frontiers3D Showcase";
+  var STOPS = Array.isArray(CONFIG.stops) ? CONFIG.stops : [];
+
+  // ── Platform + assembly gates (early: the session factory below needs
+  //    them; anno-input.mjs function declarations are hoisted across the
+  //    shared IIFE body, so they are callable here). ───────────────────
+  var ANNO_INPUT_OK =
+    typeof createAnnoPointerGuard === "function" &&
+    typeof annoCollectPoints === "function" &&
+    typeof annoClampDpr === "function" &&
+    typeof annoBudgetDpr === "function" &&
+    typeof annoIsIosWebKit === "function" &&
+    typeof annoIsCoarsePointer === "function" &&
+    typeof annoBindViewportEvents === "function";
+
+  // iOS/iPadOS WebKit (incl. iPad desktop mode and iOS Chrome): drives
+  // the clipboard isolation (ambientClipboardAllowed), the DEFERRED
+  // voice startup, and the tighter canvas DPR + pixel budget.
+  var IS_IOS_WEBKIT =
+    typeof annoIsIosWebKit === "function" ? annoIsIosWebKit(navigator) : false;
+
+  // ── DOM refs ────────────────────────────────────────────────────────
+  var panel = document.getElementById("lt-panel");
+  var panelClose = document.getElementById("lt-panel-close");
+  var roleChoose = document.getElementById("lt-role-choose");
+  var hostStartBtn = document.getElementById("lt-host-start-btn");
+  var guestChooseBtn = document.getElementById("lt-guest-choose-btn");
+  var hostBlock = document.getElementById("lt-host-block");
+  var guestBlock = document.getElementById("lt-guest-block");
+  var pinValue = document.getElementById("lt-pin-value");
+  var pinInput = document.getElementById("lt-pin-input");
+  var joinBtn = document.getElementById("lt-join-btn");
+  var hostStatus = document.getElementById("lt-host-status");
+  var guestStatus = document.getElementById("lt-guest-status");
+  var inviteBtn = document.getElementById("lt-invite-btn");
+  var inviteStatus = document.getElementById("lt-invite-status");
+  var backLinks = document.querySelectorAll(".lt-back-link");
+  var stopsWrap = document.getElementById("lt-stops");
+  var leaveBtns = document.querySelectorAll(".lt-leave-btn");
+  var statusChip = document.getElementById("lt-status-chip");
+  var audioEl = document.getElementById("lt-audio");
+
+  // Annotation overlay refs.
+  var letterboxWrap = document.getElementById("anno-letterbox-wrap");
+  var frame = document.getElementById("matterport-frame");
+  var annoCanvas = document.getElementById("anno-canvas");
+  var annoCtx = annoCanvas ? annoCanvas.getContext("2d") : null;
+  var annoToolbar = document.getElementById("anno-toolbar");
+  var remotePointer = document.getElementById("remote-pointer");
+  var clearBtn = document.getElementById("anno-clear-btn");
+  var navlockEl = document.getElementById("lt-navlock");
+
+  // Location-sync pill refs.
+  var syncBtn = document.getElementById("loc-sync");
+  var syncLabelEl = syncBtn ? syncBtn.querySelector(".loc-sync-label") : null;
+  var tipsEl = document.getElementById("loc-sync-tips");
+
+  // Live-session extras: voice status + manual paste-to-sync fallback. Shown
+  // once a tour is connected; the manual field is the safety net for browsers
+  // where clipboard read is blocked or unavailable.
+  var liveExtras = document.getElementById("lt-live-extras");
+  var voiceStatus = document.getElementById("lt-voice-status");
+  var enableVoiceBtn = document.getElementById("lt-enable-voice-btn");
+  var diagEl = document.getElementById("lt-diag");
+  // True between a startVoice() that began a call and either a remote
+  // stream arriving or the attempt dying — drives the retry re-enable.
+  var voiceAttemptPending = false;
+  var voiceConnected = false;
+
+  // ── Diagnostic milestones (P0 iPad crash instrumentation) ───────────
+  // Persisted to sessionStorage so a tab crash/reload still reveals the
+  // LAST completed step of the connect transition. Controller milestones
+  // (data_connected, mic_requested/granted/denied, media_call_started,
+  // remote_stream) arrive via the onDiagnostic hook; glue milestones
+  // (layout_started, canvas_allocated, audio_playing) are marked direct.
+  var MILESTONE_LOG_KEY = "f3d_lt_milestone_log";
+  var MILESTONE_LAST_KEY = "f3d_lt_last_milestone";
+
+  // Notify the embedding Atlas app (parent window) that an interaction
+  // needing stable touch gestures has begun — Draw / Focus Rope / pointer
+  // tool selection, or a live session connecting. The parent uses this to
+  // drop out of native Device fullscreen into Maximize on iPad (iPadOS
+  // swipe-exit would otherwise collapse native fullscreen mid-draw). Uses
+  // the same f3d: postMessage namespace as the share-url bridge. No-op
+  // when there is no distinct parent (showcase opened directly, not in the
+  // Atlas modal). The parent half is origin-checked via event.source.
+  function emitInteractionActive() {
+    try {
+      if (typeof window === "undefined") return;
+      if (!window.parent || window.parent === window) return;
+      window.parent.postMessage({ type: "f3d:interaction-active" }, "*");
+    } catch (_e) {}
+  }
+
+  function markMilestone(name) {
+    try {
+      if (!window.sessionStorage) return;
+      window.sessionStorage.setItem(MILESTONE_LAST_KEY, String(name) + "@" + Date.now());
+      var raw = window.sessionStorage.getItem(MILESTONE_LOG_KEY);
+      var arr;
+      try {
+        arr = raw ? JSON.parse(raw) : [];
+      } catch (_e) {
+        arr = [];
+      }
+      if (!Array.isArray(arr)) arr = [];
+      arr.push({ m: String(name), ts: Date.now() });
+      if (arr.length > 40) arr = arr.slice(arr.length - 40);
+      window.sessionStorage.setItem(MILESTONE_LOG_KEY, JSON.stringify(arr));
+    } catch (_e) {}
+  }
+  function resetMilestoneLog() {
+    try {
+      if (!window.sessionStorage) return;
+      window.sessionStorage.removeItem(MILESTONE_LOG_KEY);
+      window.sessionStorage.setItem(MILESTONE_LAST_KEY, "session_starting@" + Date.now());
+    } catch (_e) {}
+  }
+  // Crash forensics: if a previous session in this tab recorded
+  // milestones, surface the last one reached in the panel.
+  (function reportPriorMilestone() {
+    try {
+      if (!window.sessionStorage || !diagEl) return;
+      var last = window.sessionStorage.getItem(MILESTONE_LAST_KEY);
+      if (!last) return;
+      diagEl.textContent = "Previous live-tour session reached: " + String(last).split("@")[0];
+      diagEl.hidden = false;
+    } catch (_e) {}
+  })();
+
+  // Lazy PeerJS (pinned + SRI, declared inert in the head dep span):
+  // downloaded ONLY when this eligible desktop user actually hosts or
+  // joins a tour. Concurrent Host/Join clicks share one promise; a
+  // failure or 12s timeout resets it so the next click retries, with the
+  // error surfaced on the role status line. The controller receives a
+  // forwarding constructor so it can be built now (network-inert) and
+  // still pick up the lazily-loaded Peer global at connect time.
+  var peerJsPromise = null;
+  function ensurePeerJs() {
+    if (typeof Peer === "function") return Promise.resolve(true);
+    if (peerJsPromise) return peerJsPromise;
+    peerJsPromise = new Promise(function (resolve, reject) {
+      var cfg = document.getElementById("f3d-peerjs-loader");
+      var src = cfg && typeof cfg.getAttribute === "function" ? cfg.getAttribute("data-src") : null;
+      if (!src) {
+        reject(new Error("PeerJS loader config missing"));
+        return;
+      }
+      var s = document.createElement("script");
+      s.src = src;
+      var integ = cfg.getAttribute("data-integrity");
+      if (integ) s.integrity = integ;
+      var cross = cfg.getAttribute("data-crossorigin");
+      if (cross) s.crossOrigin = cross;
+      var done = false;
+      // Failure cleanup: clear the watchdog, detach handlers (so a late
+      // load/error from this dead element is doubly inert on top of the done
+      // guard), and remove the failed <script> from the DOM so a retry never
+      // stacks tags.
+      function cleanup() {
+        try {
+          clearTimeout(timer);
+        } catch (_e) {}
+        s.onload = null;
+        s.onerror = null;
+        try {
+          if (s.parentNode && typeof s.parentNode.removeChild === "function") {
+            s.parentNode.removeChild(s);
+          }
+        } catch (_e) {}
+      }
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(new Error("PeerJS load timed out"));
+      }, 12000);
+      s.onload = function () {
+        if (done) return;
+        done = true;
+        if (typeof Peer === "function") {
+          try {
+            clearTimeout(timer);
+          } catch (_e) {}
+          resolve(true);
+        } else {
+          cleanup();
+          reject(new Error("PeerJS loaded without a Peer global"));
+        }
+      };
+      s.onerror = function () {
+        if (done) return;
+        done = true;
+        cleanup();
+        reject(new Error("PeerJS failed to load"));
+      };
+      (document.head || document.documentElement).appendChild(s);
+    });
+    peerJsPromise.then(null, function () {
+      peerJsPromise = null;
+    });
+    return peerJsPromise;
+  }
+  function lazyPeerCtor(id) {
+    return new Peer(id);
+  }
+
+  // Session factory: every (re)creation carries the same policy — voice
+  // is DEFERRED on iOS (no automatic getUserMedia / AudioContext / media
+  // call during the connect transition; see the Enable voice button) and
+  // the controller reports diagnostic milestones via markMilestone.
+  function newSession() {
+    return createLiveSession({
+      deferVoice: IS_IOS_WEBKIT,
+      onDiagnostic: markMilestone,
+      PeerCtor: lazyPeerCtor,
+    });
+  }
+  var session = newSession();
+  var lastTeleportTs = 0;
+  var lastShareTs = 0;
+  var wasConnected = false;
+
+  // ── Annotation state (normalized [0,1] over the 16:9 letterbox) ──────
+  var ANNO_STROKE_COLOR = "#ff3b30";
+  var ANNO_STROKE_WIDTH = 0.004;
+  var ANNO_REMOTE_POINTER_TIMEOUT_MS = 2500;
+  var ANNO_ROPE_SHAPE = "circle";
+  var ANNO_ROPE_SHAPE_WHITELIST = { circle: 1, box: 1 };
+  var ANNO_COLOR_WHITELIST = { "#ff3b30": 1, "#1e90ff": 1, "#22c55e": 1, "#ffffff": 1 };
+  var ANNO_ROPE_CIRCLE_SAMPLES = 48;
+  var ANNO_LATCH_PX = 10;
+  // iPhone/iPad run under jetsam memory limits next to the Matterport
+  // WebGL context: tighter DPR cap plus an absolute backing-store pixel
+  // budget (RGBA bytes = pixels * 4). Desktop keeps retina sharpness.
+  var ANNO_DPR_MAX = IS_IOS_WEBKIT ? 1.5 : 2.5;
+  var ANNO_PIXEL_BUDGET = IS_IOS_WEBKIT ? 4194304 : 9437184;
+
+  // Coarse-pointer (touch-first) detection drives runtime affordance
+  // sizing (latch size/hit radius); the CSS @media (pointer: coarse)
+  // block handles the toolbar/panel controls.
+  var IS_COARSE_POINTER =
+    typeof annoIsCoarsePointer === "function" ? annoIsCoarsePointer(window) : false;
+  var ANNO_LATCH_DRAW_PX = IS_COARSE_POINTER ? 14 : ANNO_LATCH_PX;
+
+  var toolMode = "none";
+  var currentViewKey = "";
+  var localStrokes = [];
+  var activeStroke = null;
+  var pendingStrokePoints = null;
+  var pendingStrokeId = null;
+  var strokeFlushScheduled = false;
+  var lastPointerSeq = 0;
+  var lastStrokeSeq = 0;
+  var lastClearSeq = 0;
+  var lastNavLockSeq = 0;
+  var lastStrokeDeleteSeq = 0;
+  var remotePointerHideTimer = null;
+  // Shared annotation "floor": a gesture-scoped, invisible turn lock carried
+  // on the existing nav_lock message. While the PEER holds it
+  // (remoteGestureActive) this side won't START a new Draw/Rope/Eraser gesture
+  // and its Matterport is frozen; the instant the peer's gesture ends
+  // (nav_lock:false or the bounded safety timeout) annotation + navigation
+  // free up again. Engaged per-gesture (pointerdown), released on every
+  // gesture-end path. No visible turn UI.
+  var FLOOR_SAFETY_MS = 8000;
+  // Keepalive cadence — comfortably below FLOOR_SAFETY_MS so the peer's remote
+  // watchdog is always re-armed well before it can expire mid-gesture.
+  var FLOOR_HEARTBEAT_MS = Math.floor(FLOOR_SAFETY_MS / 3);
+  var remoteGestureActive = false;
+  var remoteFloorTimer = null;
+  var localFloorHeld = false;
+  var localFloorTimer = null;
+  var lastFloorHeartbeatTs = 0;
+  // Eraser tool: tap- or drag-delete of committed strokes (geometric hit
+  // test). eraserDeletedIds dedupes a drag so each stroke is removed once.
+  var ANNO_ERASER_TOLERANCE_PX = 12;
+  var eraserActive = false;
+  var eraserDeletedIds = null;
+  var activeRope = null;
+  var ropeDragging = false;
+  var ropeLatchDragging = false;
+  var ropeFlushScheduled = false;
+  var ropeMoveDragging = false;
+  var ropeMoveLast = null;
+  var annoAppliedDpr = 1;
+  var canvasAllocated = false;
+  var lastCanvasW = 0;
+  var lastCanvasH = 0;
+  var lastCanvasDpr = 0;
+  var canvasResizeScheduled = false;
+
+  // Single-owner pointer guard (anno-input.mjs, injected just above this
+  // glue). FAIL CLOSED if script assembly ever regresses (Codex review
+  // 2026-06-06): a permissive fallback would silently restore the unsafe
+  // multi-touch behavior the guard exists to prevent, so when any helper
+  // is missing the Draw / Focus Rope tools are disabled outright (see
+  // setToolMode + the toolbar disable block below) while Matterport
+  // viewing, voice, pointer, clear, and location sync stay fully
+  // functional — the same shape as the createLiveSession hard guard.
+  // finalizeActiveGesture is a hoisted declaration (rope helpers below);
+  // ANNO_INPUT_OK / IS_IOS_WEBKIT are computed early, above the session
+  // factory.
+  var annoGuard = ANNO_INPUT_OK
+    ? createAnnoPointerGuard({ onTakeover: finalizeActiveGesture })
+    : null;
+
+  function collectNormPoints(e) {
+    if (typeof annoCollectPoints === "function") return annoCollectPoints(e, clientToNorm);
+    return [clientToNorm(e)];
+  }
+
+  function clampedDpr() {
+    var raw = window.devicePixelRatio || 1;
+    if (typeof annoClampDpr === "function") return annoClampDpr(raw, ANNO_DPR_MAX);
+    return Math.min(raw, ANNO_DPR_MAX);
+  }
+
+  // ── Small helpers ───────────────────────────────────────────────────
+  function setText(el, text) {
+    if (el) el.textContent = text;
+  }
+  function show(el) {
+    if (el) el.hidden = false;
+  }
+  function hide(el) {
+    if (el) el.hidden = true;
+  }
+  function shareUrl() {
+    try {
+      return String(window.location.href).split("#")[0];
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function openPanel() {
+    if (panel) panel.classList.add("open");
+    if (launchBtn) launchBtn.setAttribute("aria-expanded", "true");
+  }
+  function closePanel() {
+    if (panel) panel.classList.remove("open");
+    if (launchBtn) launchBtn.setAttribute("aria-expanded", "false");
+  }
+  function togglePanel() {
+    if (panel && panel.classList.contains("open")) closePanel();
+    else openPanel();
+  }
+
+  function setHudButtonState(state) {
+    if (!launchBtn) return;
+    launchBtn.classList.remove("is-waiting", "connected");
+    if (state.isConnected) launchBtn.classList.add("connected");
+    else if (
+      state.status === "waiting" ||
+      state.status === "connecting" ||
+      state.status === "initializing"
+    ) {
+      launchBtn.classList.add("is-waiting");
+    }
+  }
+
+  function showRoleChoose() {
+    show(roleChoose);
+    hide(hostBlock);
+    hide(guestBlock);
+  }
+
+  function resetUiToIdle() {
+    showRoleChoose();
+    if (joinBtn) joinBtn.disabled = false;
+    if (hostStartBtn) hostStartBtn.disabled = false;
+    if (pinInput) pinInput.value = "";
+    if (pinValue) pinValue.textContent = "----";
+    setText(hostStatus, "");
+    setText(guestStatus, "");
+    setText(inviteStatus, "");
+    if (stopsWrap) stopsWrap.innerHTML = "";
+    if (statusChip) statusChip.hidden = true;
+    if (audioEl) {
+      try {
+        audioEl.srcObject = null;
+      } catch (_e) {}
+    }
+    hide(liveExtras);
+    setVoiceStatus("", "off");
+    voiceConnected = false;
+    voiceAttemptPending = false;
+    if (enableVoiceBtn) {
+      enableVoiceBtn.hidden = true;
+      enableVoiceBtn.disabled = false;
+    }
+  }
+
+  // ── Letterbox / body-class engagement ───────────────────────────────
+  function setBodyLetterboxClass(active, isHost) {
+    if (!document || !document.body) return;
+    if (active) {
+      document.body.classList.add("live-tour-active");
+      if (isHost) {
+        document.body.classList.add("live-tour-host");
+        document.body.classList.remove("live-tour-guest");
+      } else {
+        document.body.classList.add("live-tour-guest");
+        document.body.classList.remove("live-tour-host");
+      }
+    } else {
+      document.body.classList.remove("live-tour-active");
+      document.body.classList.remove("live-tour-host");
+      document.body.classList.remove("live-tour-guest");
+    }
+  }
+
+  // ── Annotation rendering ────────────────────────────────────────────
+  function setToolMode(mode) {
+    // Fail closed: gesture tools require the anno-input guard. Gating
+    // here covers the toolbar, the hotkeys, and any future entry point.
+    if ((mode === "draw" || mode === "rope") && !ANNO_INPUT_OK) return;
+    var prev = toolMode;
+    toolMode = mode;
+    if (annoCanvas) {
+      annoCanvas.classList.remove("pointer-mode", "draw-mode", "rope-mode", "eraser-mode");
+      if (mode === "pointer") annoCanvas.classList.add("pointer-mode");
+      else if (mode === "draw") annoCanvas.classList.add("draw-mode");
+      else if (mode === "rope") annoCanvas.classList.add("rope-mode");
+      else if (mode === "eraser") annoCanvas.classList.add("eraser-mode");
+    }
+    if (annoToolbar) {
+      var btns = annoToolbar.querySelectorAll(".anno-tool-btn[data-tool]");
+      for (var i = 0; i < btns.length; i++) {
+        var b = btns[i];
+        if (b.getAttribute("data-tool") === mode) b.classList.add("active");
+        else b.classList.remove("active");
+      }
+    }
+    if (mode === "draw" || mode === "rope") ensureAnnoCanvasAllocated();
+    if (mode === "pointer" || mode === "draw" || mode === "rope" || mode === "eraser") emitInteractionActive();
+    try {
+      document.body.classList.toggle("anno-rope-active", mode === "rope");
+      // Stage gesture hardening (wrapper touch-action/user-select, the
+      // stage-event kills) engages ONLY while a tool is active so
+      // Matterport navigation is untouched otherwise (2.0.2 wrapper fix).
+      document.body.classList.toggle(
+        "anno-tool-active",
+        mode === "pointer" || mode === "draw" || mode === "rope" || mode === "eraser",
+      );
+    } catch (_e) {}
+    if (prev !== "rope" && mode === "rope") {
+      try {
+        var sel = document.getElementById("anno-shape-select");
+        if (sel) {
+          sel.focus();
+          if (typeof sel.showPicker === "function") sel.showPicker();
+        }
+      } catch (_e) {}
+    }
+    if (prev === "pointer" && mode !== "pointer") {
+      var s = session.getState();
+      if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+        session.sendPointer(currentViewKey, null, null);
+      }
+    }
+    if (prev === "rope" && mode !== "rope") {
+      commitActiveRope();
+    }
+    // The peer-freeze is now GESTURE-scoped (the shared annotation floor),
+    // engaged on pointerdown and released on gesture end — not tied to which
+    // tool is selected. A tool change just ends any floor this side holds;
+    // navigation stays normal between gestures (both peers free).
+    try {
+      releaseLocalFloor();
+    } catch (_e) {}
+  }
+
+  // LAZY canvas allocation (P0 iPad fix): the backing store is NOT
+  // allocated when the PIN connects — that transition already carries
+  // WebRTC setup and the letterbox layout flip. The buffer is created on
+  // first need (Draw/Focus Rope selected, or a remote stroke arrives)
+  // and reallocated only when geometry/DPR actually changed.
+  function ensureAnnoCanvasAllocated() {
+    if (canvasAllocated) return;
+    canvasAllocated = true;
+    markMilestone("canvas_allocated");
+    resizeAnnoCanvas();
+  }
+
+  function resizeAnnoCanvas() {
+    if (!canvasAllocated) return;
+    if (!annoCanvas || !letterboxWrap || !annoCtx) return;
+    var rect = letterboxWrap.getBoundingClientRect();
+    var w = Math.max(1, Math.round(rect.width));
+    var h = Math.max(1, Math.round(rect.height));
+    var dpr = clampedDpr();
+    if (typeof annoBudgetDpr === "function") dpr = annoBudgetDpr(w, h, dpr, ANNO_PIXEL_BUDGET);
+    // Dedupe: ResizeObserver, visualViewport, and orientation events can
+    // fire together for one geometry change, and assigning canvas.width
+    // reallocates (and clears) the buffer even with an unchanged value.
+    if (w === lastCanvasW && h === lastCanvasH && dpr === lastCanvasDpr) return;
+    lastCanvasW = w;
+    lastCanvasH = h;
+    lastCanvasDpr = dpr;
+    annoAppliedDpr = dpr;
+    annoCanvas.width = Math.max(1, Math.round(w * dpr));
+    annoCanvas.height = Math.max(1, Math.round(h * dpr));
+    annoCanvas.style.width = w + "px";
+    annoCanvas.style.height = h + "px";
+    try {
+      annoCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    } catch (_e) {}
+    redrawAllStrokes();
+  }
+
+  // Coalesce the resize triggers through one frame so simultaneous
+  // observer callbacks produce at most one reallocation.
+  function scheduleCanvasResize() {
+    if (!canvasAllocated) return;
+    if (canvasResizeScheduled) return;
+    canvasResizeScheduled = true;
+    var raf =
+      window.requestAnimationFrame ||
+      function (cb) {
+        return setTimeout(cb, 16);
+      };
+    raf(function () {
+      canvasResizeScheduled = false;
+      resizeAnnoCanvas();
+    });
+  }
+
+  // Free the backing store on teardown so an ended tour leaves no
+  // multi-megabyte buffer behind on memory-constrained devices.
+  function releaseAnnoCanvas() {
+    canvasAllocated = false;
+    lastCanvasW = 0;
+    lastCanvasH = 0;
+    lastCanvasDpr = 0;
+    annoAppliedDpr = 1;
+    if (annoCanvas) {
+      try {
+        annoCanvas.width = 1;
+        annoCanvas.height = 1;
+        annoCanvas.style.width = "";
+        annoCanvas.style.height = "";
+      } catch (_e) {}
+    }
+  }
+
+  function redrawAllStrokes() {
+    if (!canvasAllocated) return;
+    if (!annoCtx || !annoCanvas) return;
+    // Back out the SAME (clamped) ratio resizeAnnoCanvas applied — using
+    // the raw devicePixelRatio here would misscale on capped displays.
+    var dpr = annoAppliedDpr || 1;
+    var w = annoCanvas.width / dpr;
+    var h = annoCanvas.height / dpr;
+    annoCtx.clearRect(0, 0, w, h);
+    for (var i = 0; i < localStrokes.length; i++) drawStroke(localStrokes[i], w, h);
+    if (activeStroke) drawStroke(activeStroke, w, h);
+    if (activeRope) drawRopeLatch(activeRope, w, h);
+  }
+
+  function drawStroke(stroke, w, h) {
+    if (!stroke || !stroke.points || stroke.points.length === 0) return;
+    var color = stroke.color || ANNO_STROKE_COLOR;
+    var width = typeof stroke.width === "number" ? stroke.width : ANNO_STROKE_WIDTH;
+    annoCtx.strokeStyle = color;
+    annoCtx.lineWidth = Math.max(1, width * w);
+    annoCtx.lineCap = "round";
+    annoCtx.lineJoin = "round";
+    annoCtx.beginPath();
+    var p0 = stroke.points[0];
+    annoCtx.moveTo(p0[0] * w, p0[1] * h);
+    if (stroke.points.length === 1) {
+      annoCtx.lineTo(p0[0] * w + 0.01, p0[1] * h + 0.01);
+    } else {
+      for (var i = 1; i < stroke.points.length; i++) {
+        var p = stroke.points[i];
+        annoCtx.lineTo(p[0] * w, p[1] * h);
+      }
+    }
+    annoCtx.stroke();
+  }
+
+  function findLocalStroke(id) {
+    for (var i = 0; i < localStrokes.length; i++) {
+      if (localStrokes[i].strokeId === id) return localStrokes[i];
+    }
+    return null;
+  }
+
+  function clientToNorm(e) {
+    if (!letterboxWrap) return { x: 0, y: 0 };
+    var rect = letterboxWrap.getBoundingClientRect();
+    var w = rect.width || 1;
+    var h = rect.height || 1;
+    var x = (e.clientX - rect.left) / w;
+    var y = (e.clientY - rect.top) / h;
+    if (x < 0) x = 0;
+    else if (x > 1) x = 1;
+    if (y < 0) y = 0;
+    else if (y > 1) y = 1;
+    return { x: x, y: y };
+  }
+
+  function scheduleStrokeFlush() {
+    if (strokeFlushScheduled) return;
+    strokeFlushScheduled = true;
+    var raf =
+      window.requestAnimationFrame ||
+      function (cb) {
+        return setTimeout(cb, 16);
+      };
+    raf(function () {
+      strokeFlushScheduled = false;
+      if (!pendingStrokeId || !pendingStrokePoints || pendingStrokePoints.length === 0) return;
+      var batch = pendingStrokePoints;
+      pendingStrokePoints = [];
+      session.sendStrokePatch(currentViewKey, pendingStrokeId, batch);
+    });
+  }
+
+  // ── Focus Rope helpers (rendered as polylines so they ride the normal
+  //    stroke pipeline; the latch is a local affordance only) ──────────
+  function ropeBBox(rope) {
+    var x0 = Math.min(rope.x0, rope.x1),
+      y0 = Math.min(rope.y0, rope.y1);
+    var x1 = Math.max(rope.x0, rope.x1),
+      y1 = Math.max(rope.y0, rope.y1);
+    return { x0: x0, y0: y0, x1: x1, y1: y1 };
+  }
+  function ropeToPoints(rope) {
+    var b = ropeBBox(rope);
+    var cx = (b.x0 + b.x1) / 2,
+      cy = (b.y0 + b.y1) / 2;
+    var rx = (b.x1 - b.x0) / 2,
+      ry = (b.y1 - b.y0) / 2;
+    var out = [];
+    if (rope.shape === "box") {
+      out.push([b.x0, b.y0]);
+      out.push([b.x1, b.y0]);
+      out.push([b.x1, b.y1]);
+      out.push([b.x0, b.y1]);
+      out.push([b.x0, b.y0]);
+    } else {
+      var n = ANNO_ROPE_CIRCLE_SAMPLES;
+      for (var i = 0; i <= n; i++) {
+        var t = (i / n) * Math.PI * 2;
+        var x = cx + Math.cos(t) * rx;
+        var y = cy + Math.sin(t) * ry;
+        if (x < 0) x = 0;
+        else if (x > 1) x = 1;
+        if (y < 0) y = 0;
+        else if (y > 1) y = 1;
+        out.push([x, y]);
+      }
+    }
+    return out;
+  }
+  function ropeLatchPos(rope) {
+    var b = ropeBBox(rope);
+    return { x: b.x1, y: b.y1 };
+  }
+  function ropePointInBBox(rope, pt) {
+    var b = ropeBBox(rope);
+    return pt.x >= b.x0 && pt.x <= b.x1 && pt.y >= b.y0 && pt.y <= b.y1;
+  }
+  // Latch hit radius: 24px (48px target) for touch/pen so the resize
+  // handle meets the 44px minimum; mouse keeps the precise 20px zone.
+  function latchHitRadiusPx(e) {
+    var t = e && typeof e.pointerType === "string" ? e.pointerType : "";
+    if (t === "touch" || t === "pen" || IS_COARSE_POINTER) return 24;
+    return ANNO_LATCH_PX * 2;
+  }
+  function drawRopeLatch(rope, w, h) {
+    if (!annoCtx) return;
+    var lp = ropeLatchPos(rope);
+    var px = lp.x * w,
+      py = lp.y * h;
+    var r = Math.max(5, Math.min(ANNO_LATCH_DRAW_PX, 16));
+    annoCtx.beginPath();
+    annoCtx.arc(px, py, r, 0, Math.PI * 2);
+    annoCtx.fillStyle = rope.color || ANNO_STROKE_COLOR;
+    annoCtx.fill();
+    annoCtx.lineWidth = 2;
+    annoCtx.strokeStyle = "#ffffff";
+    annoCtx.stroke();
+  }
+  function ropeRegenerate(rope) {
+    rope.points = ropeToPoints(rope);
+  }
+  function scheduleRopeFlush() {
+    if (ropeFlushScheduled) return;
+    ropeFlushScheduled = true;
+    var raf =
+      window.requestAnimationFrame ||
+      function (cb) {
+        return setTimeout(cb, 16);
+      };
+    raf(function () {
+      ropeFlushScheduled = false;
+      if (!activeRope) return;
+      var s = session.getState();
+      if ((s.role !== "agent" && s.role !== "visitor") || !s.isConnected) return;
+      session.sendStrokeBegin(
+        currentViewKey,
+        activeRope.strokeId,
+        activeRope.color,
+        activeRope.width,
+        activeRope.points,
+      );
+    });
+  }
+  function commitActiveRope() {
+    if (!activeRope) return;
+    var s = session.getState();
+    if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+      session.sendStrokeBegin(
+        currentViewKey,
+        activeRope.strokeId,
+        activeRope.color,
+        activeRope.width,
+        activeRope.points,
+      );
+      session.sendStrokeCommit(currentViewKey, activeRope.strokeId);
+    }
+    activeRope.committed = true; // sealed rope is now erasable (same obj in localStrokes)
+    activeRope = null;
+    ropeDragging = false;
+    ropeLatchDragging = false;
+    ropeMoveDragging = false;
+    ropeMoveLast = null;
+    redrawAllStrokes();
+  }
+
+  // Finish the in-flight freehand stroke: flush queued points, commit on
+  // the wire, and promote it to localStrokes. Idempotent (no-op when no
+  // stroke is active) so pointerup / pointercancel / lostpointercapture
+  // can all route here without double-sending.
+  function finishActiveDraw() {
+    if (!activeStroke) return;
+    if (pendingStrokePoints && pendingStrokePoints.length > 0) {
+      session.sendStrokePatch(currentViewKey, pendingStrokeId, pendingStrokePoints);
+    }
+    pendingStrokePoints = null;
+    session.sendStrokeCommit(currentViewKey, activeStroke.strokeId);
+    activeStroke.committed = true; // eligible for the eraser only once sealed
+    localStrokes.push(activeStroke);
+    activeStroke = null;
+    pendingStrokeId = null;
+  }
+
+  // End the in-flight rope drag (initial draw / latch-resize / move) and
+  // resend the final shape. The rope itself stays active so its latch
+  // remains grabbable; commitActiveRope() seals it on tool exit.
+  function finishActiveRopeDrag() {
+    if (!activeRope) return;
+    if (!ropeDragging && !ropeLatchDragging && !ropeMoveDragging) return;
+    ropeDragging = false;
+    ropeLatchDragging = false;
+    ropeMoveDragging = false;
+    ropeMoveLast = null;
+    var s = session.getState();
+    if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+      session.sendStrokeBegin(
+        currentViewKey,
+        activeRope.strokeId,
+        activeRope.color,
+        activeRope.width,
+        activeRope.points,
+      );
+    }
+    redrawAllStrokes();
+  }
+
+  // Commit-or-abort for pen takeover, pointercancel, and
+  // lostpointercapture. We COMMIT the in-flight gesture: the remote side
+  // already holds its begin/patch packets, so committing is the only path
+  // that leaves no orphan stroke on either end.
+  function finalizeActiveGesture() {
+    if (toolMode === "draw") finishActiveDraw();
+    else if (toolMode === "rope") finishActiveRopeDrag();
+  }
+
+  function wipeAnnotations() {
+    localStrokes = [];
+    activeStroke = null;
+    pendingStrokeId = null;
+    pendingStrokePoints = null;
+    activeRope = null;
+    ropeDragging = false;
+    ropeLatchDragging = false;
+    ropeMoveDragging = false;
+    ropeMoveLast = null;
+    eraserActive = false;
+    eraserDeletedIds = null;
+    if (annoGuard) annoGuard.reset();
+    if (remotePointer) remotePointer.style.display = "none";
+    if (remotePointerHideTimer) {
+      try {
+        clearTimeout(remotePointerHideTimer);
+      } catch (_e) {}
+      remotePointerHideTimer = null;
+    }
+    redrawAllStrokes();
+  }
+
+  function applyNavLock(locked) {
+    try {
+      if (!navlockEl) return;
+      if (locked) navlockEl.classList.add("locked");
+      else navlockEl.classList.remove("locked");
+    } catch (_e) {}
+  }
+
+  // ── Shared annotation floor (gesture-scoped, invisible) ─────────────
+  // acquireLocalFloor: call at the START of a Draw/Rope/Eraser gesture.
+  // Returns false (caller bails) when the peer holds the floor — the
+  // invisible sequential-annotation rule. On success it broadcasts
+  // nav_lock(true) so the peer freezes its Matterport and won't begin a
+  // competing gesture, and arms a bounded local safety timeout.
+  function acquireLocalFloor() {
+    if (remoteGestureActive) return false;
+    if (!localFloorHeld) {
+      localFloorHeld = true;
+      lastFloorHeartbeatTs = Date.now(); // the initial lock is the first beat
+      var s = session.getState();
+      if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+        session.sendNavLock(currentViewKey, true);
+      }
+    }
+    if (localFloorTimer) {
+      try {
+        clearTimeout(localFloorTimer);
+      } catch (_e) {}
+    }
+    localFloorTimer = setTimeout(function () {
+      releaseLocalFloor();
+    }, FLOOR_SAFETY_MS);
+    return true;
+  }
+  // releaseLocalFloor: idempotent; call on EVERY gesture-end path (pointerup,
+  // pointercancel, lostpointercapture, tool change, disconnect) and from the
+  // safety timeout. Broadcasts nav_lock(false) so the peer frees immediately.
+  function releaseLocalFloor() {
+    if (localFloorTimer) {
+      try {
+        clearTimeout(localFloorTimer);
+      } catch (_e) {}
+      localFloorTimer = null;
+    }
+    lastFloorHeartbeatTs = 0; // stop heartbeats; next gesture starts a fresh cadence
+    if (!localFloorHeld) return;
+    localFloorHeld = false;
+    var s = session.getState();
+    if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+      session.sendNavLock(currentViewKey, false);
+    }
+  }
+  // Push the safety watchdog out on owned-gesture activity so a long but
+  // healthy stroke/rope/erase keeps the floor for its whole duration. The
+  // timeout only fires ~FLOOR_SAFETY_MS after activity actually STOPS — the
+  // genuine "pointerup/cancel never arrived" crash case — not mid-gesture.
+  function refreshLocalFloor() {
+    if (!localFloorHeld) return;
+    if (localFloorTimer) {
+      try {
+        clearTimeout(localFloorTimer);
+      } catch (_e) {}
+    }
+    localFloorTimer = setTimeout(function () {
+      releaseLocalFloor();
+    }, FLOOR_SAFETY_MS);
+  }
+  // Throttled keepalive for the PEER's remote watchdog. The local watchdog is
+  // refreshed in-process (refreshLocalFloor), but the peer only re-arms its own
+  // when it hears from us — and an Eraser drag emits stroke_delete ONLY when it
+  // hits a stroke (nothing over blank space), so stroke traffic is not a
+  // reliable keepalive. While we hold the floor on an active gesture and are
+  // connected, re-broadcast nav_lock(true) at most once per FLOOR_HEARTBEAT_MS.
+  // Movement-driven: a stationary/abandoned gesture stops beating and both
+  // sides release via the safety timeout. nav_lock is ordered + seq-deduped on
+  // the wire, so duplicate beats are harmless and a stale beat can never relock
+  // after the final nav_lock(false).
+  function floorHeartbeat() {
+    if (!localFloorHeld) return;
+    var s = session.getState();
+    if ((s.role !== "agent" && s.role !== "visitor") || !s.isConnected) return;
+    var now = Date.now();
+    if (now - lastFloorHeartbeatTs < FLOOR_HEARTBEAT_MS) return;
+    lastFloorHeartbeatTs = now;
+    session.sendNavLock(currentViewKey, true);
+  }
+  // setRemoteFloor: react to an inbound nav_lock. Freezes/unfreezes this
+  // side's Matterport AND gates new local gesture starts. A bounded timeout
+  // auto-clears so a peer that crashes mid-gesture can never lock this side
+  // out; ongoing remote stroke activity refreshes it.
+  function setRemoteFloor(active) {
+    remoteGestureActive = active === true;
+    applyNavLock(remoteGestureActive);
+    if (remoteFloorTimer) {
+      try {
+        clearTimeout(remoteFloorTimer);
+      } catch (_e) {}
+      remoteFloorTimer = null;
+    }
+    if (remoteGestureActive) {
+      remoteFloorTimer = setTimeout(function () {
+        remoteGestureActive = false;
+        applyNavLock(false);
+        remoteFloorTimer = null;
+      }, FLOOR_SAFETY_MS);
+    }
+  }
+  function refreshRemoteFloor() {
+    if (remoteGestureActive) setRemoteFloor(true);
+  }
+
+  // ── Eraser hit-testing (point-to-polyline distance, touch-tolerant) ──
+  function pointSegDistPx(px, py, ax, ay, bx, by) {
+    var vx = bx - ax,
+      vy = by - ay,
+      wx = px - ax,
+      wy = py - ay;
+    var c1 = vx * wx + vy * wy;
+    if (c1 <= 0) return Math.sqrt(wx * wx + wy * wy);
+    var c2 = vx * vx + vy * vy;
+    if (c2 <= c1) {
+      var ex = px - bx,
+        ey = py - by;
+      return Math.sqrt(ex * ex + ey * ey);
+    }
+    var t = c1 / c2,
+      projx = ax + t * vx,
+      projy = ay + t * vy,
+      dxp = px - projx,
+      dyp = py - projy;
+    return Math.sqrt(dxp * dxp + dyp * dyp);
+  }
+  function strokeHitTest(stroke, pt, rect, tolPx) {
+    var pts = stroke && stroke.points;
+    if (!pts || pts.length === 0) return false;
+    var w = rect.width || 1,
+      h = rect.height || 1;
+    var px = pt.x * w,
+      py = pt.y * h;
+    var halfWidthPx =
+      ((typeof stroke.width === "number" ? stroke.width : ANNO_STROKE_WIDTH) * w) / 2;
+    var tol = Math.max(tolPx, halfWidthPx + tolPx * 0.5);
+    if (pts.length === 1) {
+      var dx0 = pts[0][0] * w - px,
+        dy0 = pts[0][1] * h - py;
+      return Math.sqrt(dx0 * dx0 + dy0 * dy0) <= tol;
+    }
+    for (var i = 1; i < pts.length; i++) {
+      if (
+        pointSegDistPx(px, py, pts[i - 1][0] * w, pts[i - 1][1] * h, pts[i][0] * w, pts[i][1] * h) <=
+        tol
+      )
+        return true;
+    }
+    return false;
+  }
+  // Erase every COMMITTED stroke within tolerance of pt. In-flight
+  // (uncommitted) local OR remote strokes are skipped. Each stroke is removed
+  // at most once per eraser gesture; deletions sync via stroke_delete.
+  function eraseAtPoint(pt, e) {
+    if (!localStrokes.length) return;
+    var rect = letterboxWrap
+      ? letterboxWrap.getBoundingClientRect()
+      : { width: 1, height: 1 };
+    var tolPx = ANNO_ERASER_TOLERANCE_PX;
+    var ptype = e && typeof e.pointerType === "string" ? e.pointerType : "";
+    if (ptype === "touch" || ptype === "pen" || IS_COARSE_POINTER) tolPx = 24;
+    var hitIds = [];
+    for (var i = localStrokes.length - 1; i >= 0; i--) {
+      var st = localStrokes[i];
+      if (!st || st.committed !== true) continue;
+      if (eraserDeletedIds && eraserDeletedIds[st.strokeId]) continue;
+      if (strokeHitTest(st, pt, rect, tolPx)) {
+        hitIds.push(st.strokeId);
+        if (eraserDeletedIds) eraserDeletedIds[st.strokeId] = 1;
+      }
+    }
+    if (hitIds.length === 0) return;
+    localStrokes = localStrokes.filter(function (s) {
+      return hitIds.indexOf(s.strokeId) < 0;
+    });
+    redrawAllStrokes();
+    var s = session.getState();
+    if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+      session.sendStrokeDelete(currentViewKey, hitIds);
+    }
+  }
+
+  function handleClearLocallyAndBroadcast() {
+    wipeAnnotations();
+    var s = session.getState();
+    if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+      session.sendClear(currentViewKey);
+    }
+  }
+
+  function canAnnotateLocal() {
+    var r = session.getState().role;
+    return r === "agent" || r === "visitor";
+  }
+
+  // ── Canvas wiring (bidirectional: Host and Guest both annotate) ──────
+  if (annoCanvas) {
+    annoCanvas.addEventListener("pointerdown", function (e) {
+      if (!canAnnotateLocal()) return;
+      if (toolMode !== "draw" && toolMode !== "rope" && toolMode !== "eraser") return;
+      // Sequential annotation: bail if the PEER currently holds the shared
+      // floor; the instant their gesture ends we're free to start.
+      if (remoteGestureActive) return;
+      // Single-owner guard: rejects secondary touches outright; a Pencil
+      // arriving mid-touch fires finalizeActiveGesture() first (clean
+      // commit of the in-flight stroke) and then claims the gesture.
+      // No guard (failed assembly) means no gesture, ever — setToolMode
+      // already refuses draw/rope, this is the belt to that suspender.
+      if (!annoGuard || !annoGuard.claim(e)) return;
+      // Take the floor: broadcast nav_lock(true) so the peer pauses + freezes.
+      acquireLocalFloor();
+      if (toolMode === "draw") {
+        var pt = clientToNorm(e);
+        var sid = String(Date.now()) + "_" + Math.random().toString(36).slice(2, 8);
+        activeStroke = { strokeId: sid, color: ANNO_STROKE_COLOR, width: ANNO_STROKE_WIDTH, points: [[pt.x, pt.y]] };
+        pendingStrokeId = sid;
+        pendingStrokePoints = [];
+        session.sendStrokeBegin(currentViewKey, sid, activeStroke.color, activeStroke.width, [[pt.x, pt.y]]);
+        redrawAllStrokes();
+        try {
+          annoCanvas.setPointerCapture(e.pointerId);
+        } catch (_e) {}
+        e.preventDefault();
+        return;
+      }
+      if (toolMode === "rope") {
+        var rpt = clientToNorm(e);
+        if (activeRope) {
+          var lp = ropeLatchPos(activeRope);
+          var rect = letterboxWrap ? letterboxWrap.getBoundingClientRect() : { width: 1, height: 1 };
+          var dx = (rpt.x - lp.x) * rect.width;
+          var dy = (rpt.y - lp.y) * rect.height;
+          if (Math.sqrt(dx * dx + dy * dy) <= latchHitRadiusPx(e)) {
+            ropeLatchDragging = true;
+            try {
+              annoCanvas.setPointerCapture(e.pointerId);
+            } catch (_e) {}
+            e.preventDefault();
+            return;
+          }
+          // Inside the rope body (off the latch): drag moves the whole
+          // rope — the touch affordance the resize-only latch lacked.
+          if (ropePointInBBox(activeRope, rpt)) {
+            ropeMoveDragging = true;
+            ropeMoveLast = rpt;
+            try {
+              annoCanvas.setPointerCapture(e.pointerId);
+            } catch (_e) {}
+            e.preventDefault();
+            return;
+          }
+          commitActiveRope();
+        }
+        var rsid = String(Date.now()) + "_" + Math.random().toString(36).slice(2, 8);
+        activeRope = {
+          strokeId: rsid,
+          color: ANNO_STROKE_COLOR,
+          width: ANNO_STROKE_WIDTH,
+          shape: ANNO_ROPE_SHAPE,
+          x0: rpt.x,
+          y0: rpt.y,
+          x1: rpt.x,
+          y1: rpt.y,
+          points: [[rpt.x, rpt.y]],
+        };
+        ropeRegenerate(activeRope);
+        localStrokes.push(activeRope);
+        ropeDragging = true;
+        scheduleRopeFlush();
+        redrawAllStrokes();
+        try {
+          annoCanvas.setPointerCapture(e.pointerId);
+        } catch (_e) {}
+        e.preventDefault();
+        return;
+      }
+      if (toolMode === "eraser") {
+        eraserActive = true;
+        eraserDeletedIds = {};
+        try {
+          annoCanvas.setPointerCapture(e.pointerId);
+        } catch (_e) {}
+        e.preventDefault();
+        eraseAtPoint(clientToNorm(e), e); // tap-to-delete
+        return;
+      }
+    });
+    annoCanvas.addEventListener("pointermove", function (e) {
+      if (!canAnnotateLocal()) return;
+      if (toolMode === "pointer") {
+        // Hover-driven; on touch only the primary finger drives the dot.
+        if (e.isPrimary === false) return;
+        var hp = clientToNorm(e);
+        session.sendPointer(currentViewKey, hp.x, hp.y);
+        return;
+      }
+      if (!annoGuard || !annoGuard.owns(e)) return;
+      // Owned gesture: suppress any default WebKit handling for the move.
+      e.preventDefault();
+      refreshLocalFloor(); // keep OUR watchdog alive while this gesture is active
+      floorHeartbeat(); // throttled nav_lock(true) keepalive for the remote watchdog
+      if (toolMode === "draw" && activeStroke) {
+        // Coalesced samples (120Hz Pencil) — oldest first, all appended
+        // to the stroke and to the same outbound patch batch.
+        var batch = collectNormPoints(e);
+        if (!pendingStrokePoints) pendingStrokePoints = [];
+        for (var bi = 0; bi < batch.length; bi++) {
+          activeStroke.points.push([batch[bi].x, batch[bi].y]);
+          pendingStrokePoints.push([batch[bi].x, batch[bi].y]);
+        }
+        scheduleStrokeFlush();
+        redrawAllStrokes();
+      } else if (toolMode === "rope" && activeRope && ropeMoveDragging) {
+        var mpt = clientToNorm(e);
+        var b = ropeBBox(activeRope);
+        var mdx = mpt.x - ropeMoveLast.x;
+        var mdy = mpt.y - ropeMoveLast.y;
+        // Clamp the translation so the bbox never leaves [0,1] space.
+        if (mdx < -b.x0) mdx = -b.x0;
+        if (mdx > 1 - b.x1) mdx = 1 - b.x1;
+        if (mdy < -b.y0) mdy = -b.y0;
+        if (mdy > 1 - b.y1) mdy = 1 - b.y1;
+        activeRope.x0 += mdx;
+        activeRope.x1 += mdx;
+        activeRope.y0 += mdy;
+        activeRope.y1 += mdy;
+        ropeMoveLast = mpt;
+        ropeRegenerate(activeRope);
+        scheduleRopeFlush();
+        redrawAllStrokes();
+      } else if (toolMode === "rope" && activeRope && (ropeDragging || ropeLatchDragging)) {
+        var rpt2 = clientToNorm(e);
+        activeRope.x1 = rpt2.x;
+        activeRope.y1 = rpt2.y;
+        ropeRegenerate(activeRope);
+        scheduleRopeFlush();
+        redrawAllStrokes();
+      } else if (toolMode === "eraser" && eraserActive) {
+        // Drag-erase: hit-test every coalesced sample so a fast sweep never
+        // skips a stroke; eraserDeletedIds keeps each removal to one.
+        var epts = collectNormPoints(e);
+        for (var ei = 0; ei < epts.length; ei++) eraseAtPoint(epts[ei], e);
+      }
+    });
+    annoCanvas.addEventListener("pointerup", function (e) {
+      if (!canAnnotateLocal()) return;
+      if (!annoGuard || !annoGuard.owns(e)) return;
+      e.preventDefault();
+      if (toolMode === "draw" && activeStroke) {
+        finishActiveDraw();
+      } else if (toolMode === "rope" && activeRope && (ropeDragging || ropeLatchDragging || ropeMoveDragging)) {
+        finishActiveRopeDrag();
+      } else if (toolMode === "eraser") {
+        eraserActive = false;
+        eraserDeletedIds = null;
+      }
+      annoGuard.release(e);
+      try {
+        annoCanvas.releasePointerCapture(e.pointerId);
+      } catch (_e) {}
+      releaseLocalFloor(); // gesture ended → free the peer immediately
+    });
+    // iOS system gestures can abort a touch mid-stroke (pointercancel) or
+    // strip capture without a matching up (lostpointercapture). Both
+    // finalize the in-flight gesture so neither side is left with an
+    // orphan stroke, a stuck rope drag, or a permanently-claimed pointer.
+    // A normal pointerup also fires lostpointercapture — by then the
+    // guard has released, so this is a no-op on the happy path.
+    function handlePointerAbort(e) {
+      if (!annoGuard || !annoGuard.owns(e)) return;
+      try {
+        e.preventDefault();
+      } catch (_e) {}
+      finalizeActiveGesture();
+      if (toolMode === "eraser") {
+        eraserActive = false;
+        eraserDeletedIds = null;
+      }
+      annoGuard.release(e);
+      try {
+        annoCanvas.releasePointerCapture(e.pointerId);
+      } catch (_e) {}
+      releaseLocalFloor(); // abort is a gesture-end path → free the peer
+    }
+    annoCanvas.addEventListener("pointercancel", handlePointerAbort);
+    annoCanvas.addEventListener("lostpointercapture", handlePointerAbort);
+    annoCanvas.addEventListener("pointerleave", function () {
+      if (!canAnnotateLocal()) return;
+      if (toolMode === "pointer") session.sendPointer(currentViewKey, null, null);
+    });
+
+    // WebKit gesture defenses: while Draw or Focus Rope is active, swallow
+    // the raw touch sequence at the canvas (non-passive on purpose) so
+    // Safari cannot run its long-press / magnifier / text-interaction
+    // recognizers alongside the pointer stream. Pointer events are not
+    // synthesized from touch, so drawing is unaffected. Scoped to the
+    // canvas — never to inputs or the manual paste field.
+    function blockTouchDuringGesture(e) {
+      if (toolMode !== "draw" && toolMode !== "rope" && toolMode !== "eraser") return;
+      try {
+        e.preventDefault();
+      } catch (_e) {}
+    }
+    try {
+      var nonPassive = { passive: false };
+      annoCanvas.addEventListener("touchstart", blockTouchDuringGesture, nonPassive);
+      annoCanvas.addEventListener("touchmove", blockTouchDuringGesture, nonPassive);
+      annoCanvas.addEventListener("touchend", blockTouchDuringGesture, nonPassive);
+      annoCanvas.addEventListener("touchcancel", blockTouchDuringGesture, nonPassive);
+    } catch (_e) {}
+  }
+
+  // Stage-scoped selection/menu defenses: the annotation stage is a
+  // drawing surface, not a document — context menus, text selection, and
+  // drag-start inside it fight the gesture recognizers on WebKit. Scoped
+  // to the letterbox wrap only (the panel and its inputs live outside).
+  if (letterboxWrap) {
+    var killStageEvent = function (e) {
+      // 2.0.2: only while an annotation tool is active — the stage must
+      // behave like a normal viewer surface the rest of the time.
+      if (!annotationToolActive()) return;
+      try {
+        e.preventDefault();
+      } catch (_e) {}
+      return false;
+    };
+    letterboxWrap.addEventListener("contextmenu", killStageEvent);
+    letterboxWrap.addEventListener("selectstart", killStageEvent);
+    letterboxWrap.addEventListener("dragstart", killStageEvent);
+  }
+
+  // Toolbar buttons (shown to both roles).
+  if (annoToolbar) {
+    annoToolbar.addEventListener("click", function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest(".anno-tool-btn") : null;
+      if (!btn) return;
+      var t = btn.getAttribute("data-tool");
+      if (t === "pointer" || t === "draw" || t === "rope" || t === "eraser") {
+        setToolMode(t);
+        return;
+      }
+      if (btn === clearBtn) {
+        handleClearLocallyAndBroadcast();
+        return;
+      }
+      if (btn.id === "anno-exit-btn") {
+        handleClearLocallyAndBroadcast();
+        setToolMode("none");
+        try {
+          var st = session.getState();
+          if ((st.role === "agent" || st.role === "visitor") && st.isConnected) {
+            session.sendNavLock(currentViewKey, false);
+          }
+        } catch (_e) {}
+        return;
+      }
+    });
+  }
+
+  // Annotation-unavailable surface for the fail-closed state: the gesture
+  // tools are visibly disabled (setToolMode refuses them regardless), so
+  // a broken assembly degrades to an obvious, honest "drawing is off"
+  // rather than a quietly unsafe canvas. Pointer + Clear stay usable.
+  if (!ANNO_INPUT_OK) {
+    var annoDisabledIds = ["anno-draw-btn", "anno-rope-btn"];
+    for (var adi = 0; adi < annoDisabledIds.length; adi++) {
+      var adBtn = document.getElementById(annoDisabledIds[adi]);
+      if (adBtn) {
+        adBtn.disabled = true;
+        adBtn.setAttribute("title", "Annotation drawing unavailable in this session");
+      }
+    }
+  }
+
+  // Stroke color picker (whitelist-guarded).
+  var annoColorSelect = document.getElementById("anno-color-select");
+  var annoColorSwatch = document.getElementById("anno-color-swatch");
+  if (annoColorSelect) {
+    annoColorSelect.value = ANNO_STROKE_COLOR;
+    annoColorSelect.addEventListener("change", function () {
+      var v = String(annoColorSelect.value || "").toLowerCase();
+      if (!ANNO_COLOR_WHITELIST[v]) {
+        annoColorSelect.value = ANNO_STROKE_COLOR;
+        return;
+      }
+      ANNO_STROKE_COLOR = v;
+      if (annoColorSwatch) annoColorSwatch.style.background = v;
+      if (activeRope) {
+        activeRope.color = v;
+        scheduleRopeFlush();
+        redrawAllStrokes();
+      }
+    });
+  }
+
+  // Focus Rope shape picker (whitelist-guarded).
+  var annoShapeSelect = document.getElementById("anno-shape-select");
+  if (annoShapeSelect) {
+    annoShapeSelect.value = ANNO_ROPE_SHAPE;
+    annoShapeSelect.addEventListener("change", function () {
+      var v = String(annoShapeSelect.value || "").toLowerCase();
+      if (!ANNO_ROPE_SHAPE_WHITELIST[v]) {
+        annoShapeSelect.value = ANNO_ROPE_SHAPE;
+        return;
+      }
+      ANNO_ROPE_SHAPE = v;
+      if (activeRope) {
+        activeRope.shape = v;
+        ropeRegenerate(activeRope);
+        scheduleRopeFlush();
+        redrawAllStrokes();
+      }
+    });
+  }
+
+  // Hotkeys — fire for whichever role is connected, unless typing.
+  document.addEventListener("keydown", function (e) {
+    var s = session.getState();
+    if ((s.role !== "agent" && s.role !== "visitor") || !s.isConnected) return;
+    var tgt = e.target;
+    if (tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable)) return;
+    var k = (e.key || "").toLowerCase();
+    if (k === "p") {
+      setToolMode("pointer");
+      e.preventDefault();
+    } else if (k === "d") {
+      setToolMode("draw");
+      e.preventDefault();
+    } else if (k === "r") {
+      setToolMode("rope");
+      e.preventDefault();
+    } else if (k === "e") {
+      setToolMode("eraser");
+      e.preventDefault();
+    } else if (k === "c") {
+      handleClearLocallyAndBroadcast();
+      e.preventDefault();
+    } else if (e.key === "Escape") {
+      setToolMode("none");
+      e.preventDefault();
+    }
+  });
+
+  if (typeof ResizeObserver === "function" && letterboxWrap) {
+    try {
+      var ro = new ResizeObserver(function () {
+        scheduleCanvasResize();
+      });
+      ro.observe(letterboxWrap);
+    } catch (_e) {
+      window.addEventListener("resize", scheduleCanvasResize);
+    }
+  } else if (letterboxWrap) {
+    window.addEventListener("resize", scheduleCanvasResize);
+  }
+  // visualViewport + orientation: geometry changes the ResizeObserver /
+  // window-resize paths can miss on mobile (iOS URL-bar collapse,
+  // rotation, keyboard). All triggers coalesce through one rAF in
+  // scheduleCanvasResize and no-op until the canvas is lazily allocated.
+  if (typeof annoBindViewportEvents === "function") {
+    annoBindViewportEvents(window, scheduleCanvasResize);
+  }
+
+  // ── Location sync (clipboard auto-share, both roles) ─────────────────
+  var LOC_SYNC_POLL_THROTTLE_MS = 800;
+  var LOC_SYNC_SUCCESS_RESET_MS = 1800;
+  var LOC_SYNC_TIPS_HIDE_DELAY_MS = 250;
+  var SYNC_SUPPRESS_MS = 500;
+  var locSyncLastPollTs = 0;
+  var lastReadClipText = "";
+  var lastSentLocationKey = "";
+  var lastSentLocationTs = 0;
+  // Provenance tracking for echo suppression: the view we most recently
+  // APPLIED FROM A REMOTE sync (teleport received / share followed), kept
+  // separate from the sent-dedupe vars above so a remote apply can never
+  // poison the outbound dedupe. Only the short-lived automatic echo of
+  // this remotely applied location is swallowed — an INTENTIONAL U + Copy
+  // of the very view we're displaying still sends.
+  var lastAppliedRemoteKey = "";
+  var lastAppliedRemoteTs = 0;
+  var lastOwnSendTs = 0;
+  var syncResetTimer = null;
+  var tipsTimer = null;
+
+  var LOC_SYNC_LABELS = {
+    idle: "Sync ready",
+    syncing: "Syncing…",
+    success: "Synced",
+    waiting: "Connecting…",
+  };
+
+  // Whether ANY ambient (non-manual) clipboard read may run right now.
+  // Layered, all fail-closed:
+  //   - missing anno-input module → cannot verify the platform → never;
+  //   - iOS/iPadOS WebKit → never (native Paste callout, the root cause
+  //     of the annotation-interruption bug);
+  //   - any annotation tool active (Draw / Focus Rope / Pointer) → never,
+  //     on EVERY platform — a clipboard prompt mid-gesture is exactly the
+  //     interruption this exists to prevent.
+  // The manual paste field bypasses this on purpose: it reads its own
+  // input value, never the clipboard API.
+  function annotationToolActive() {
+    return toolMode === "draw" || toolMode === "rope" || toolMode === "pointer";
+  }
+  function ambientClipboardAllowed() {
+    if (!ANNO_INPUT_OK) return false;
+    if (IS_IOS_WEBKIT) return false;
+    if (annotationToolActive()) return false;
+    return true;
+  }
+
+  // Desktop clipboard-read permission, tracked WITHOUT calling readText()
+  // — probing via read is exactly what raises the Paste callout / prompt.
+  // "unknown" (Permissions API absent or query unsupported) keeps the
+  // mouse pointerenter fast-path OFF; focus/visibility ambient reads keep
+  // their legacy desktop behavior behind ambientClipboardAllowed().
+  var clipPermissionState = "unknown";
+  (function trackClipboardPermission() {
+    if (IS_IOS_WEBKIT) return;
+    try {
+      if (navigator && navigator.permissions && typeof navigator.permissions.query === "function") {
+        var q = navigator.permissions.query({ name: "clipboard-read" });
+        if (q && typeof q.then === "function") {
+          q.then(
+            function (st) {
+              if (!st || typeof st.state !== "string") return;
+              clipPermissionState = st.state;
+              try {
+                st.onchange = function () {
+                  clipPermissionState = st.state;
+                };
+              } catch (_e) {}
+            },
+            function () {
+              // query rejected (name unsupported) — stay "unknown"
+            },
+          );
+        }
+      }
+    } catch (_e) {}
+  })();
+
+  function showTips() {
+    if (!tipsEl) return;
+    if (tipsTimer) {
+      try {
+        clearTimeout(tipsTimer);
+      } catch (_e) {}
+      tipsTimer = null;
+    }
+    tipsEl.hidden = false;
+  }
+  function scheduleHideTips() {
+    if (!tipsEl) return;
+    if (tipsTimer) {
+      try {
+        clearTimeout(tipsTimer);
+      } catch (_e) {}
+    }
+    tipsTimer = setTimeout(function () {
+      if (tipsEl) tipsEl.hidden = true;
+      tipsTimer = null;
+    }, LOC_SYNC_TIPS_HIDE_DELAY_MS);
+  }
+  function hideTips() {
+    if (tipsEl) tipsEl.hidden = true;
+    if (tipsTimer) {
+      try {
+        clearTimeout(tipsTimer);
+      } catch (_e) {}
+      tipsTimer = null;
+    }
+  }
+
+  function setPulseState(name) {
+    if (!syncBtn) return;
+    var state = LOC_SYNC_LABELS[name] ? name : "idle";
+    syncBtn.setAttribute("data-state", state);
+    if (syncLabelEl) syncLabelEl.textContent = LOC_SYNC_LABELS[state];
+    if (syncResetTimer) {
+      try {
+        clearTimeout(syncResetTimer);
+      } catch (_e) {}
+      syncResetTimer = null;
+    }
+  }
+  function scheduleSyncIdleReset() {
+    if (syncResetTimer) {
+      try {
+        clearTimeout(syncResetTimer);
+      } catch (_e) {}
+    }
+    syncResetTimer = setTimeout(function () {
+      var cur = syncBtn ? syncBtn.getAttribute("data-state") : "idle";
+      if (cur === "success") setPulseState("idle");
+    }, LOC_SYNC_SUCCESS_RESET_MS);
+  }
+  function resetLocationSyncUi() {
+    locSyncLastPollTs = 0;
+    lastReadClipText = "";
+    lastSentLocationKey = "";
+    lastSentLocationTs = 0;
+    lastAppliedRemoteKey = "";
+    lastAppliedRemoteTs = 0;
+    lastOwnSendTs = 0;
+    hideTips();
+    setPulseState("waiting");
+  }
+
+  function parseMatterportLocationUrl(text) {
+    if (!text || typeof text !== "string") return null;
+    var trimmed = text.trim();
+    if (trimmed.length === 0 || trimmed.length > 2000) return null;
+    var u;
+    try {
+      u = new URL(trimmed);
+    } catch (_e) {
+      return null;
+    }
+    if (!/(^|\.)matterport\.com$/i.test(u.hostname || "")) return null;
+    var ss = u.searchParams.get("ss");
+    var sr = u.searchParams.get("sr") || "";
+    if (!ss || !/^\d+$/.test(ss)) return null;
+    if (sr && !/^-?\d*\.?\d+,-?\d*\.?\d+$/.test(sr)) return null;
+    return { ss: ss, sr: sr };
+  }
+
+  function attemptSendLocation(parsed) {
+    if (!parsed) return false;
+    var key = parsed.ss + "|" + parsed.sr;
+    var now = Date.now();
+    // Echo suppression — provenance-aware. Only the short-lived automatic
+    // echo of a REMOTELY APPLIED location is swallowed: right after
+    // applyTeleport ran for an inbound sync, a racing ambient trigger
+    // re-reading the same coords must not rebroadcast and ping-pong the
+    // sender's iframe. An INTENTIONAL U + Copy of the view we're standing
+    // in (e.g. the host pulling the guest back after following the
+    // guest's share) is a legitimate send and goes through once this
+    // window passes. A blanket currentViewKey equality check here
+    // previously swallowed those intentional syncs forever — with a
+    // success pulse.
+    if (key === lastAppliedRemoteKey && now - lastAppliedRemoteTs < SYNC_SUPPRESS_MS) {
+      setPulseState("success");
+      scheduleSyncIdleReset();
+      return true;
+    }
+    // Content-level dedupe on GENUINE own sends only (remote applies
+    // track lastAppliedRemoteKey above, so this can no longer eat an
+    // intentional re-share of a just-followed view).
+    if (key === lastSentLocationKey && now - lastSentLocationTs < 5000) {
+      setPulseState("success");
+      scheduleSyncIdleReset();
+      return true;
+    }
+    var ok = false;
+    var role = session.getState().role;
+    try {
+      if (role === "visitor") ok = session.shareLocationWithAgent(parsed.ss, parsed.sr);
+      else if (role === "agent") ok = session.teleportVisitor(parsed.ss, parsed.sr);
+    } catch (_e) {
+      ok = false;
+    }
+    if (ok) {
+      // The controller send method just stamped ITS view key (see
+      // live-session.mjs teleportVisitor/shareLocationWithAgent — the sender
+      // owns that update, so no noteCurrentView call here); converge the glue
+      // key so OUTBOUND annotation packets are stamped with the live view and
+      // the receive filter keeps dropping genuinely stale frames.
+      // 2.2.5: a View Sync is NOT an annotation reset — Host and Guest share one
+      // scene and annotate sequentially, so committed strokes MUST persist
+      // across a sync. We do NOT wipe here; Clear and the Eraser are the only
+      // ways to remove marks in a shared scene.
+      currentViewKey = key;
+      lastSentLocationKey = key;
+      lastSentLocationTs = now;
+      lastOwnSendTs = now;
+      setPulseState("success");
+      scheduleSyncIdleReset();
+      return true;
+    }
+    setPulseState("idle");
+    return false;
+  }
+
+  // ── Voice status (mic capability + live connection) ──────────────────
+  function setVoiceStatus(label, kind) {
+    if (!voiceStatus) return;
+    voiceStatus.textContent = label;
+    voiceStatus.setAttribute("data-voice", kind || "off");
+  }
+
+  // Report microphone availability WITHOUT prompting: a capability check
+  // plus a (best-effort) Permissions API query. The controller does the
+  // real getUserMedia and falls back to a silent track, so this is purely
+  // to set expectations ("blocked" / "unavailable" / "ready").
+  function reportVoiceCapability() {
+    if (!voiceStatus) return;
+    if (IS_IOS_WEBKIT) {
+      // Deferred voice: nothing was requested at connect by design — the
+      // microphone activates only from the Enable voice tap (a direct
+      // user gesture, as WebKit prefers).
+      setVoiceStatus("Voice is off — tap Enable voice to talk.", "warn");
+      return;
+    }
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices ||
+      typeof navigator.mediaDevices.getUserMedia !== "function"
+    ) {
+      setVoiceStatus("Microphone unavailable here — you can still tour together silently.", "warn");
+      return;
+    }
+    var queried = false;
+    try {
+      if (navigator.permissions && typeof navigator.permissions.query === "function") {
+        var q = navigator.permissions.query({ name: "microphone" });
+        if (q && typeof q.then === "function") {
+          queried = true;
+          q.then(
+            function (st) {
+              if (st && st.state === "denied") {
+                setVoiceStatus("Microphone blocked — others cannot hear you. Allow mic access to talk.", "warn");
+              } else {
+                setVoiceStatus("Microphone ready — connecting voice…", "ok");
+              }
+            },
+            function () {
+              setVoiceStatus("Microphone ready — connecting voice…", "ok");
+            },
+          );
+        }
+      }
+    } catch (_e) {
+      queried = false;
+    }
+    if (!queried) setVoiceStatus("Microphone ready — connecting voice…", "ok");
+  }
+
+  // ── Enable voice (deferred-voice sessions; a direct user gesture) ────
+  // The P0 rule: voice startup must never ride the connect transition on
+  // iOS. The tap acquires the mic, answers a held offer (host) or places
+  // the call (guest). Failure leaves the data session fully intact.
+  if (enableVoiceBtn) {
+    enableVoiceBtn.addEventListener("click", function () {
+      if (typeof session.startVoice !== "function") return;
+      enableVoiceBtn.disabled = true;
+      setVoiceStatus("Connecting voice…", "ok");
+      session.startVoice().then(
+        function (ok) {
+          if (!ok) {
+            enableVoiceBtn.disabled = false;
+            setVoiceStatus(
+              "Voice has not started yet — check mic permission, or have the other side tap Enable voice too, then retry.",
+              "warn",
+            );
+            return;
+          }
+          // Success: a call is negotiating. The remote_stream state
+          // change flips the status to "Voice connected" and hides this
+          // button; if the call instead dies BEFORE streaming, the
+          // voiceCallActive falling edge below re-enables the retry.
+          voiceAttemptPending = true;
+          var nowState = session.getState();
+          if (nowState.voiceCallActive === false && !nowState.remoteStream) {
+            // The call already died between resolution and this handler.
+            voiceAttemptPending = false;
+            enableVoiceBtn.disabled = false;
+            setVoiceStatus("Voice did not connect — tap Enable voice to retry.", "warn");
+          }
+        },
+        function () {
+          enableVoiceBtn.disabled = false;
+          setVoiceStatus("Could not start voice — you can still tour together silently.", "warn");
+        },
+      );
+    });
+  }
+
+  function readClipboardAndSend() {
+    if (!ambientClipboardAllowed()) return;
+    var s = session.getState();
+    if ((s.role !== "visitor" && s.role !== "agent") || !s.isConnected) return;
+    if (!navigator || !navigator.clipboard || typeof navigator.clipboard.readText !== "function") return;
+    var p;
+    try {
+      p = navigator.clipboard.readText();
+    } catch (_e) {
+      return;
+    }
+    if (!p || typeof p.then !== "function") return;
+    p.then(
+      function (text) {
+        if (typeof text !== "string") return;
+        if (text === lastReadClipText) return;
+        var parsed = parseMatterportLocationUrl(text);
+        if (!parsed) {
+          lastReadClipText = text;
+          return;
+        }
+        setPulseState("syncing");
+        if (attemptSendLocation(parsed)) lastReadClipText = text;
+      },
+      function () {
+        // Read rejected (denied / no focus). Stay silent; retry later.
+      },
+    );
+  }
+
+  function schedulePoll() {
+    if (!ambientClipboardAllowed()) return;
+    if (document.hidden) return;
+    var s = session.getState();
+    if ((s.role !== "visitor" && s.role !== "agent") || !s.isConnected) return;
+    var now = Date.now();
+    if (now - locSyncLastPollTs < LOC_SYNC_POLL_THROTTLE_MS) return;
+    locSyncLastPollTs = now;
+    readClipboardAndSend();
+  }
+
+  if (syncBtn) {
+    syncBtn.addEventListener("mouseenter", showTips);
+    syncBtn.addEventListener("mouseleave", scheduleHideTips);
+    syncBtn.addEventListener("focus", showTips);
+    syncBtn.addEventListener("blur", scheduleHideTips);
+  }
+  if (tipsEl) {
+    tipsEl.addEventListener("mouseenter", showTips);
+    tipsEl.addEventListener("mouseleave", scheduleHideTips);
+  }
+  window.addEventListener("focus", schedulePoll);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) schedulePoll();
+  });
+  if (letterboxWrap) {
+    // Ambient read on stage entry: a REAL mouse only, and only when the
+    // desktop clipboard-read permission is already confirmed granted via
+    // the Permissions API — never as a readText() permission probe, and
+    // never for touch/pen (those are annotation hands, not sync intent).
+    letterboxWrap.addEventListener("pointerenter", function (e) {
+      if (!e || e.pointerType !== "mouse") return;
+      if (clipPermissionState !== "granted") return;
+      schedulePoll();
+    });
+    letterboxWrap.addEventListener("pointerenter", function () {
+      var st = session.getState();
+      if (st.role !== "visitor" && st.role !== "agent") return;
+      var ae = document.activeElement;
+      if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
+      if (frame) {
+        try {
+          frame.focus({ preventScroll: true });
+        } catch (_e) {
+          try {
+            frame.focus();
+          } catch (_e2) {}
+        }
+      }
+    });
+  }
+  try {
+    if (navigator && navigator.clipboard && typeof navigator.clipboard.addEventListener === "function") {
+      navigator.clipboard.addEventListener("clipboardchange", schedulePoll);
+    }
+  } catch (_e) {}
+
+  function preGrantClipboard() {
+    // NEVER on iOS/iPadOS: this readText() probe IS the native Paste
+    // callout. Also skipped when the platform detector is unavailable
+    // (fail closed). Desktop keeps the session-start prompt (it runs
+    // inside the Host/Join click gesture) so later ambient reads are
+    // silent instead of prompting mid-tour.
+    if (IS_IOS_WEBKIT || !ANNO_INPUT_OK) return;
+    try {
+      if (navigator && navigator.clipboard && typeof navigator.clipboard.readText === "function") {
+        navigator.clipboard.readText().then(
+          function () {},
+          function () {},
+        );
+      }
+    } catch (_e) {}
+  }
+
+  // ── Teleport / iframe rewrite (single iframe) ────────────────────────
+  function rewriteIframeForTeleport(baseUrl, ss, sr) {
+    if (!baseUrl) return baseUrl;
+    var stripped = baseUrl.replace(/[?&](ss|sr|qs|play|title|brand)=[^&]*/g, function (m) {
+      return m.charAt(0) === "?" ? "?" : "";
+    });
+    stripped = stripped.replace(/\?&/g, "?").replace(/[?&]$/, "");
+    var sep = stripped.indexOf("?") === -1 ? "?" : "&";
+    var qs = "ss=" + encodeURIComponent(ss);
+    if (sr) qs += "&sr=" + encodeURIComponent(sr);
+    qs += "&qs=1&play=1&title=0&brand=0";
+    return stripped + sep + qs;
+  }
+
+  function applyTeleport(ss, sr) {
+    if (!frame || !MP_BASE) return;
+    // Converge the view key (so outbound annotation packets are stamped with the
+    // live view and the receive filter keeps dropping genuinely stale frames),
+    // but do NOT wipe — 2.2.5: a View Sync / follow keeps Host and Guest in one
+    // shared scene where committed annotations persist. Clear and the Eraser are
+    // the only ways to remove marks. Empty-key strokes drawn before the first
+    // sync stay accepted on both ends (the filter only drops when BOTH keys are
+    // non-empty and differ), so establishing the first key never orphans them.
+    currentViewKey = (ss || "") + "|" + (sr || "");
+    try { session.noteCurrentView(ss, sr); } catch (_e) {}
+    try {
+      frame.src = rewriteIframeForTeleport(MP_BASE, ss, sr);
+    } catch (_e) {}
+  }
+
+  // ── Tour stops (optional; Host only) ─────────────────────────────────
+  function renderStops() {
+    if (!stopsWrap) return;
+    stopsWrap.innerHTML = "";
+    if (!STOPS.length) {
+      var empty = document.createElement("div");
+      empty.className = "lt-stops-empty";
+      empty.textContent = "No saved stops yet — press U inside the tour and copy the link to bring your guest along.";
+      stopsWrap.appendChild(empty);
+      return;
+    }
+    var connected = session.getState().isConnected;
+    STOPS.forEach(function (stop) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "lt-stop-btn";
+      btn.textContent = stop.name || "Stop";
+      btn.disabled = !connected;
+      btn.addEventListener("click", function () {
+        var sent = session.teleportVisitor(stop.ss, stop.sr || "");
+        if (sent) {
+          lastOwnSendTs = Date.now();
+          applyTeleport(stop.ss, stop.sr || "");
+        }
+      });
+      stopsWrap.appendChild(btn);
+    });
+  }
+
+  // ── Invite / share-the-PIN ───────────────────────────────────────────
+  function currentInviteText() {
+    var pin = session.getState().pin;
+    var url = shareUrl();
+    var lines = ["Join my live tour of " + SHARE_TITLE + " on Frontiers3D:", url];
+    if (pin) lines.push("Tour PIN: " + pin);
+    return lines.join("\n");
+  }
+  if (inviteBtn) {
+    inviteBtn.addEventListener("click", function () {
+      var text = currentInviteText();
+      var done = function (msg) {
+        setText(inviteStatus, msg);
+        setTimeout(function () {
+          setText(inviteStatus, "");
+        }, 2500);
+      };
+      if (navigator && typeof navigator.share === "function") {
+        navigator
+          .share({ title: SHARE_TITLE, text: text, url: shareUrl() })
+          .then(
+            function () {
+              done("Invite shared.");
+            },
+            function () {
+              // share cancelled / failed -> fall back to clipboard
+              copyInvite(text, done);
+            },
+          );
+        return;
+      }
+      copyInvite(text, done);
+    });
+  }
+  function copyInvite(text, done) {
+    if (navigator && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+      navigator.clipboard.writeText(text).then(
+        function () {
+          done("Invite copied to clipboard.");
+        },
+        function () {
+          done("Copy failed — select and copy manually.");
+        },
+      );
+    } else {
+      done("Copy unavailable in this browser.");
+    }
+  }
+
+  // ── Role / panel wiring ──────────────────────────────────────────────
+  if (launchBtn) {
+    launchBtn.addEventListener("click", togglePanel);
+  }
+  if (panelClose) {
+    panelClose.addEventListener("click", closePanel);
+  }
+  if (backLinks) {
+    for (var bi = 0; bi < backLinks.length; bi++) {
+      backLinks[bi].addEventListener("click", function () {
+        // Only allowed before a session is live; tears nothing down.
+        if (session.getState().isConnected) return;
+        try {
+          session.dispose();
+        } catch (_e) {}
+        session = newSession();
+        session.subscribe(onState);
+        resetUiToIdle();
+      });
+    }
+  }
+
+  if (guestChooseBtn) {
+    guestChooseBtn.addEventListener("click", function () {
+      hide(roleChoose);
+      hide(hostBlock);
+      show(guestBlock);
+      if (pinInput) {
+        try {
+          pinInput.focus();
+        } catch (_e) {}
+      }
+    });
+  }
+
+  if (hostStartBtn) {
+    hostStartBtn.addEventListener("click", function () {
+      hide(roleChoose);
+      hide(guestBlock);
+      show(hostBlock);
+      hostStartBtn.disabled = true;
+      setText(hostStatus, "Preparing Live Tour…");
+      resetMilestoneLog();
+      // Pre-grant must stay synchronous inside the click — a
+      // then-callback is not a user gesture.
+      preGrantClipboard();
+      ensurePeerJs().then(
+        function () {
+          setText(hostStatus, "Reserving session…");
+          session.initializeAsAgent().catch(function () {
+            // surfaced via subscribe()
+          });
+        },
+        function () {
+          hostStartBtn.disabled = false;
+          setText(hostStatus, "Live Tour could not load (network issue). Click Host to retry.");
+        },
+      );
+    });
+  }
+
+  if (joinBtn && pinInput) {
+    joinBtn.addEventListener("click", function () {
+      var pin = (pinInput.value || "").replace(/\D/g, "").slice(0, 4);
+      if (pin.length !== 4) {
+        setText(guestStatus, "Enter the 4-digit PIN from your host.");
+        return;
+      }
+      joinBtn.disabled = true;
+      setText(guestStatus, "Preparing Live Tour…");
+      resetMilestoneLog();
+      preGrantClipboard();
+      ensurePeerJs().then(
+        function () {
+          setText(guestStatus, "Connecting…");
+          session.joinAsVisitor(pin).catch(function () {
+            // surfaced via subscribe()
+          });
+        },
+        function () {
+          joinBtn.disabled = false;
+          setText(guestStatus, "Live Tour could not load (network issue). Click Join to retry.");
+        },
+      );
+    });
+    pinInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        joinBtn.click();
+      }
+    });
+    pinInput.addEventListener("input", function () {
+      pinInput.value = (pinInput.value || "").replace(/\D/g, "").slice(0, 4);
+    });
+  }
+
+  function teardownSession() {
+    try {
+      session.dispose();
+    } catch (_e) {}
+    if (leaveBtns) {
+      for (var i = 0; i < leaveBtns.length; i++) leaveBtns[i].hidden = true;
+    }
+    wasConnected = false;
+    setBodyLetterboxClass(false, false);
+    setToolMode("none");
+    wipeAnnotations();
+    releaseAnnoCanvas();
+    currentViewKey = "";
+    lastPointerSeq = 0;
+    lastStrokeSeq = 0;
+    lastClearSeq = 0;
+    lastNavLockSeq = 0;
+    lastStrokeDeleteSeq = 0;
+    // Disconnect is a gesture-end path: release any floor this side holds and
+    // clear any the peer held so neither side is left frozen/locked out.
+    try {
+      releaseLocalFloor();
+    } catch (_e) {}
+    try {
+      setRemoteFloor(false);
+    } catch (_e) {}
+    eraserActive = false;
+    eraserDeletedIds = null;
+    resetLocationSyncUi();
+    resetUiToIdle();
+    session = newSession();
+    session.subscribe(onState);
+  }
+
+  if (leaveBtns) {
+    for (var li = 0; li < leaveBtns.length; li++) {
+      leaveBtns[li].addEventListener("click", teardownSession);
+    }
+  }
+
+  // ── State subscriber ─────────────────────────────────────────────────
+  function onState(state) {
+    if (pinValue && state.pin) pinValue.textContent = state.pin;
+
+    if (state.role === "agent" && hostStatus) {
+      if (state.status === "initializing") setText(hostStatus, "Reserving session…");
+      else if (state.status === "waiting") setText(hostStatus, "Share the PIN with your guest.");
+      else if (state.status === "connected") setText(hostStatus, "Connected. Your guest is with you.");
+      else if (state.status === "ended") setText(hostStatus, "Session ended.");
+      else if (state.status === "error") setText(hostStatus, state.error || "Live tour is unavailable right now.");
+      if (state.status === "error" && hostStartBtn) hostStartBtn.disabled = false;
+      // Render stops once we have a PIN; refresh disabled state cheaply.
+      if (state.pin && stopsWrap) {
+        if (!stopsWrap.firstChild) renderStops();
+        var sbtns = stopsWrap.querySelectorAll(".lt-stop-btn");
+        for (var i = 0; i < sbtns.length; i++) sbtns[i].disabled = !state.isConnected;
+      }
+    }
+
+    if (state.role === "visitor" && guestStatus) {
+      if (state.status === "connecting") setText(guestStatus, "Connecting…");
+      else if (state.status === "connected") setText(guestStatus, "Connected to your host.");
+      else if (state.status === "ended") {
+        setText(guestStatus, "Session ended.");
+        if (joinBtn) joinBtn.disabled = false;
+      } else if (state.status === "error") {
+        setText(guestStatus, state.error || "Could not connect. Check the PIN and try again.");
+        if (joinBtn) joinBtn.disabled = false;
+      }
+    }
+
+    if (!wasConnected && state.isConnected && state.status === "connected") {
+      wasConnected = true;
+      var isHost = state.role === "agent";
+      if (leaveBtns) {
+        for (var l = 0; l < leaveBtns.length; l++) leaveBtns[l].hidden = false;
+      }
+      if (statusChip) statusChip.hidden = false;
+      markMilestone("layout_started");
+      // A live tour is itself an interaction that needs stable gestures —
+      // ask the parent to switch off native Device fullscreen on iPad.
+      emitInteractionActive();
+      setBodyLetterboxClass(true, isHost);
+      // No annotation-canvas allocation here (P0 iPad fix): the buffer
+      // is created lazily on first Draw/Rope use or first remote stroke,
+      // never inside the already-heavy connect transition.
+      // Surface the live extras (voice status) and set initial voice
+      // expectations.
+      show(liveExtras);
+      reportVoiceCapability();
+      // Deferred voice (iOS): voice did not auto-start; offer the
+      // explicit gesture-driven activation.
+      if (IS_IOS_WEBKIT && enableVoiceBtn && !state.remoteStream) {
+        show(enableVoiceBtn);
+      }
+      // Guest: collapse the panel so the tour fills the screen. Host keeps
+      // the panel so they can use stops / invite. Both can reopen via the
+      // Explore Together button.
+      if (!isHost) closePanel();
+    }
+    setHudButtonState(state);
+
+    if (wasConnected && (state.status === "ended" || state.status === "error")) {
+      setTimeout(teardownSession, 0);
+    }
+
+    // Voice attach.
+    if (audioEl) {
+      try {
+        if (state.remoteStream && audioEl.srcObject !== state.remoteStream) {
+          audioEl.srcObject = state.remoteStream;
+          var pp = audioEl.play();
+          if (pp && typeof pp.then === "function") {
+            pp.then(
+              function () {
+                markMilestone("audio_playing");
+              },
+              function () {},
+            );
+          }
+        } else if (!state.remoteStream && audioEl.srcObject) {
+          audioEl.srcObject = null;
+        }
+      } catch (_e) {}
+    }
+
+    // Voice connection reflection: a remoteStream means the peer audio path
+    // is up (the controller falls back to a silent track when the local mic
+    // is blocked, so this fires for both sides regardless of mic state).
+    if (state.remoteStream && !voiceConnected) {
+      voiceConnected = true;
+      voiceAttemptPending = false;
+      setVoiceStatus("Voice connected — you can talk now.", "live");
+      if (enableVoiceBtn) {
+        enableVoiceBtn.hidden = true;
+        enableVoiceBtn.disabled = false;
+      }
+    } else if (!state.remoteStream && voiceConnected) {
+      voiceConnected = false;
+      if (state.isConnected) {
+        reportVoiceCapability();
+        // The established voice path dropped: re-offer the explicit
+        // restart on deferred-voice sessions (the button was hidden on
+        // connect, and the status above tells the user to tap it).
+        if (IS_IOS_WEBKIT && enableVoiceBtn) {
+          enableVoiceBtn.hidden = false;
+          enableVoiceBtn.disabled = false;
+        }
+      }
+    }
+
+    // P2 (PR #149 review): a media call that dies BEFORE producing a
+    // remote stream (negotiation failure, peer disconnect) must hand the
+    // Enable voice control back — without this, the only recovery was
+    // leaving and rejoining the data session. Strict `=== false` so
+    // controllers that predate voiceCallActive never trigger it.
+    if (
+      voiceAttemptPending &&
+      !state.remoteStream &&
+      state.voiceCallActive === false &&
+      !voiceConnected
+    ) {
+      voiceAttemptPending = false;
+      if (enableVoiceBtn && state.isConnected) {
+        enableVoiceBtn.hidden = false;
+        enableVoiceBtn.disabled = false;
+        setVoiceStatus("Voice did not connect — tap Enable voice to retry.", "warn");
+      }
+    }
+
+    // Guest follows host teleports (dedupe by ts; last-sender-wins).
+    if (state.role === "visitor" && state.incomingTeleportEvent && state.incomingTeleportEvent.ts !== lastTeleportTs) {
+      lastTeleportTs = state.incomingTeleportEvent.ts;
+      if (lastOwnSendTs === 0 || Date.now() - lastOwnSendTs >= SYNC_SUPPRESS_MS) {
+        applyTeleport(state.incomingTeleportEvent.ss, state.incomingTeleportEvent.sr);
+        // Remote-provenance record: stops an immediate ambient echo of
+        // the just-applied coords without poisoning the outbound dedupe
+        // (an intentional re-share of this view must still send).
+        lastAppliedRemoteKey = state.incomingTeleportEvent.ss + "|" + state.incomingTeleportEvent.sr;
+        lastAppliedRemoteTs = Date.now();
+      }
+    }
+
+    // Host auto-follows guest location shares (dedupe by ts).
+    if (state.role === "agent" && state.incomingLocationShareEvent && state.incomingLocationShareEvent.ts !== lastShareTs) {
+      lastShareTs = state.incomingLocationShareEvent.ts;
+      if (lastOwnSendTs === 0 || Date.now() - lastOwnSendTs >= SYNC_SUPPRESS_MS) {
+        applyTeleport(state.incomingLocationShareEvent.ss, state.incomingLocationShareEvent.sr);
+        // Remote-provenance record (see visitor branch above): the
+        // host's INTENTIONAL "come here" re-share of this same view a
+        // moment later must still transmit.
+        lastAppliedRemoteKey = state.incomingLocationShareEvent.ss + "|" + state.incomingLocationShareEvent.sr;
+        lastAppliedRemoteTs = Date.now();
+        if (letterboxWrap) {
+          try {
+            letterboxWrap.classList.add("follow-pulse");
+            setTimeout(function () {
+              if (letterboxWrap) letterboxWrap.classList.remove("follow-pulse");
+            }, 1500);
+          } catch (_e) {}
+        }
+      }
+    }
+
+    // Pulse pill connection reflection.
+    if ((state.role === "visitor" || state.role === "agent") && syncBtn) {
+      var curState = syncBtn.getAttribute("data-state");
+      if (!state.isConnected) {
+        if (curState !== "syncing") setPulseState("waiting");
+      } else if (curState === "waiting") {
+        setPulseState("idle");
+      }
+    }
+
+    // Annotation receive paths.
+    var canReceive = state.role === "agent" || state.role === "visitor";
+    var pev = state.incomingPointerEvent;
+    if (pev && pev.seq !== lastPointerSeq) {
+      lastPointerSeq = pev.seq;
+      if (canReceive && remotePointer && letterboxWrap) {
+        if (pev.x == null || pev.y == null) {
+          remotePointer.style.display = "none";
+          if (remotePointerHideTimer) {
+            try {
+              clearTimeout(remotePointerHideTimer);
+            } catch (_e) {}
+            remotePointerHideTimer = null;
+          }
+        } else {
+          var rect = letterboxWrap.getBoundingClientRect();
+          remotePointer.style.left = pev.x * rect.width + "px";
+          remotePointer.style.top = pev.y * rect.height + "px";
+          remotePointer.style.display = "block";
+          if (remotePointerHideTimer) {
+            try {
+              clearTimeout(remotePointerHideTimer);
+            } catch (_e) {}
+          }
+          remotePointerHideTimer = setTimeout(function () {
+            if (remotePointer) remotePointer.style.display = "none";
+          }, ANNO_REMOTE_POINTER_TIMEOUT_MS);
+        }
+      }
+    }
+
+    var sev = state.incomingStrokeEvent;
+    if (sev && sev.seq !== lastStrokeSeq) {
+      lastStrokeSeq = sev.seq;
+      if (canReceive) {
+        // A remote annotation is the other lazy-allocation trigger.
+        ensureAnnoCanvasAllocated();
+        if (sev.kind === "begin") {
+          var existingBegin = findLocalStroke(sev.strokeId);
+          if (existingBegin) {
+            if (sev.points) existingBegin.points = sev.points.slice();
+            if (typeof sev.color === "string") existingBegin.color = sev.color;
+            if (typeof sev.width === "number") existingBegin.width = sev.width;
+          } else {
+            localStrokes.push({
+              strokeId: sev.strokeId,
+              color: sev.color || ANNO_STROKE_COLOR,
+              width: typeof sev.width === "number" ? sev.width : ANNO_STROKE_WIDTH,
+              points: sev.points ? sev.points.slice() : [],
+            });
+          }
+          redrawAllStrokes();
+        } else if (sev.kind === "patch") {
+          var existing = findLocalStroke(sev.strokeId);
+          if (existing && sev.points) {
+            for (var pi = 0; pi < sev.points.length; pi++) existing.points.push(sev.points[pi]);
+            redrawAllStrokes();
+          }
+        } else if (sev.kind === "commit") {
+          // Commit seals the stroke: mark it erasable. Until now it was an
+          // in-flight remote stroke and the eraser deliberately skipped it.
+          var committedRemote = findLocalStroke(sev.strokeId);
+          if (committedRemote) committedRemote.committed = true;
+        }
+        // Ongoing remote stroke activity refreshes the floor safety timer so
+        // a long remote gesture keeps this side paused until it actually ends.
+        if (sev.kind === "begin" || sev.kind === "patch") refreshRemoteFloor();
+      }
+    }
+
+    var cev = state.incomingClearEvent;
+    if (cev && cev.seq !== lastClearSeq) {
+      lastClearSeq = cev.seq;
+      if (canReceive) {
+        wipeAnnotations();
+        setRemoteFloor(false);
+      }
+    }
+
+    var nlev = state.incomingNavLockEvent;
+    if (nlev && nlev.seq !== lastNavLockSeq) {
+      lastNavLockSeq = nlev.seq;
+      // nav_lock IS the shared annotation floor: freeze this side's Matterport
+      // AND block new local gesture starts for its duration. setRemoteFloor
+      // arms a bounded safety timeout so a crashed peer can't lock us out.
+      if (canReceive) setRemoteFloor(nlev.locked === true);
+    }
+
+    var dev = state.incomingStrokeDeleteEvent;
+    if (dev && dev.seq !== lastStrokeDeleteSeq) {
+      lastStrokeDeleteSeq = dev.seq;
+      // Defense in depth: a delete proves the peer's eraser is mid-gesture, so
+      // re-arm the remote watchdog too (the nav_lock heartbeat is the primary
+      // keepalive; this just hardens the delete-heavy path).
+      if (canReceive) refreshRemoteFloor();
+      // Idempotent erase: drop any matching ids; unknown / already-removed
+      // ids change nothing (no redraw), so duplicate/stale deletes are safe.
+      if (canReceive && dev.strokeIds && dev.strokeIds.length) {
+        var beforeLen = localStrokes.length;
+        localStrokes = localStrokes.filter(function (s) {
+          return dev.strokeIds.indexOf(s.strokeId) < 0;
+        });
+        if (localStrokes.length !== beforeLen) redrawAllStrokes();
+      }
+    }
+  }
+
+  // Tint the accent-driven affordances created at runtime.
+  try {
+    if (ACCENT && remotePointer) remotePointer.style.background = ACCENT;
+  } catch (_e) {}
+
+  session.subscribe(onState);
+})();
+
+// f3d:runtime-js:glue END
+})();
+</script>
+<script>
+(function(){
+  // ── Page chrome: Share + About (no backslashes / regex here so this
+  //    inline block stays trivially correct without a verify guard). ──
+  var aboutBtn=document.getElementById("about-btn");
+  var aboutPanel=document.getElementById("about-panel");
+  var aboutClose=document.getElementById("about-close");
+  function openAbout(){ if(aboutPanel) aboutPanel.classList.add("open"); }
+  function closeAbout(){ if(aboutPanel) aboutPanel.classList.remove("open"); }
+  if(aboutBtn) aboutBtn.addEventListener("click",openAbout);
+  if(aboutClose) aboutClose.addEventListener("click",closeAbout);
+  if(aboutPanel) aboutPanel.addEventListener("click",function(e){ if(e.target===aboutPanel) closeAbout(); });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeAbout(); });
+
+  var shareBtn=document.getElementById("share-btn");
+  var SHARE_TITLE="Even Hotel Times Square S.";
+  function pageUrl(){ try { return String(window.location.href).split("#")[0]; } catch(_e){ return ""; } }
+  function flashShare(label){
+    if(!shareBtn) return;
+    var lbl=shareBtn.querySelector(".f3d-btn-label");
+    var prev=lbl?lbl.textContent:"";
+    if(lbl) lbl.textContent=label;
+    setTimeout(function(){ if(lbl) lbl.textContent=prev||"Share"; },2000);
+  }
+  if(shareBtn){
+    shareBtn.addEventListener("click",function(){
+      var url=pageUrl();
+      var data={ title:SHARE_TITLE, text:SHARE_TITLE+" — an immersive 3D showcase on Frontiers3D", url:url };
+      if(navigator&&typeof navigator.share==="function"){
+        navigator.share(data).then(function(){},function(){ copyUrl(url); });
+        return;
+      }
+      copyUrl(url);
+    });
+  }
+  function copyUrl(url){
+    if(navigator&&navigator.clipboard&&typeof navigator.clipboard.writeText==="function"){
+      navigator.clipboard.writeText(url).then(function(){ flashShare("Link copied"); },function(){ flashShare("Copy failed"); });
+    } else {
+      flashShare("Copy unavailable");
+    }
+  }
+})();
+</script>
+</body>
+</html>
