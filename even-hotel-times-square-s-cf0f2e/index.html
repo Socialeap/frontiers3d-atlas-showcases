@@ -12,7 +12,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
 Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.2.6" />
+<meta name="f3d-runtime" content="2.2.7" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -3622,21 +3622,22 @@ function annoBindViewportEvents(win, cb) {
   // Build a "quiet" Matterport show URL for a synced/teleported view. Changing
   // ss/sr requires reloading the iframe (no Matterport SDK); these verified
   // params stop that reload from replaying Matterport's startup UI:
-  //   play=1 auto-open · qs=1 quickstart→Inside View · help=0 no help prompt ·
-  //   hl=0 auto-collapse the highlight reel · dh=0 no dollhouse fly-in/button.
-  // (title=0/brand=0 preserve prior behavior.) Idempotent; preserves m + ss/sr;
-  // only ever decorates real Matterport show URLs.
+  //   mls=2 reduce Matterport presentation/branding · hr=0 suppress highlight reel ·
+  //   help=0 no help prompt · dh=1 KEEP Dollhouse access · fp=1 KEEP Floor Plan access ·
+  //   vr=0 suppress VR mode/prompt · play=1 start directly in the tour.
+  // Idempotent (re-strips its own + legacy params before re-appending); preserves
+  // m + ss/sr; only ever decorates real Matterport show URLs.
   function normalizeMatterportLiveSyncUrl(baseUrl, ss, sr) {
     if (!baseUrl) return baseUrl;
     if (!/matterport\.com/i.test(baseUrl)) return baseUrl;
-    var stripped = baseUrl.replace(/[?&](ss|sr|qs|play|title|brand|help|hl|dh)=[^&]*/g, function (m) {
+    var stripped = baseUrl.replace(/[?&](ss|sr|mls|hr|help|dh|fp|vr|play|qs|title|brand|hl)=[^&]*/g, function (m) {
       return m.charAt(0) === "?" ? "?" : "";
     });
     stripped = stripped.replace(/\?&/g, "?").replace(/[?&]$/, "");
     var sep = stripped.indexOf("?") === -1 ? "?" : "&";
     var qs = "ss=" + encodeURIComponent(ss);
     if (sr) qs += "&sr=" + encodeURIComponent(sr);
-    qs += "&qs=1&play=1&title=0&brand=0&help=0&hl=0&dh=0";
+    qs += "&mls=2&hr=0&help=0&dh=1&fp=1&vr=0&play=1";
     return stripped + sep + qs;
   }
 
