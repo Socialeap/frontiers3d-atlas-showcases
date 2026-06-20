@@ -12,7 +12,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
 Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.2.8" />
+<meta name="f3d-runtime" content="2.3.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -77,6 +77,9 @@ body.live-tour-active #anno-letterbox-wrap:has(#lt-navlock.locked) #matterport-f
 
 #anno-toolbar{display:none;justify-content:center;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 12px;background:rgba(10,12,20,0.92);border-bottom:1px solid rgba(255,255,255,0.08);position:relative;z-index:1250;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 body.live-tour-active #anno-toolbar{display:flex}
+body.anno-solo-mode #anno-toolbar{display:flex}
+body.live-tour-active #lt-annotate-btn{display:none}
+.f3d-iconbtn.lt-annotate[aria-pressed="true"]{background:rgba(129,140,248,0.28);border-color:rgba(129,140,248,0.55)}
 .anno-tool-btn{appearance:none;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border-radius:6px;padding:6px 10px;font:600 12px/1 inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.15s,border-color 0.15s,color 0.15s;font-family:inherit;-webkit-tap-highlight-color:transparent}
 .anno-tool-btn:hover{background:rgba(255,255,255,0.14);color:#fff}
 .anno-tool-btn.active{background:var(--lt-accent);border-color:var(--lt-accent);color:#fff}
@@ -228,6 +231,10 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
   <span class="lt-dot" aria-hidden="true"></span>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
   <span class="lt-launch-label">Explore Together</span>
+</button>
+    <button id="lt-annotate-btn" type="button" class="f3d-iconbtn lt-annotate" hidden aria-pressed="false" title="Annotate — draw on your own screen">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+  <span class="f3d-btn-label">Annotate</span>
 </button>
     <button id="about-btn" type="button" class="f3d-iconbtn" title="About this showcase">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -1662,11 +1669,19 @@ function annoIsCoarsePointer(win) {
 //   2. Phone/tablet UA or platform markers                  -> ineligible
 //   3. iPadOS desktop mode (MacIntel + maxTouchPoints > 1,
 //      which also covers iPad with a keyboard/trackpad)     -> ineligible
-//   4. Primary pointer not fine, or no hover capability     -> ineligible
-//   5. Primary pointer coarse (belt-and-braces with 4)      -> ineligible
-// A Windows touchscreen laptop stays ELIGIBLE: its primary pointer is
-// fine + hover-capable and it carries no mobile identity, regardless of
-// maxTouchPoints. Viewport width is deliberately not an input.
+//   4. No precise pointer available anywhere                -> ineligible
+//   5. No hover-capable device available anywhere           -> ineligible
+// Gate on ANY-pointer / ANY-hover, NOT the primary pointer: a touchscreen
+// laptop (a genuine desktop) routinely reports TOUCH as its PRIMARY pointer
+// at load — so (pointer: fine) is false and (pointer: coarse) is true — even
+// though a mouse/trackpad is attached. The earlier primary-pointer test
+// (require pointer: fine + hover: hover, reject pointer: coarse) wrongly
+// stripped collaboration from those machines — the "annotation tool
+// disappeared on my touchscreen laptop" regression. (any-pointer: fine) +
+// (any-hover: hover) are true for every desktop incl. touchscreen laptops,
+// and false for phones/tablets — which are already excluded by the UA /
+// platform checks above regardless. Viewport width is deliberately not an
+// input.
 function annoCollabEligible(win, nav) {
   try {
     var w = win || (typeof window !== "undefined" ? window : null);
@@ -1681,12 +1696,10 @@ function annoCollabEligible(win, nav) {
       return false;
     }
     if (typeof w.matchMedia !== "function") return false;
-    var fine = w.matchMedia("(pointer: fine)");
+    var fine = w.matchMedia("(any-pointer: fine)");
     if (!fine || !fine.matches) return false;
-    var hover = w.matchMedia("(hover: hover)");
+    var hover = w.matchMedia("(any-hover: hover)");
     if (!hover || !hover.matches) return false;
-    var coarse = w.matchMedia("(pointer: coarse)");
-    if (coarse && coarse.matches) return false;
     return true;
   } catch (_e) {
     return false;
@@ -1782,6 +1795,7 @@ function annoBindViewportEvents(win, cb) {
   if (!COLLAB_ELIGIBLE) {
     var collabIds = [
       "lt-launch-btn",
+      "lt-annotate-btn",
       "lt-panel",
       "anno-toolbar",
       "anno-canvas",
@@ -1865,6 +1879,15 @@ function annoBindViewportEvents(win, cb) {
   var leaveBtns = document.querySelectorAll(".lt-leave-btn");
   var statusChip = document.getElementById("lt-status-chip");
   var audioEl = document.getElementById("lt-audio");
+
+  // Solo annotation (runtime 2.3.0): the annotation toolbar usable by a single
+  // viewer with NO Live Tour session. This block runs only on eligible desktops
+  // (the ineligible path removed lt-annotate-btn above and returned), so solo
+  // annotation is desktop-only in this step; mobile/tablet solo is a fast-follow
+  // that splits the collaboration gate from the annotation surfaces. The button
+  // ships hidden; reveal it now that we know this is an eligible desktop.
+  var annotateBtn = document.getElementById("lt-annotate-btn");
+  if (annotateBtn) annotateBtn.hidden = false;
 
   // Annotation overlay refs.
   var letterboxWrap = document.getElementById("anno-letterbox-wrap");
@@ -2070,6 +2093,10 @@ function annoBindViewportEvents(win, cb) {
   var ANNO_LATCH_DRAW_PX = IS_COARSE_POINTER ? 14 : ANNO_LATCH_PX;
 
   var toolMode = "none";
+  // Solo annotation mode: true while a single viewer is annotating with no live
+  // session. Lets canAnnotateLocal() accept local strokes (session.send* no-op
+  // safely with no peer) and is the body.anno-solo-mode driver.
+  var soloAnnotate = false;
   var currentViewKey = "";
   var localStrokes = [];
   var activeStroke = null;
@@ -2222,6 +2249,9 @@ function annoBindViewportEvents(win, cb) {
   function setBodyLetterboxClass(active, isHost) {
     if (!document || !document.body) return;
     if (active) {
+      // A live session and solo annotation are mutually exclusive entry points;
+      // leaving solo first avoids two toolbars and clears the local-only strokes.
+      if (soloAnnotate) setSoloAnnotate(false);
       document.body.classList.add("live-tour-active");
       if (isHost) {
         document.body.classList.add("live-tour-host");
@@ -2827,8 +2857,28 @@ function annoBindViewportEvents(win, cb) {
   }
 
   function canAnnotateLocal() {
+    if (soloAnnotate) return true;
     var r = session.getState().role;
     return r === "agent" || r === "visitor";
+  }
+
+  // Toggle solo annotation mode. On: reveal the toolbar (body.anno-solo-mode),
+  // allocate the canvas, and start on the Draw tool. Off: drop the tool and wipe
+  // the local-only strokes. No session traffic — session.send* no-op with no
+  // peer, so this is purely local marking on the viewer's own screen.
+  function setSoloAnnotate(on) {
+    soloAnnotate = !!on;
+    try {
+      document.body.classList.toggle("anno-solo-mode", soloAnnotate);
+    } catch (_e) {}
+    if (annotateBtn) annotateBtn.setAttribute("aria-pressed", soloAnnotate ? "true" : "false");
+    if (soloAnnotate) {
+      ensureAnnoCanvasAllocated();
+      setToolMode("draw");
+    } else {
+      setToolMode("none");
+      wipeAnnotations();
+    }
   }
 
   // ── Canvas wiring (bidirectional: Host and Guest both annotate) ──────
@@ -3082,6 +3132,11 @@ function annoBindViewportEvents(win, cb) {
         return;
       }
       if (btn.id === "anno-exit-btn") {
+        // Solo: exit closes the solo toolbar (clears the local strokes too).
+        if (soloAnnotate) {
+          setSoloAnnotate(false);
+          return;
+        }
         handleClearLocallyAndBroadcast();
         setToolMode("none");
         try {
@@ -3748,6 +3803,11 @@ function annoBindViewportEvents(win, cb) {
   // ── Role / panel wiring ──────────────────────────────────────────────
   if (launchBtn) {
     launchBtn.addEventListener("click", togglePanel);
+  }
+  if (annotateBtn) {
+    annotateBtn.addEventListener("click", function () {
+      setSoloAnnotate(!soloAnnotate);
+    });
   }
   if (panelClose) {
     panelClose.addEventListener("click", closePanel);
