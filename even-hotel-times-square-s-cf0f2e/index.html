@@ -12,7 +12,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
 Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.3.0" />
+<meta name="f3d-runtime" content="2.4.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -1786,25 +1786,33 @@ function annoBindViewportEvents(win, cb) {
   // sync, no annotation surfaces, nothing focusable. Solo viewing, sharing,
   // fullscreen and PWA behavior are untouched. Fails closed if the kernel
   // is missing.
+  // KERNEL_OK: the hardened anno-input kernel is present (annoCollabEligible lives
+  // in it). Annotation can't run safely without it, so a missing kernel fails
+  // fully closed (below) regardless of device.
+  var KERNEL_OK = typeof annoCollabEligible === "function";
   var COLLAB_ELIGIBLE =
-    typeof annoCollabEligible === "function" &&
+    KERNEL_OK &&
     annoCollabEligible(
       typeof window !== "undefined" ? window : null,
       typeof navigator !== "undefined" ? navigator : null,
     );
+  // Desktop-only COLLABORATION (Explore Together: PeerJS, voice, view sync,
+  // shared annotation) — remove its affordances on ineligible devices. But KEEP
+  // the annotation surfaces (anno-toolbar/anno-canvas/remote-pointer) AND the
+  // Annotate button so SOLO annotation (local-only marking, no session) works on
+  // phones/tablets too (runtime 2.4.0). We do NOT return when the kernel is
+  // present: the solo annotation wiring below runs on every device. Collaboration
+  // side-effects stay inert on ineligible devices because the collab DOM is gone
+  // (button handlers are null-ref guarded), the clipboard poll self-guards on an
+  // active connection, and PeerJS / the mic only load on a Host/Join intent that
+  // the removed buttons can't fire. If the kernel is MISSING, annotation cannot
+  // run — fail fully closed: also remove the annotation surfaces + Annotate button
+  // and bail.
   if (!COLLAB_ELIGIBLE) {
-    var collabIds = [
-      "lt-launch-btn",
-      "lt-annotate-btn",
-      "lt-panel",
-      "anno-toolbar",
-      "anno-canvas",
-      "remote-pointer",
-      "lt-navlock",
-      "loc-sync",
-      "loc-sync-tips",
-      "lt-audio",
-    ];
+    var collabIds = ["lt-launch-btn", "lt-panel", "lt-navlock", "loc-sync", "loc-sync-tips", "lt-audio"];
+    if (!KERNEL_OK) {
+      collabIds = collabIds.concat(["lt-annotate-btn", "anno-toolbar", "anno-canvas", "remote-pointer"]);
+    }
     for (var ci = 0; ci < collabIds.length; ci++) {
       var cn = document.getElementById(collabIds[ci]);
       if (!cn) continue;
@@ -1814,7 +1822,7 @@ function annoBindViewportEvents(win, cb) {
         cn.hidden = true;
       }
     }
-    return;
+    if (!KERNEL_OK) return;
   }
 
   // Hard guard: the controller factory is injected just above. If it is
@@ -1828,9 +1836,10 @@ function annoBindViewportEvents(win, cb) {
     }
     return;
   }
-  // Eligible desktop: reveal the launch button (ships hidden so ineligible
-  // devices never flash it before this glue runs).
-  if (launchBtn) launchBtn.hidden = false;
+  // Eligible desktop: reveal the COLLABORATION launch button (ships hidden so
+  // ineligible devices never flash it). Gated by COLLAB_ELIGIBLE so the no-return
+  // solo-annotation path on mobile/tablet does not re-reveal the removed button.
+  if (COLLAB_ELIGIBLE && launchBtn) launchBtn.hidden = false;
 
   var CONFIG =
     window.__ATLAS_LT_CONFIG && typeof window.__ATLAS_LT_CONFIG === "object"
@@ -1880,14 +1889,20 @@ function annoBindViewportEvents(win, cb) {
   var statusChip = document.getElementById("lt-status-chip");
   var audioEl = document.getElementById("lt-audio");
 
-  // Solo annotation (runtime 2.3.0): the annotation toolbar usable by a single
-  // viewer with NO Live Tour session. This block runs only on eligible desktops
-  // (the ineligible path removed lt-annotate-btn above and returned), so solo
-  // annotation is desktop-only in this step; mobile/tablet solo is a fast-follow
-  // that splits the collaboration gate from the annotation surfaces. The button
-  // ships hidden; reveal it now that we know this is an eligible desktop.
+  // Solo annotation (runtime 2.3.0; all-devices in 2.4.0): the annotation toolbar
+  // usable by a single viewer with NO Live Tour session. The Annotate button +
+  // annotation surfaces survive on every device (only collaboration is gated), so
+  // reveal the button here for solo use. Live collaboration remains desktop-only.
   var annotateBtn = document.getElementById("lt-annotate-btn");
-  if (annotateBtn) annotateBtn.hidden = false;
+  if (annotateBtn) {
+    annotateBtn.hidden = false;
+    // Wired here (not in the collaboration block) so solo annotation works on
+    // every eligible device AND on ineligible mobile/tablet. setSoloAnnotate is a
+    // hoisted declaration; soloAnnotate is initialized before any click fires.
+    annotateBtn.addEventListener("click", function () {
+      setSoloAnnotate(!soloAnnotate);
+    });
+  }
 
   // Annotation overlay refs.
   var letterboxWrap = document.getElementById("anno-letterbox-wrap");
@@ -2065,7 +2080,38 @@ function annoBindViewportEvents(win, cb) {
       PeerCtor: lazyPeerCtor,
     });
   }
-  var session = newSession();
+  // Solo annotation on an ineligible (mobile/tablet) device uses an INERT stub
+  // instead of the real controller — preserving the desktop-only guarantee that
+  // ineligible devices never construct a session, load PeerJS, request the mic,
+  // or run clipboard sync. Every method is a safe no-op; solo strokes render
+  // locally and broadcast nothing (the annotation pipeline only needs getState +
+  // the send* sinks).
+  function soloStubSession() {
+    var idle = { role: null, status: "idle", isConnected: false };
+    function no() {
+      return false;
+    }
+    return {
+      getState: function () {
+        return idle;
+      },
+      subscribe: function () {
+        return function () {};
+      },
+      noteCurrentView: function () {
+        return true;
+      },
+      sendPointer: no,
+      sendStrokeBegin: no,
+      sendStrokePatch: no,
+      sendStrokeCommit: no,
+      sendClear: no,
+      sendNavLock: no,
+      sendStrokeDelete: no,
+      dispose: function () {},
+    };
+  }
+  var session = COLLAB_ELIGIBLE ? newSession() : soloStubSession();
   var lastTeleportTs = 0;
   var lastShareTs = 0;
   var wasConnected = false;
@@ -3800,14 +3846,15 @@ function annoBindViewportEvents(win, cb) {
     }
   }
 
-  // ── Role / panel wiring ──────────────────────────────────────────────
+  // ── Role / panel wiring (collaboration — desktop-only) ───────────────
+  // Gated behind COLLAB_ELIGIBLE so an ineligible (mobile/tablet) device never
+  // wires Host / Join / PIN / back / leave — belt-and-suspenders on top of the
+  // collab DOM removal above, so PeerJS or a real session can never be triggered
+  // on mobile regardless of markup. The solo Annotate button is wired at its
+  // reveal site above, so it stays live for solo annotation here.
+  if (COLLAB_ELIGIBLE) {
   if (launchBtn) {
     launchBtn.addEventListener("click", togglePanel);
-  }
-  if (annotateBtn) {
-    annotateBtn.addEventListener("click", function () {
-      setSoloAnnotate(!soloAnnotate);
-    });
   }
   if (panelClose) {
     panelClose.addEventListener("click", closePanel);
@@ -3900,6 +3947,7 @@ function annoBindViewportEvents(win, cb) {
       pinInput.value = (pinInput.value || "").replace(/\D/g, "").slice(0, 4);
     });
   }
+  } // end if (COLLAB_ELIGIBLE) — collaboration role/panel wiring
 
   function teardownSession() {
     try {
