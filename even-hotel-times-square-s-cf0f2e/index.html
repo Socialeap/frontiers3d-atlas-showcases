@@ -12,7 +12,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
 Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.2.7" />
+<meta name="f3d-runtime" content="2.2.8" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -3624,7 +3624,9 @@ function annoBindViewportEvents(win, cb) {
   // params stop that reload from replaying Matterport's startup UI:
   //   mls=2 reduce Matterport presentation/branding · hr=0 suppress highlight reel ·
   //   help=0 no help prompt · dh=1 KEEP Dollhouse access · fp=1 KEEP Floor Plan access ·
-  //   vr=0 suppress VR mode/prompt · play=1 start directly in the tour.
+  //   vr=0 suppress VR mode/prompt · play=1 start directly in the tour ·
+  //   qs=1 Quickstart — bypasses Matterport's fly-in so dh=1 does NOT replay the
+  //   Dollhouse fly-in animation on every View Sync iframe URL refresh (2.2.8).
   // Idempotent (re-strips its own + legacy params before re-appending); preserves
   // m + ss/sr; only ever decorates real Matterport show URLs.
   function normalizeMatterportLiveSyncUrl(baseUrl, ss, sr) {
@@ -3637,7 +3639,7 @@ function annoBindViewportEvents(win, cb) {
     var sep = stripped.indexOf("?") === -1 ? "?" : "&";
     var qs = "ss=" + encodeURIComponent(ss);
     if (sr) qs += "&sr=" + encodeURIComponent(sr);
-    qs += "&mls=2&hr=0&help=0&dh=1&fp=1&vr=0&play=1";
+    qs += "&mls=2&hr=0&help=0&dh=1&fp=1&vr=0&play=1&qs=1";
     return stripped + sep + qs;
   }
 
