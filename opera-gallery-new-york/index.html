@@ -8,7 +8,7 @@
 <meta property="og:title" content="Opera Gallery New York — Frontiers|3D" />
 <meta property="og:description" content="A premier three-level gallery on Madison Avenue showcasing an exceptional collection of modern and contemporary art. Visitors can explore works by 20th-century masters like Picasso, Chagall, and Botero alongside contemporary pieces by Yayoi Kusama and Mel Bochner. The space features dramatic dark walls that make the vibrant artworks pop and is fully accessible via stairs or elevator. Offering free admission, it is a sophisticated and welcoming destination for art lovers visiting the Upper East Side, conveniently located near Central Park, The Metropolitan Museum of Art, and world-class luxury" />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.4.0" />
+<meta name="f3d-runtime" content="2.24.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -116,6 +116,12 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
 .lt-panel-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
 .lt-intro{margin:0 0 4px;font-size:12.5px;line-height:1.55;color:rgba(255,255,255,0.78)}
 .lt-role-choose{display:flex;flex-direction:column;gap:8px}
+/* Host / guest blocks are flex columns for TWO reasons, both visible bugs
+   before 2.24.0: without it the PIN card and "Share invite" sat flush against
+   each other (no gap), and a bare <button> shrink-wrapped its label so the
+   invite button was narrower than every control above it. Stretch (the flex
+   default) gives uniform full-width buttons; the gap gives the spacing. */
+#lt-host-block,#lt-guest-block{display:flex;flex-direction:column;gap:10px}
 .lt-btn{appearance:none;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.07);color:#fff;border-radius:8px;padding:10px 12px;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;transition:background 0.2s,opacity 0.2s,transform 0.1s;-webkit-tap-highlight-color:transparent}
 .lt-btn:hover{background:rgba(255,255,255,0.14)}
 .lt-btn:active{transform:scale(0.99)}
@@ -345,9 +351,13 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
   <span class="loc-sync-label" aria-live="polite">Connecting…</span>
 </div>
 <div id="loc-sync-tips" role="status" aria-live="polite" hidden>
+  <!-- One flow, not two. The old first step described "Share → Current
+       Location", which is not how syncing works and contradicted the step
+       below it — the same wrong-instructions defect the Builder runtime fixed
+       in 2.23.0. Sync is: move, press U, click Copy. Nothing else. -->
   <ol>
-    <li>In Matterport, open <strong>Share &rarr; Current Location</strong> and tap <strong>Copy</strong>.</li>
-    <li>Press <kbd>U</kbd> then <strong>Copy to clipboard</strong> &mdash; it syncs automatically.</li>
+    <li>Move to the exact view you want everyone to see.</li>
+    <li>Press <kbd>U</kbd>, then click <strong>COPY TO CLIPBOARD</strong> &mdash; the group jumps to your view automatically.</li>
   </ol>
 </div>
 <audio id="lt-audio" autoplay playsinline></audio>
@@ -358,9 +368,28 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 // f3d:runtime-js:kernel BEGIN v=1 family=atlas
 // Live Guided Tour P2P controller. Loaded into the exported HTML
 // runtime. Wraps the global `Peer` constructor (PeerJS UMD bundle,
-// loaded via CDN <script> tag) to drive a single Agent <-> Visitor
-// session: a reliable WebRTC DataChannel for teleport + annotation
-// packets and a MediaConnection for two-way voice.
+// loaded via CDN <script> tag) to drive an Agent <-> Visitor session:
+// a reliable WebRTC DataChannel per guest for teleport + annotation
+// packets and a MediaConnection per guest for voice.
+//
+// 2.12.0 — MULTI-GUEST (star topology, agent at the hub). The agent
+// side now keeps a REGISTRY of guest connections instead of a single
+// slot; each guest still holds exactly one connection to the agent, so
+// the visitor code path is unchanged. Two options keep every existing
+// embedder byte-behavior compatible:
+//   maxGuests (default 1) — at the default, agent connection handling
+//     keeps the EXACT pre-2.12 semantics (a newly opened connection
+//     displaces the previous one; visitor close ends the session).
+//     The Builder glue passes 8. Above the cap an excess inbound
+//     connection is closed on open.
+//   guestPermissionDefaults (default {syncView:true, annotate:true}) —
+//     what a newly joined guest may do before setGuestPermission() is
+//     ever called. The default preserves the pre-2.12 permissive
+//     behavior for embedders that never call it (the Atlas runtime);
+//     the Builder glue passes {syncView:false, annotate:false} (the
+//     owner-approved grant model, enforced HERE at the hub: packets
+//     from a non-permitted guest are dropped before they reach state
+//     or any relay, so a tampered client gains nothing).
 //
 // Wire format (DataChannel JSON, all packets share the channel):
 //   { type: "teleport", ss, sr }
@@ -376,10 +405,27 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 // on both ends; receivers drop annotation packets whose viewKey
 // differs from their current one — kills late-arriving frames from a
 // previous Matterport sweep. `seq` is a single monotonic counter per
-// sender; receivers drop any packet with seq <= last seen. Pointer
-// sends are coalesced through a frame-rate scheduler (rAF in the
-// browser) and are additionally guarded by dataConn.bufferedAmount so
-// the channel never backs up under a flood of mousemove events.
+// sender; receivers drop any packet with seq <= last seen (tracked
+// PER CONNECTION on the agent). Because each guest counts its own seq
+// independently, the agent RE-STAMPS every locally delivered
+// annotation event with a hub-local monotonic ingest counter before
+// patching state — the embedding glue dedupes state events with a
+// single `seq !== lastSeen` check, which two guests' colliding raw
+// counters would otherwise break. Relayed packets are re-stamped with
+// the agent's own outbound counter for the same reason.
+//
+// Control markers: an ss string starting with "f3dctl:" is a
+// SETTINGS/DIRECTIVE marker riding the teleport channel, never a real
+// view — the controller does NOT stamp _currentViewKey for them (in
+// either direction), and sendControl/sendControlTo exist so the glue
+// can emit them without the view-key restore dance real teleports
+// would force.
+//
+// Pointer sends are coalesced through a frame-rate scheduler (rAF in
+// the browser) and are additionally guarded by conn.bufferedAmount so
+// the channel never backs up under a flood of mousemove events; on
+// the agent the guard is applied per connection so one congested
+// guest never starves the others.
 //
 // Same constraints as the other .mjs runtime modules in this folder:
 // no imports, no TypeScript syntax, no single-quote string literals,
@@ -413,6 +459,18 @@ function _coerceString(v) {
   if (typeof v === "string") return v;
   if (v == null) return "";
   return String(v);
+}
+
+// Guest display-name hygiene: strings only, control characters
+// stripped, trimmed, hard 24-char cap. Empty after cleaning falls
+// back to "Guest <ordinal>". Names are DATA — the embedding glue must
+// render them via textContent, never innerHTML.
+function _sanitizeGuestName(v, ordinal) {
+  var s = typeof v === "string" ? v : "";
+  s = s.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ");
+  s = s.replace(/^\s+|\s+$/g, "").slice(0, 24);
+  if (!s) s = "Guest " + ordinal;
+  return s;
 }
 
 // Acquire the local microphone with consistent audio constraints.
@@ -489,6 +547,10 @@ function _makeLogger(debug) {
 // guard so we never lose ink.
 var LIVE_SESSION_POINTER_BACKPRESSURE_BYTES = 65536;
 
+// Absolute ceiling for the maxGuests option — the M1 reliability cap
+// (host bandwidth/CPU scale with guest count; see the design record).
+var LIVE_SESSION_MAX_GUESTS_CEILING = 8;
+
 // Factory for a single live-session controller. Each call returns an
 // independent state machine; the page is expected to keep at most one
 // alive at a time.
@@ -508,16 +570,35 @@ var LIVE_SESSION_POINTER_BACKPRESSURE_BYTES = 65536;
 //     the silent AudioContext fallback, or place/answer a media call
 //     automatically during the connect transition. Voice starts only
 //     via startVoice(), i.e. from a direct user gesture. Incoming
-//     calls are held (pendingIncomingCall) until then. The data
-//     channel is fully independent of all of it.
+//     calls are held (pending) until then. The data channel is fully
+//     independent of all of it.
 //   onDiagnostic: function(name) — milestone hook (data_connected,
 //     mic_requested/granted/denied, media_call_started,
 //     remote_stream). Must never throw into the controller; guarded.
+//   maxGuests: number — how many guests the AGENT accepts at once
+//     (default 1 = exact pre-2.12 single-guest semantics; clamped to
+//     [1, 8]).
+//   guestPermissionDefaults: {syncView, annotate} — what a new guest
+//     may do before setGuestPermission() is called (default both true
+//     = pre-2.12 permissive behavior).
 function createLiveSession(options) {
   var opts = options || {};
   var log = _makeLogger(!!opts.debug);
   var pinAttempts = typeof opts.pinAttempts === "number" ? opts.pinAttempts : 5;
   var deferVoice = opts.deferVoice === true;
+  var maxGuests = 1;
+  if (typeof opts.maxGuests === "number" && isFinite(opts.maxGuests)) {
+    maxGuests = Math.floor(opts.maxGuests);
+    if (maxGuests < 1) maxGuests = 1;
+    if (maxGuests > LIVE_SESSION_MAX_GUESTS_CEILING) maxGuests = LIVE_SESSION_MAX_GUESTS_CEILING;
+  }
+  var permDefaults = { syncView: true, annotate: true };
+  if (_isPlainObject(opts.guestPermissionDefaults)) {
+    permDefaults = {
+      syncView: opts.guestPermissionDefaults.syncView !== false,
+      annotate: opts.guestPermissionDefaults.annotate !== false,
+    };
+  }
   var _diag = typeof opts.onDiagnostic === "function" ? opts.onDiagnostic : null;
   function _diagSafe(name) {
     if (!_diag) return;
@@ -552,6 +633,8 @@ function createLiveSession(options) {
     error: null,
     isConnected: false,
     remoteStream: null,
+    remoteStreams: {},
+    guests: [],
     voiceCallActive: false,
     incomingTeleportEvent: null,
     incomingPointerEvent: null,
@@ -564,24 +647,59 @@ function createLiveSession(options) {
 
   var listeners = [];
   var peer = null;
+  // Visitor-side single slots (the visitor talks to exactly one agent;
+  // this path is byte-for-byte the pre-2.12 behavior).
   var dataConn = null;
   var mediaCall = null;
-  var localMicStream = null;
   var pendingIncomingCall = null;
+  // Agent-side guest registry. Keyed by the remote peer id. Each slot:
+  // { conn, open, name, ordinal, lastRecvSeq }. guestOrder preserves
+  // join order for a stable roster; ordinals only ever grow so a
+  // fallback "Guest N" name is never reused within a session.
+  var guestConns = {};
+  var guestOrder = [];
+  var guestOrdinal = 0;
+  var mediaCalls = {};
+  var pendingIncomingCalls = {};
+  var permissions = {};
+  var localMicStream = null;
   var voiceEnabledByUser = false;
   var disposed = false;
 
-  // Annotation channel bookkeeping. _sendSeq is the agent's monotonic
-  // counter stamped on every outbound annotation packet. _lastRecvSeq
-  // is the receiver's watermark — any packet whose seq doesn't exceed
-  // it is dropped (out-of-order arrival under a reliable channel
-  // shouldn't happen, but we guard so a buggy peer can't replay).
-  // _currentViewKey is updated automatically from teleport packets on
-  // both ends; annotation packets whose viewKey diverges are dropped
-  // so late frames from a stale Matterport sweep don't leak through.
+  // Annotation channel bookkeeping. _sendSeq is this peer's monotonic
+  // counter stamped on every outbound annotation packet (agent: shared
+  // across its own sends AND relays — still strictly monotonic per
+  // receiving connection, which is all the receiver checks).
+  // _lastRecvSeq is the VISITOR-side receive watermark (single sender);
+  // the agent keeps a per-slot watermark in the registry instead.
+  // _ingestSeq re-stamps agent-side locally delivered events so the
+  // embedding glue's single `seq !== lastSeen` dedupe survives multiple
+  // guests' independent (colliding) raw counters.
+  // _currentViewKey is updated automatically from REAL teleport packets
+  // on both ends (control markers excluded); annotation packets whose
+  // viewKey diverges are dropped so late frames from a stale Matterport
+  // sweep don't leak through.
   var _sendSeq = 0;
   var _lastRecvSeq = 0;
+  var _ingestSeq = 0;
   var _currentViewKey = "";
+  // Monotonic event id stamped on incomingTeleportEvent /
+  // incomingLocationShareEvent (2.12.0, additive field). The glue's
+  // pre-2.12 dedupe used the Date.now() ts — two packets flushed in
+  // one SCTP batch can land in the SAME millisecond (e.g. the host's
+  // back-to-back permission markers on guest join), which made the
+  // second event look like a duplicate. evId can never collide.
+  var _teleportEvId = 0;
+  // Annotation-floor holder at the hub (multi-guest sessions only —
+  // maxGuests===1 keeps the exact pre-2.12 pass-through semantics).
+  // null | "host" | <guest peerId>. With 3+ parties a single boolean
+  // floor collapses: a release from one actor would unfreeze peers
+  // while ANOTHER actor is mid-gesture. The hub arbitrates instead:
+  // nav_lock(true) from a non-holder while held is dropped;
+  // nav_lock(false) is honored only from the current holder; a
+  // departing holder's slot removal synthesizes the release.
+  var _floorHolder = null;
+  var _floorManaged = maxGuests > 1;
 
   // Pointer coalescer. The runtime can call sendPointer many times
   // per frame (mousemove fires at the input device's poll rate); we
@@ -649,6 +767,150 @@ function createLiveSession(options) {
       error: "PeerJS isn't loaded yet. Check your network connection.",
     });
     return false;
+  }
+
+  // ── Agent-side registry helpers ────────────────────────────────────
+  function _openGuestIds() {
+    var out = [];
+    for (var i = 0; i < guestOrder.length; i++) {
+      var slot = guestConns[guestOrder[i]];
+      if (slot && slot.open) out.push(guestOrder[i]);
+    }
+    return out;
+  }
+
+  function _guestsSnapshot() {
+    var out = [];
+    for (var i = 0; i < guestOrder.length; i++) {
+      var id = guestOrder[i];
+      var slot = guestConns[id];
+      if (!slot || !slot.open) continue;
+      var perm = permissions[id] || permDefaults;
+      out.push({
+        peerId: id,
+        name: slot.name,
+        syncView: perm.syncView === true,
+        annotate: perm.annotate === true,
+      });
+    }
+    return out;
+  }
+
+  function _remoteStreamsSnapshot() {
+    // remoteStream (singular) stays populated for embedders that only
+    // know the pre-2.12 single-stream shape: the first live stream.
+    // Iterate guestOrder FIRST (stable ordering), then any media calls
+    // whose data slot hasn't opened yet — media and data negotiate on
+    // independent RTC connections, so a stream can land before its
+    // guest's data channel does, and pre-2.12 delivered it regardless.
+    var streams = {};
+    var first = null;
+    for (var i = 0; i < guestOrder.length; i++) {
+      var id = guestOrder[i];
+      var call = mediaCalls[id];
+      if (call && call._f3dRemoteStream) {
+        streams[id] = call._f3dRemoteStream;
+        if (!first) first = call._f3dRemoteStream;
+      }
+    }
+    for (var mid in mediaCalls) {
+      if (!Object.prototype.hasOwnProperty.call(mediaCalls, mid)) continue;
+      if (streams[mid]) continue;
+      var mcall = mediaCalls[mid];
+      if (mcall && mcall._f3dRemoteStream) {
+        streams[mid] = mcall._f3dRemoteStream;
+        if (!first) first = mcall._f3dRemoteStream;
+      }
+    }
+    return { streams: streams, first: first };
+  }
+
+  function _patchGuestState(extra) {
+    var media = _remoteStreamsSnapshot();
+    var openCount = _openGuestIds().length;
+    var next = {
+      guests: _guestsSnapshot(),
+      remoteStreams: media.streams,
+      remoteStream: media.first,
+      isConnected: openCount > 0,
+      // maxGuests===1 keeps the EXACT pre-2.12 close semantics: losing
+      // the only guest ends the session ("ended" → embedder teardown).
+      // Multi-guest sessions stay alive and return to "waiting" so more
+      // guests can join / rejoin.
+      status: openCount > 0 ? "connected" : maxGuests === 1 ? "ended" : "waiting",
+    };
+    if (extra) {
+      for (var k in extra) {
+        if (Object.prototype.hasOwnProperty.call(extra, k)) next[k] = extra[k];
+      }
+    }
+    _patch(next);
+  }
+
+  function _removeGuestSlot(remoteId) {
+    var slot = guestConns[remoteId];
+    if (!slot) return;
+    delete guestConns[remoteId];
+    delete permissions[remoteId];
+    var idx = guestOrder.indexOf(remoteId);
+    if (idx >= 0) guestOrder.splice(idx, 1);
+    // Last guest gone: clear ANY held floor. A guest holder is handled
+    // by the synthesis below; a HOST holder must reset here too — with
+    // zero guests the glue's release path never calls sendNavLock (not
+    // connected), so a holder left set would silently drop every future
+    // guest's nav_lock forever.
+    if (_floorManaged && _openGuestIds().length === 0) {
+      _floorHolder = null;
+    }
+    // A departing floor holder can no longer send its own release —
+    // synthesize it so the remaining parties aren't frozen for the
+    // full client-side safety timeout.
+    if (_floorManaged && _floorHolder === remoteId) {
+      _floorHolder = null;
+      var releasePacket = {
+        type: "nav_lock",
+        viewKey: _currentViewKey,
+        locked: false,
+        seq: ++_sendSeq,
+        ts: Date.now(),
+      };
+      for (var ri = 0; ri < guestOrder.length; ri++) {
+        var rslot = guestConns[guestOrder[ri]];
+        if (!rslot || !rslot.open) continue;
+        try {
+          rslot.conn.send(releasePacket);
+        } catch (e) {
+          log("floor release relay failed", e);
+        }
+      }
+      _ingestSeq++;
+      _patch({
+        incomingNavLockEvent: {
+          viewKey: _currentViewKey,
+          locked: false,
+          seq: _ingestSeq,
+          ts: Date.now(),
+        },
+      });
+    }
+    var call = mediaCalls[remoteId];
+    if (call) {
+      delete mediaCalls[remoteId];
+      try {
+        call.close();
+      } catch (e) {
+        // ignore
+      }
+    }
+    var pend = pendingIncomingCalls[remoteId];
+    if (pend) {
+      delete pendingIncomingCalls[remoteId];
+      try {
+        pend.close();
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 
   // ── Agent ──────────────────────────────────────────────────────────
@@ -722,7 +984,7 @@ function createLiveSession(options) {
   function _wireAgentPeer() {
     if (!peer) return;
     peer.on("connection", function (conn) {
-      _attachDataConnection(conn);
+      _attachAgentConnection(conn);
     });
     peer.on("call", function (call) {
       _answerIncomingCall(call);
@@ -740,18 +1002,121 @@ function createLiveSession(options) {
     });
   }
 
+  // Agent-side inbound connection handling.
+  //
+  // Candidate adoption (2.2.1, now PER SLOT): a newly offered connection
+  // must NOT displace a live one until it actually emits "open". PeerJS
+  // can hand the agent a duplicate inbound connection (visitor tab
+  // refresh, network flap, ICE restart) that never opens; assigning it
+  // eagerly left a dead OUTBOUND channel while the old connection's
+  // handlers kept delivering INBOUND data. Until the candidate opens,
+  // the existing connection stays authoritative; on open the candidate
+  // is adopted and the previous channel for that SAME remote peer id is
+  // closed. At maxGuests===1 adoption additionally displaces ANY other
+  // guest's connection — the exact pre-2.12 single-guest semantics. A
+  // candidate that errors/closes before opening changes nothing.
+  var _anonConnCounter = 0;
+  function _attachAgentConnection(conn) {
+    var remoteId = _coerceString(conn && conn.peer);
+    if (!remoteId) {
+      _anonConnCounter++;
+      remoteId = "anon-" + _anonConnCounter;
+    }
+    conn.on("open", function () {
+      var slot = guestConns[remoteId];
+      var isNewSlot = !slot;
+      if (isNewSlot) {
+        // Capacity check counts OTHER open slots — a re-offer for an
+        // existing slot never trips the cap.
+        var openOthers = 0;
+        for (var i = 0; i < guestOrder.length; i++) {
+          var s = guestConns[guestOrder[i]];
+          if (s && s.open && guestOrder[i] !== remoteId) openOthers++;
+        }
+        if (maxGuests === 1 && openOthers > 0) {
+          // Pre-2.12 semantics: the newest opened connection wins and
+          // every previous guest connection is closed out.
+          var ids = guestOrder.slice();
+          for (var d = 0; d < ids.length; d++) {
+            var old = guestConns[ids[d]];
+            _removeGuestSlot(ids[d]);
+            if (old && old.conn) {
+              try {
+                old.conn.close();
+              } catch (e) {
+                log("stale conn close failed", e);
+              }
+            }
+          }
+        } else if (openOthers >= maxGuests) {
+          // Session full: refuse the newcomer. Their side sees the
+          // connection close ("Session ended").
+          try {
+            conn.close();
+          } catch (e) {
+            // ignore
+          }
+          return;
+        }
+        guestOrdinal++;
+        slot = {
+          conn: conn,
+          open: true,
+          ordinal: guestOrdinal,
+          name: _sanitizeGuestName(
+            conn && conn.metadata && conn.metadata.name,
+            guestOrdinal,
+          ),
+          lastRecvSeq: 0,
+        };
+        guestConns[remoteId] = slot;
+        guestOrder.push(remoteId);
+        if (!permissions[remoteId]) {
+          permissions[remoteId] = {
+            syncView: permDefaults.syncView,
+            annotate: permDefaults.annotate,
+          };
+        }
+      } else {
+        var previous = slot.conn !== conn ? slot.conn : null;
+        slot.conn = conn;
+        slot.open = true;
+        if (previous) {
+          try {
+            previous.close();
+          } catch (e) {
+            log("stale conn close failed", e);
+          }
+        }
+      }
+      _diagSafe("data_connected");
+      _patchGuestState();
+    });
+    conn.on("data", function (data) {
+      var slot = guestConns[remoteId];
+      // Only the slot's authoritative connection may deliver.
+      if (!slot || slot.conn !== conn) return;
+      _handleAgentData(remoteId, slot, data);
+    });
+    conn.on("close", function () {
+      var slot = guestConns[remoteId];
+      if (!slot || slot.conn !== conn) return;
+      _removeGuestSlot(remoteId);
+      _patchGuestState();
+    });
+    conn.on("error", function (err) {
+      var t = (err && err.type) || (err && err.message) || "data-error";
+      log("data conn error", t);
+      // A failing CANDIDATE must not surface an error over a healthy
+      // active channel; only a slot's authoritative conn reports.
+      var slot = guestConns[remoteId];
+      if (slot && slot.conn === conn) _patch({ error: t });
+    });
+  }
+
+  // Visitor-side single-connection handling (pre-2.12 path, unchanged
+  // except the control-marker view-key exclusion in _handleIncomingData).
   function _attachDataConnection(conn) {
-    // Candidate adoption: a newly offered connection must NOT displace a
-    // live dataConn until it actually emits "open". PeerJS can hand the
-    // agent a duplicate inbound connection (visitor tab refresh, network
-    // flap, ICE restart) that never opens; assigning it eagerly left
-    // isConnected=true with a dead OUTBOUND channel while the old
-    // connection's handlers kept delivering INBOUND data — the exact
-    // one-way host→guest failure this guards against. Until the
-    // candidate opens, the existing connection stays authoritative; on
-    // open the candidate is adopted and the previous channel is closed.
-    // A candidate that errors/closes before opening leaves the existing
-    // connection and the connected state untouched.
     conn.on("open", function () {
       var previous = dataConn !== conn ? dataConn : null;
       dataConn = conn;
@@ -777,9 +1142,6 @@ function createLiveSession(options) {
     conn.on("error", function (err) {
       var t = (err && err.type) || (err && err.message) || "data-error";
       log("data conn error", t);
-      // A failing CANDIDATE must not surface an error over a healthy
-      // active channel; only the authoritative conn (or the very first,
-      // below) reports.
       if (dataConn === conn) _patch({ error: t });
     });
     // First connection (nothing live yet): make it the provisional
@@ -789,21 +1151,47 @@ function createLiveSession(options) {
   }
 
   // Shared media-call plumbing: stream/close/error handlers. Media
-  // failure only patches state — it must never close or corrupt the
-  // data connection. `voiceCallActive` tracks the attempt lifecycle so
-  // the UI can re-offer "Enable voice" when a call dies BEFORE a remote
-  // stream ever arrived (negotiation failure, peer hung up); the error
-  // path also clears mediaCall, otherwise a dead call would make every
-  // startVoice() retry a no-op.
-  function _wireMediaCall(call) {
-    mediaCall = call;
+  // failure only patches state — it must never close or corrupt a
+  // data connection. `voiceCallActive` tracks whether ANY call is live
+  // so the UI can re-offer "Enable voice" when every call died BEFORE a
+  // remote stream ever arrived.
+  function _wireMediaCall(call, remoteId) {
+    var isAgent = state.role === "agent";
+    if (isAgent) mediaCalls[remoteId] = call;
+    else mediaCall = call;
     _patch({ voiceCallActive: true });
     call.on("stream", function (remoteStream) {
       _diagSafe("remote_stream");
-      _patch({ remoteStream: remoteStream });
+      if (isAgent) {
+        call._f3dRemoteStream = remoteStream;
+        // Patch ONLY the media fields — never recompute status here.
+        // Media and data channels negotiate on independent RTC
+        // connections, so a stream can land BEFORE the guest's data
+        // channel opens; recomputing status from the open-slot count in
+        // that window would emit a transition (waiting→ended at the
+        // maxGuests===1 defaults) the pre-2.12 controller never did.
+        var media = _remoteStreamsSnapshot();
+        _patch({
+          remoteStreams: media.streams,
+          remoteStream: media.first,
+          voiceCallActive: true,
+        });
+      } else {
+        _patch({ remoteStream: remoteStream });
+      }
     });
     call.on("close", function () {
-      if (mediaCall === call) {
+      if (isAgent) {
+        if (mediaCalls[remoteId] === call) {
+          delete mediaCalls[remoteId];
+          var media = _remoteStreamsSnapshot();
+          _patch({
+            remoteStreams: media.streams,
+            remoteStream: media.first,
+            voiceCallActive: _hasAnyMediaCall(),
+          });
+        }
+      } else if (mediaCall === call) {
         mediaCall = null;
         _patch({ remoteStream: null, voiceCallActive: false });
       }
@@ -811,7 +1199,20 @@ function createLiveSession(options) {
     call.on("error", function (err) {
       var t = (err && err.type) || (err && err.message) || "call-error";
       log("call error", t);
-      if (mediaCall === call) {
+      if (isAgent) {
+        if (mediaCalls[remoteId] === call) {
+          delete mediaCalls[remoteId];
+          var media = _remoteStreamsSnapshot();
+          _patch({
+            error: t,
+            remoteStreams: media.streams,
+            remoteStream: media.first,
+            voiceCallActive: _hasAnyMediaCall(),
+          });
+        } else {
+          _patch({ error: t });
+        }
+      } else if (mediaCall === call) {
         mediaCall = null;
         _patch({ error: t, remoteStream: null, voiceCallActive: false });
       } else {
@@ -820,22 +1221,38 @@ function createLiveSession(options) {
     });
   }
 
+  function _hasAnyMediaCall() {
+    for (var k in mediaCalls) {
+      if (Object.prototype.hasOwnProperty.call(mediaCalls, k)) return true;
+    }
+    return false;
+  }
+
   function _answerIncomingCall(call) {
+    var remoteId = _coerceString(call && call.peer) || "caller";
     // Deferred-voice sessions hold the offer until the user explicitly
     // enables voice (startVoice) — unless they already did, in which
     // case the offer is answered immediately below with the stream the
     // user already granted.
     if (deferVoice && !voiceEnabledByUser) {
-      pendingIncomingCall = call;
-      call.on("close", function () {
-        if (pendingIncomingCall === call) pendingIncomingCall = null;
-      });
+      if (state.role === "agent") {
+        pendingIncomingCalls[remoteId] = call;
+        call.on("close", function () {
+          if (pendingIncomingCalls[remoteId] === call) delete pendingIncomingCalls[remoteId];
+        });
+      } else {
+        pendingIncomingCall = call;
+        call.on("close", function () {
+          if (pendingIncomingCall === call) pendingIncomingCall = null;
+        });
+      }
       return;
     }
     _getMicStream(_diagSafe).then(function (stream) {
       // deferVoice: NEVER build the silent AudioContext fallback — a
-      // mic-less answer is receive-only instead.
-      localMicStream = stream || (deferVoice ? localMicStream : _silentTrackStream());
+      // mic-less answer is receive-only instead. The mic stream is
+      // acquired once and reused for every guest's call.
+      localMicStream = stream || localMicStream || (deferVoice ? null : _silentTrackStream());
       try {
         if (localMicStream) call.answer(localMicStream);
         else call.answer();
@@ -843,19 +1260,21 @@ function createLiveSession(options) {
         log("call.answer failed", e);
       }
       _diagSafe("media_call_started");
-      _wireMediaCall(call);
+      _wireMediaCall(call, remoteId);
     });
   }
 
   // ── Visitor ────────────────────────────────────────────────────────
-  function joinAsVisitor(pinInput) {
+  // `name` (optional, 2.12.0) travels to the agent as connection
+  // metadata and is sanitized THERE — the agent never trusts it raw.
+  function joinAsVisitor(pinInput, name) {
     if (disposed) return Promise.reject(new Error("session disposed"));
     if (!_ensurePeerCtor()) {
       return Promise.reject(new Error(state.error || "peer-unavailable"));
     }
     var clean = _coerceString(pinInput).replace(/\D/g, "").slice(0, 4);
     if (clean.length !== 4) {
-      var msg = "Enter the 4-digit PIN from your agent.";
+      var msg = "Enter the 4-digit PIN from your host.";
       _patch({ status: "error", error: msg });
       return Promise.reject(new Error(msg));
     }
@@ -864,6 +1283,7 @@ function createLiveSession(options) {
     }
     var visitorId = LIVE_SESSION_VISITOR_PREFIX + _generateVisitorSuffix();
     var agentId = LIVE_SESSION_AGENT_PREFIX + clean;
+    var cleanName = _coerceString(name).slice(0, 64);
     _patch({
       role: "visitor",
       status: "connecting",
@@ -883,7 +1303,10 @@ function createLiveSession(options) {
       var settled = false;
 
       p.on("open", function () {
-        var conn = p.connect(agentId, { reliable: true });
+        var conn = p.connect(agentId, {
+          reliable: true,
+          metadata: { v: 1, name: cleanName },
+        });
         _attachDataConnection(conn);
         // Deferred voice (P0 iPad): the connect transition stays
         // data-only — no getUserMedia, no AudioContext, no media call.
@@ -901,7 +1324,7 @@ function createLiveSession(options) {
             }
             if (call) {
               _diagSafe("media_call_started");
-              _wireMediaCall(call);
+              _wireMediaCall(call, agentId);
             }
           });
         }
@@ -916,7 +1339,7 @@ function createLiveSession(options) {
         log("visitor peer error", t);
         var human =
           t === "peer-unavailable"
-            ? "No active session for that PIN. Ask your agent to start one."
+            ? "No active session for that PIN. Ask your host to start one."
             : "Couldn't connect to the live tour. " + t;
         _patch({ status: "error", error: human, isConnected: false });
         if (!settled) {
@@ -931,123 +1354,61 @@ function createLiveSession(options) {
     });
   }
 
-  // ── Shared ─────────────────────────────────────────────────────────
-  function _handleIncomingData(payload) {
-    if (!_isPlainObject(payload)) return;
-    var type = payload.type;
-    if (type === "teleport") {
-      var ss = _coerceString(payload.ss).trim();
-      var sr = _coerceString(payload.sr).trim();
-      if (!ss) return;
-      // Always update the internal viewKey so the annotation receive
-      // filter stays correct — annotation packets carry the viewKey
-      // and we drop stale ones regardless of role.
-      _currentViewKey = ss + "|" + sr;
-      // Role-direction guard: `teleport` is an agent → visitor packet.
-      // An agent receiving its own teleport (echo / loopback / test
-      // arrangement) must NOT patch incomingTeleportEvent — doing so
-      // would trigger the agent's parent-code reload branch and cause
-      // an unintended iframe refresh on the wrong side.
-      if (state.role !== "visitor") return;
-      _patch({
-        incomingTeleportEvent: { ss: ss, sr: sr, ts: Date.now() },
-      });
-      return;
+  // ── Inbound packet normalization (shared by both roles) ───────────
+  // Returns a normalized annotation event object for a valid packet of
+  // the given type, or null. Does NOT touch watermarks — callers own
+  // their replay protection (global on the visitor, per-slot on the
+  // agent).
+  function _normalizeAnnotationPacket(type, payload) {
+    var vk = _coerceString(payload.viewKey);
+    var seq = +payload.seq || 0;
+    var ts = +payload.ts || Date.now();
+    if (type === "pointer") {
+      return {
+        kind: "pointer",
+        viewKey: vk,
+        seq: seq,
+        x: typeof payload.x === "number" ? payload.x : null,
+        y: typeof payload.y === "number" ? payload.y : null,
+        ts: ts,
+      };
     }
-    if (type === "location_share") {
-      // Visitor → Agent: an offered location. Receiver-side validation
-      // mirrors `teleport` (non-empty ss required); we deliberately do
-      // NOT update _currentViewKey here — accepting the share is the
-      // agent's UX decision, not an automatic protocol action.
-      var lss = _coerceString(payload.ss).trim();
-      var lsr = _coerceString(payload.sr).trim();
-      if (!lss) return;
-      // Role-direction guard: `location_share` is a visitor → agent
-      // packet. A visitor receiving its own share bounced back (echo /
-      // loopback) must NOT patch incomingLocationShareEvent — even
-      // though the parent code's auto-follow branch is also role-gated,
-      // sealing this at the controller boundary is the strongest
-      // defense against the visitor's iframe reloading unexpectedly.
-      if (state.role !== "agent") return;
-      _patch({
-        incomingLocationShareEvent: { ss: lss, sr: lsr, ts: Date.now() },
-      });
-      return;
+    if (type === "clear") {
+      return { kind: "clear", viewKey: vk, seq: seq, ts: ts };
     }
-    if (
-      type === "pointer" ||
-      type === "stroke_begin" ||
-      type === "stroke_patch" ||
-      type === "stroke_commit" ||
-      type === "stroke_delete" ||
-      type === "clear" ||
-      type === "nav_lock"
-    ) {
-      var seq = +payload.seq || 0;
-      if (seq <= _lastRecvSeq) return;
-      var vk = _coerceString(payload.viewKey);
-      // Empty viewKey on either end means "no teleport yet" — accept;
-      // mismatch when both sides have a key means stale frame, drop.
-      if (vk && _currentViewKey && vk !== _currentViewKey) return;
-      _lastRecvSeq = seq;
-      var ts = +payload.ts || Date.now();
-      if (type === "pointer") {
-        _patch({
-          incomingPointerEvent: {
-            viewKey: vk,
-            seq: seq,
-            x: typeof payload.x === "number" ? payload.x : null,
-            y: typeof payload.y === "number" ? payload.y : null,
-            ts: ts,
-          },
-        });
-        return;
-      }
-      if (type === "clear") {
-        _patch({
-          incomingClearEvent: { viewKey: vk, seq: seq, ts: ts },
-        });
-        return;
-      }
-      if (type === "nav_lock") {
-        _patch({
-          incomingNavLockEvent: {
-            viewKey: vk,
-            locked: payload.locked === true,
-            seq: seq,
-            ts: ts,
-          },
-        });
-        return;
-      }
-      if (type === "stroke_delete") {
-        // Idempotent erase of one or more committed strokes. Unknown /
-        // already-removed ids are a harmless no-op on the consumer side.
-        var delIds = [];
-        if (Array.isArray(payload.strokeIds)) {
-          for (var di = 0; di < payload.strokeIds.length; di++) {
-            var sid = _coerceString(payload.strokeIds[di]);
-            if (sid) delIds.push(sid);
-          }
+    if (type === "nav_lock") {
+      return {
+        kind: "nav_lock",
+        viewKey: vk,
+        locked: payload.locked === true,
+        seq: seq,
+        ts: ts,
+      };
+    }
+    if (type === "stroke_delete") {
+      var delIds = [];
+      if (Array.isArray(payload.strokeIds)) {
+        for (var di = 0; di < payload.strokeIds.length; di++) {
+          var sid = _coerceString(payload.strokeIds[di]);
+          if (sid) delIds.push(sid);
         }
-        _patch({
-          incomingStrokeDeleteEvent: {
-            viewKey: vk,
-            strokeIds: delIds,
-            seq: seq,
-            ts: ts,
-          },
-        });
-        return;
       }
-      var kind =
-        type === "stroke_begin"
-          ? "begin"
-          : type === "stroke_patch"
-            ? "patch"
-            : "commit";
+      return {
+        kind: "stroke_delete",
+        viewKey: vk,
+        strokeIds: delIds,
+        seq: seq,
+        ts: ts,
+      };
+    }
+    if (type === "stroke_begin" || type === "stroke_patch" || type === "stroke_commit") {
       var ev = {
-        kind: kind,
+        kind:
+          type === "stroke_begin"
+            ? "begin"
+            : type === "stroke_patch"
+              ? "patch"
+              : "commit",
         viewKey: vk,
         seq: seq,
         strokeId: _coerceString(payload.strokeId),
@@ -1056,7 +1417,266 @@ function createLiveSession(options) {
       if (typeof payload.color === "string") ev.color = payload.color;
       if (typeof payload.width === "number") ev.width = payload.width;
       if (Array.isArray(payload.points)) ev.points = payload.points;
-      _patch({ incomingStrokeEvent: ev });
+      return ev;
+    }
+    return null;
+  }
+
+  // Patch a normalized annotation event into state under the correct
+  // incoming*Event field, re-stamping seq with `stampSeq`.
+  function _patchAnnotationEvent(ev, stampSeq) {
+    if (ev.kind === "pointer") {
+      _patch({
+        incomingPointerEvent: {
+          viewKey: ev.viewKey,
+          seq: stampSeq,
+          x: ev.x,
+          y: ev.y,
+          ts: ev.ts,
+        },
+      });
+      return;
+    }
+    if (ev.kind === "clear") {
+      _patch({ incomingClearEvent: { viewKey: ev.viewKey, seq: stampSeq, ts: ev.ts } });
+      return;
+    }
+    if (ev.kind === "nav_lock") {
+      _patch({
+        incomingNavLockEvent: {
+          viewKey: ev.viewKey,
+          locked: ev.locked,
+          seq: stampSeq,
+          ts: ev.ts,
+        },
+      });
+      return;
+    }
+    if (ev.kind === "stroke_delete") {
+      _patch({
+        incomingStrokeDeleteEvent: {
+          viewKey: ev.viewKey,
+          strokeIds: ev.strokeIds,
+          seq: stampSeq,
+          ts: ev.ts,
+        },
+      });
+      return;
+    }
+    var sev = {
+      kind: ev.kind,
+      viewKey: ev.viewKey,
+      seq: stampSeq,
+      strokeId: ev.strokeId,
+      ts: ev.ts,
+    };
+    if (typeof ev.color === "string") sev.color = ev.color;
+    if (typeof ev.width === "number") sev.width = ev.width;
+    if (ev.points) sev.points = ev.points;
+    _patch({ incomingStrokeEvent: sev });
+  }
+
+  // Rebuild the wire packet for a normalized annotation event with a
+  // fresh outbound seq (agent relay path).
+  function _wirePacketFor(ev, seq) {
+    if (ev.kind === "pointer") {
+      return { type: "pointer", viewKey: ev.viewKey, seq: seq, x: ev.x, y: ev.y, ts: ev.ts };
+    }
+    if (ev.kind === "clear") {
+      return { type: "clear", viewKey: ev.viewKey, seq: seq, ts: ev.ts };
+    }
+    if (ev.kind === "nav_lock") {
+      return { type: "nav_lock", viewKey: ev.viewKey, locked: ev.locked, seq: seq, ts: ev.ts };
+    }
+    if (ev.kind === "stroke_delete") {
+      return { type: "stroke_delete", viewKey: ev.viewKey, strokeIds: ev.strokeIds, seq: seq, ts: ev.ts };
+    }
+    var type =
+      ev.kind === "begin"
+        ? "stroke_begin"
+        : ev.kind === "patch"
+          ? "stroke_patch"
+          : "stroke_commit";
+    var packet = { type: type, viewKey: ev.viewKey, seq: seq, strokeId: ev.strokeId, ts: ev.ts };
+    if (typeof ev.color === "string") packet.color = ev.color;
+    if (typeof ev.width === "number") packet.width = ev.width;
+    if (ev.points) packet.points = ev.points;
+    return packet;
+  }
+
+  var _ANNOTATION_TYPES = {
+    pointer: 1,
+    stroke_begin: 1,
+    stroke_patch: 1,
+    stroke_commit: 1,
+    stroke_delete: 1,
+    clear: 1,
+    nav_lock: 1,
+  };
+
+  // ── Agent inbound: per-slot watermarks, hub permission enforcement,
+  //    hub relay ─────────────────────────────────────────────────────
+  function _handleAgentData(remoteId, slot, payload) {
+    if (!_isPlainObject(payload)) return;
+    var type = payload.type;
+    var perm = permissions[remoteId] || permDefaults;
+    if (type === "teleport") {
+      // `teleport` is an agent → visitor packet; the role-direction
+      // guard means it never patches incomingTeleportEvent here. The
+      // internal view-key stamp is PRESERVED for real views (pre-2.12
+      // contract — loopback/test arrangements rely on it); control
+      // markers never stamp (see the header comment).
+      var tss = _coerceString(payload.ss).trim();
+      var tsr = _coerceString(payload.sr).trim();
+      if (tss && tss.indexOf("f3dctl:") !== 0) {
+        _currentViewKey = tss + "|" + tsr;
+      }
+      return;
+    }
+    if (type === "location_share") {
+      var lss = _coerceString(payload.ss).trim();
+      var lsr = _coerceString(payload.sr).trim();
+      if (!lss) return;
+      // Hub enforcement: a guest without the Sync View grant cannot
+      // move anyone — the packet dies here even if a tampered client
+      // sent it (the honest client's send paths are disabled by the
+      // ctl marker before this).
+      if (perm.syncView !== true) return;
+      _teleportEvId++;
+      _patch({
+        incomingLocationShareEvent: {
+          ss: lss,
+          sr: lsr,
+          ts: Date.now(),
+          evId: _teleportEvId,
+          fromPeerId: remoteId,
+          fromName: slot.name,
+        },
+      });
+      return;
+    }
+    if (_ANNOTATION_TYPES[type] === 1) {
+      var seq = +payload.seq || 0;
+      if (seq <= slot.lastRecvSeq) return;
+      var vk = _coerceString(payload.viewKey);
+      // Empty viewKey on either end means "no teleport yet" — accept;
+      // mismatch when both sides have a key means stale frame, drop.
+      if (vk && _currentViewKey && vk !== _currentViewKey) return;
+      slot.lastRecvSeq = seq;
+      var ev = _normalizeAnnotationPacket(type, payload);
+      if (!ev) return;
+      // Hub enforcement: annotation packets from a guest without the
+      // Annotation grant are dropped (watermark already advanced so a
+      // replay can't sneak in later either). GESTURE-CLOSING packets
+      // are exempt — a commit that seals THIS guest's own in-flight
+      // stroke, or a floor release — because they can only seal or
+      // release, never create; dropping them (revoke-mid-gesture)
+      // would strand an uncommittable, un-erasable stroke fragment on
+      // every other canvas and freeze everyone for the full safety
+      // timeout.
+      var closing =
+        (ev.kind === "commit" && slot.openStrokeId && slot.openStrokeId === ev.strokeId) ||
+        (ev.kind === "nav_lock" && ev.locked !== true);
+      if (perm.annotate !== true && !closing) return;
+      // Hub floor arbitration (multi-guest only; maxGuests===1 keeps
+      // the exact pre-2.12 pass-through). With 3+ parties a single
+      // boolean floor collapses — a release from one actor would
+      // unfreeze peers while ANOTHER actor is mid-gesture — so the hub
+      // tracks the holder: a non-holder's lock while held is dropped,
+      // and only the current holder's release is honored/relayed.
+      if (_floorManaged && ev.kind === "nav_lock") {
+        if (ev.locked === true) {
+          if (_floorHolder && _floorHolder !== remoteId) return;
+          _floorHolder = remoteId;
+        } else {
+          if (_floorHolder !== remoteId) return;
+          _floorHolder = null;
+        }
+      }
+      // Track the slot's in-flight stroke so a mid-gesture Annotation
+      // revoke can synthesize the seal (see setGuestPermission).
+      if (ev.kind === "begin") slot.openStrokeId = ev.strokeId;
+      else if (ev.kind === "commit" && slot.openStrokeId === ev.strokeId) slot.openStrokeId = null;
+      // Deliver locally. With ONE possible guest the wire seq is
+      // delivered as-is — the exact pre-2.12 observable behavior (the
+      // Atlas glue and every existing test see identical values). With
+      // multiple guests their independent raw counters collide, so the
+      // hub re-stamps with a local monotonic ingest counter (the glue
+      // dedupes state events with a single `seq !== lastSeen` check).
+      _ingestSeq++;
+      _patchAnnotationEvent(ev, maxGuests === 1 ? ev.seq : _ingestSeq);
+      // Relay to every OTHER open guest, re-stamped with the hub's own
+      // outbound counter. Pointer relays honor per-conn backpressure;
+      // stroke/clear/nav_lock/delete packets always go (never lose ink).
+      var ids = _openGuestIds();
+      for (var i = 0; i < ids.length; i++) {
+        if (ids[i] === remoteId) continue;
+        var target = guestConns[ids[i]];
+        if (!target || !target.open) continue;
+        if (ev.kind === "pointer") {
+          var ba = target.conn && typeof target.conn.bufferedAmount === "number" ? target.conn.bufferedAmount : 0;
+          if (ba > LIVE_SESSION_POINTER_BACKPRESSURE_BYTES) continue;
+        }
+        var relaySeq = ++_sendSeq;
+        try {
+          target.conn.send(_wirePacketFor(ev, relaySeq));
+        } catch (e) {
+          log("relay send failed", e);
+        }
+      }
+    }
+  }
+
+  // ── Visitor inbound (single sender: the agent) ─────────────────────
+  function _handleIncomingData(payload) {
+    if (!_isPlainObject(payload)) return;
+    var type = payload.type;
+    if (type === "teleport") {
+      var ss = _coerceString(payload.ss).trim();
+      var sr = _coerceString(payload.sr).trim();
+      if (!ss) return;
+      // Control markers ("f3dctl:...") are settings riding this
+      // channel, never views — they must NOT stamp the view key (the
+      // annotation receive filter would start dropping every live
+      // frame until the next real teleport otherwise).
+      var isCtl = ss.indexOf("f3dctl:") === 0;
+      // Always update the internal viewKey for REAL views so the
+      // annotation receive filter stays correct.
+      if (!isCtl) _currentViewKey = ss + "|" + sr;
+      // Role-direction guard: `teleport` is an agent → visitor packet.
+      // An agent receiving its own teleport (echo / loopback / test
+      // arrangement) must NOT patch incomingTeleportEvent — doing so
+      // would trigger the agent's parent-code reload branch and cause
+      // an unintended iframe refresh on the wrong side.
+      if (state.role !== "visitor") return;
+      // evId (2.12.0, additive): monotonic event identity. The glue's
+      // pre-2.12 ts dedupe collides when two packets (e.g. the host's
+      // back-to-back permission markers on join) are handled in the
+      // same millisecond; evId never collides.
+      _teleportEvId++;
+      _patch({
+        incomingTeleportEvent: { ss: ss, sr: sr, ts: Date.now(), evId: _teleportEvId },
+      });
+      return;
+    }
+    if (type === "location_share") {
+      // Visitor → Agent packet arriving at a visitor: echo/loopback.
+      // The agent path handles these in _handleAgentData; here it can
+      // only be a protocol violation — drop (role guard preserved from
+      // pre-2.12).
+      return;
+    }
+    if (_ANNOTATION_TYPES[type] === 1) {
+      var seq = +payload.seq || 0;
+      if (seq <= _lastRecvSeq) return;
+      var vk = _coerceString(payload.viewKey);
+      // Empty viewKey on either end means "no teleport yet" — accept;
+      // mismatch when both sides have a key means stale frame, drop.
+      if (vk && _currentViewKey && vk !== _currentViewKey) return;
+      _lastRecvSeq = seq;
+      var ev = _normalizeAnnotationPacket(type, payload);
+      if (!ev) return;
+      _patchAnnotationEvent(ev, seq);
     }
   }
 
@@ -1064,20 +1684,38 @@ function createLiveSession(options) {
   // voice"; safe as a retry on any session). Resolves true when a media
   // call is answered or placed, false when voice cannot start yet (no
   // mic AND nothing to answer, or the other side has not offered). The
-  // data connection is untouched on every path.
+  // data connections are untouched on every path.
   function startVoice() {
     if (disposed) return Promise.resolve(false);
     if (!state.isConnected) return Promise.resolve(false);
-    if (state.remoteStream) return Promise.resolve(true);
-    if (mediaCall && !pendingIncomingCall) return Promise.resolve(true);
+    if (state.role !== "agent" && state.remoteStream) return Promise.resolve(true);
+    if (state.role !== "agent" && mediaCall && !pendingIncomingCall) return Promise.resolve(true);
+    // Agent fast-path (pre-2.12 contract: "safe as a retry on any
+    // session"): with voice already live and NOTHING held pending, a
+    // retry returns immediately — never re-fires getUserMedia.
+    if (state.role === "agent") {
+      var hasPending = false;
+      for (var hp in pendingIncomingCalls) {
+        if (Object.prototype.hasOwnProperty.call(pendingIncomingCalls, hp)) {
+          hasPending = true;
+          break;
+        }
+      }
+      if (!hasPending && (_hasAnyMediaCall() || state.remoteStream)) {
+        return Promise.resolve(true);
+      }
+    }
     voiceEnabledByUser = true;
     return _getMicStream(_diagSafe).then(function (stream) {
       if (disposed) return false;
       if (stream) localMicStream = stream;
       if (state.role === "agent") {
-        var pending = pendingIncomingCall;
-        if (pending) {
-          pendingIncomingCall = null;
+        // Answer every held offer (one per guest under deferVoice).
+        var answered = false;
+        for (var id in pendingIncomingCalls) {
+          if (!Object.prototype.hasOwnProperty.call(pendingIncomingCalls, id)) continue;
+          var pending = pendingIncomingCalls[id];
+          delete pendingIncomingCalls[id];
           try {
             // Receive-only when the mic is unavailable — never the
             // silent AudioContext fallback on a deferred session.
@@ -1085,15 +1723,17 @@ function createLiveSession(options) {
             else pending.answer();
           } catch (e) {
             log("pending answer failed", e);
-            return false;
+            continue;
           }
           _diagSafe("media_call_started");
-          _wireMediaCall(pending);
-          return true;
+          _wireMediaCall(pending, id);
+          answered = true;
         }
-        // No offer yet — the visitor has not started voice. The grant is
-        // remembered (voiceEnabledByUser), so the offer is answered the
-        // moment it arrives.
+        if (answered) return true;
+        if (_hasAnyMediaCall()) return true;
+        // No offer yet — no guest has started voice. The grant is
+        // remembered (voiceEnabledByUser), so offers are answered the
+        // moment they arrive.
         return false;
       }
       if (state.role === "visitor") {
@@ -1107,32 +1747,216 @@ function createLiveSession(options) {
         }
         if (!call) return false;
         _diagSafe("media_call_started");
-        _wireMediaCall(call);
+        _wireMediaCall(call, LIVE_SESSION_AGENT_PREFIX + (state.pin || ""));
         return true;
       }
       return false;
     });
   }
 
-  // Agent-only: send a teleport packet to the connected visitor. Returns
-  // true on a successful send. Silently fails (returns false) when not
-  // in agent role, when no data channel is open, or when the underlying
-  // send throws — callers should treat the boolean as a hint, not as an
-  // ack of delivery.
+  // Agent-only: iterate open guest slots.
+  function _forEachOpenGuest(fn) {
+    var ids = _openGuestIds();
+    for (var i = 0; i < ids.length; i++) {
+      var slot = guestConns[ids[i]];
+      if (slot && slot.open) fn(ids[i], slot);
+    }
+    return ids.length;
+  }
+
+  // Agent-only: send a teleport packet to EVERY connected guest (2.12.0
+  // broadcast — with one guest this is byte-identical to the pre-2.12
+  // single send). Returns true when at least one guest received it.
+  // Callers should treat the boolean as a hint, not a delivery ack.
   function teleportVisitor(ss, sr) {
     if (state.role !== "agent") return false;
-    if (!dataConn || !state.isConnected) return false;
+    if (!state.isConnected) return false;
     var ssClean = _coerceString(ss).trim();
     var srClean = _coerceString(sr).trim();
     if (!ssClean) return false;
     var packet = { type: "teleport", ss: ssClean, sr: srClean };
-    try {
-      dataConn.send(packet);
+    var sent = 0;
+    _forEachOpenGuest(function (id, slot) {
+      try {
+        slot.conn.send(packet);
+        sent++;
+      } catch (e) {
+        log("send failed", e);
+      }
+    });
+    if (sent === 0) return false;
+    // Control markers never stamp the view key (see header comment) —
+    // prefer sendControl/sendControlTo for those; this guard keeps a
+    // legacy-style ctl send through teleportVisitor harmless too.
+    if (ssClean.indexOf("f3dctl:") !== 0) {
       _currentViewKey = ssClean + "|" + srClean;
+    }
+    return true;
+  }
+
+  // Agent-only (2.12.0): send a REAL teleport to ONE guest — the
+  // late-join current-view push, and the share-follow fan-out that
+  // excludes the sharing guest (broadcasting back to the sender would
+  // open a whole echo class the 1:1 design deliberately avoided).
+  // Deliberately does NOT stamp _currentViewKey: callers send the view
+  // the scene is ALREADY at (or a per-guest catch-up), so the global
+  // key must not move. Control markers are refused (use sendControlTo).
+  function teleportVisitorTo(peerId, ss, sr) {
+    if (state.role !== "agent") return false;
+    if (!state.isConnected) return false;
+    var id = _coerceString(peerId);
+    if (!id) return false;
+    var ssClean = _coerceString(ss).trim();
+    var srClean = _coerceString(sr).trim();
+    if (!ssClean || ssClean.indexOf("f3dctl:") === 0) return false;
+    var slot = guestConns[id];
+    if (!slot || !slot.open) return false;
+    try {
+      slot.conn.send({ type: "teleport", ss: ssClean, sr: srClean });
       return true;
     } catch (e) {
-      log("send failed", e);
+      log("targeted teleport failed", e);
       return false;
+    }
+  }
+
+  // Agent-only (2.12.0): emit a control marker ("f3dctl:...") to every
+  // guest / one guest. Rides the teleport channel but NEVER stamps the
+  // view key on either end (the visitor-side stamp is excluded in
+  // _handleIncomingData). Returns true when at least one send went out.
+  function sendControl(text) {
+    return _sendControlPacket(null, text);
+  }
+
+  function sendControlTo(peerId, text) {
+    var id = _coerceString(peerId);
+    if (!id) return false;
+    return _sendControlPacket(id, text);
+  }
+
+  function _sendControlPacket(onlyId, text) {
+    if (state.role !== "agent") return false;
+    if (!state.isConnected) return false;
+    var ssClean = _coerceString(text).trim();
+    if (!ssClean || ssClean.indexOf("f3dctl:") !== 0) return false;
+    var packet = { type: "teleport", ss: ssClean, sr: "" };
+    var sent = 0;
+    _forEachOpenGuest(function (id, slot) {
+      if (onlyId && id !== onlyId) return;
+      try {
+        slot.conn.send(packet);
+        sent++;
+      } catch (e) {
+        log("control send failed", e);
+      }
+    });
+    return sent > 0;
+  }
+
+  // Agent-only (2.12.0): grant/revoke a guest capability at the hub.
+  // kind: "syncView" | "annotate". Granting syncView is EXCLUSIVE —
+  // at most ONE guest holds it at a time (owner decision 2026-07-12),
+  // so granting guest B auto-revokes every other guest. Returns the
+  // list of {peerId, kind, allowed} changes actually applied (the glue
+  // uses it to push exactly the right ctl markers), or an empty array.
+  function setGuestPermission(peerId, kind, allowed) {
+    if (state.role !== "agent") return [];
+    if (kind !== "syncView" && kind !== "annotate") return [];
+    var id = _coerceString(peerId);
+    if (!id || !guestConns[id]) return [];
+    var want = allowed === true;
+    var changes = [];
+    if (!permissions[id]) {
+      permissions[id] = {
+        syncView: permDefaults.syncView,
+        annotate: permDefaults.annotate,
+      };
+    }
+    if (kind === "syncView" && want) {
+      for (var i = 0; i < guestOrder.length; i++) {
+        var otherId = guestOrder[i];
+        if (otherId === id) continue;
+        var op = permissions[otherId];
+        if (op && op.syncView === true) {
+          op.syncView = false;
+          changes.push({ peerId: otherId, kind: "syncView", allowed: false });
+        }
+      }
+    }
+    if (permissions[id][kind] !== want) {
+      permissions[id][kind] = want;
+      changes.push({ peerId: id, kind: kind, allowed: want });
+    }
+    // Revoking Annotation mid-gesture: the hub will now drop that
+    // guest's packets, so synthesize the gesture end FIRST — seal any
+    // in-flight stroke and release a held floor — or every other party
+    // keeps an uncommittable, un-erasable stroke fragment and stays
+    // frozen for the full client-side safety timeout. (The guest's own
+    // client self-cancels on the f3dctl:annot:0 marker.)
+    if (kind === "annotate" && !want) {
+      _synthesizeGuestGestureEnd(id);
+    }
+    if (changes.length > 0) _patchGuestState();
+    return changes;
+  }
+
+  // Seal an in-flight stroke / release a held floor on behalf of a
+  // guest that can no longer do it itself (permission revoke; the
+  // slot-removal release lives in _removeGuestSlot). Delivers locally
+  // and relays to every OTHER open guest.
+  function _synthesizeGuestGestureEnd(remoteId) {
+    // Only reachable on real multi-guest sessions (the Builder glue);
+    // maxGuests===1 embedders never call setGuestPermission, and the
+    // ingest-stamped local delivery below assumes multi-guest stamping.
+    if (!_floorManaged) return;
+    var slot = guestConns[remoteId];
+    if (!slot) return;
+    if (slot.openStrokeId) {
+      var sealId = slot.openStrokeId;
+      slot.openStrokeId = null;
+      var commitEv = {
+        kind: "commit",
+        viewKey: _currentViewKey,
+        seq: 0,
+        strokeId: sealId,
+        ts: Date.now(),
+      };
+      _ingestSeq++;
+      _patchAnnotationEvent(commitEv, _ingestSeq);
+      var ids = _openGuestIds();
+      for (var i = 0; i < ids.length; i++) {
+        if (ids[i] === remoteId) continue;
+        var target = guestConns[ids[i]];
+        if (!target || !target.open) continue;
+        try {
+          target.conn.send(_wirePacketFor(commitEv, ++_sendSeq));
+        } catch (e) {
+          log("synthesized commit relay failed", e);
+        }
+      }
+    }
+    if (_floorManaged && _floorHolder === remoteId) {
+      _floorHolder = null;
+      var releaseEv = {
+        kind: "nav_lock",
+        viewKey: _currentViewKey,
+        locked: false,
+        seq: 0,
+        ts: Date.now(),
+      };
+      _ingestSeq++;
+      _patchAnnotationEvent(releaseEv, _ingestSeq);
+      var rids = _openGuestIds();
+      for (var r = 0; r < rids.length; r++) {
+        if (rids[r] === remoteId) continue;
+        var rtarget = guestConns[rids[r]];
+        if (!rtarget || !rtarget.open) continue;
+        try {
+          rtarget.conn.send(_wirePacketFor(releaseEv, ++_sendSeq));
+        } catch (e) {
+          log("synthesized release relay failed", e);
+        }
+      }
     }
   }
 
@@ -1180,16 +2004,11 @@ function createLiveSession(options) {
 
   function _canSendAnnotation() {
     // Bidirectional annotations: both agent and visitor may emit
-    // pointer / stroke / clear / nav_lock packets. _sendSeq and
-    // _lastRecvSeq are per-peer so monotonicity holds either way.
-    return (state.role === "agent" || state.role === "visitor")
-      && !!dataConn && state.isConnected;
-  }
-
-  function _bufferedAmount() {
-    if (!dataConn) return 0;
-    var ba = dataConn.bufferedAmount;
-    return typeof ba === "number" ? ba : 0;
+    // pointer / stroke / clear / nav_lock packets.
+    if (!state.isConnected) return false;
+    if (state.role === "agent") return _openGuestIds().length > 0;
+    if (state.role === "visitor") return !!dataConn;
+    return false;
   }
 
   function _scheduleFlush() {
@@ -1209,7 +2028,6 @@ function createLiveSession(options) {
     _pendingPointer = null;
     if (!p) return;
     if (!_canSendAnnotation()) return;
-    if (_bufferedAmount() > LIVE_SESSION_POINTER_BACKPRESSURE_BYTES) return;
     var seq = ++_sendSeq;
     var packet = {
       type: "pointer",
@@ -1219,17 +2037,48 @@ function createLiveSession(options) {
       y: typeof p.y === "number" ? p.y : null,
       ts: Date.now(),
     };
-    try {
-      dataConn.send(packet);
-    } catch (e) {
-      log("pointer send failed", e);
-    }
+    _sendAnnotationPacket(packet, true);
   }
 
-  // Agent-only: queue a pointer update. Coalesced through `scheduler`
-  // so a flood of mousemove events still produces at most one packet
-  // per frame. Returns true if the call was queued, false if the
-  // session isn't in a position to send (wrong role, no channel).
+  // Send an annotation packet to the peer(s): the single agent conn for
+  // a visitor; EVERY open guest conn for the agent. `pointerGuard`
+  // applies the per-connection bufferedAmount backpressure check (only
+  // pointer packets are droppable — never lose ink).
+  function _sendAnnotationPacket(packet, pointerGuard) {
+    if (state.role === "visitor") {
+      if (!dataConn) return false;
+      if (pointerGuard) {
+        var ba = typeof dataConn.bufferedAmount === "number" ? dataConn.bufferedAmount : 0;
+        if (ba > LIVE_SESSION_POINTER_BACKPRESSURE_BYTES) return false;
+      }
+      try {
+        dataConn.send(packet);
+        return true;
+      } catch (e) {
+        log("annotation send failed", e);
+        return false;
+      }
+    }
+    var sent = 0;
+    _forEachOpenGuest(function (id, slot) {
+      if (pointerGuard) {
+        var ba = slot.conn && typeof slot.conn.bufferedAmount === "number" ? slot.conn.bufferedAmount : 0;
+        if (ba > LIVE_SESSION_POINTER_BACKPRESSURE_BYTES) return;
+      }
+      try {
+        slot.conn.send(packet);
+        sent++;
+      } catch (e) {
+        log("annotation send failed", e);
+      }
+    });
+    return sent > 0;
+  }
+
+  // Queue a pointer update. Coalesced through `scheduler` so a flood of
+  // mousemove events still produces at most one packet per frame.
+  // Returns true if the call was queued, false if the session isn't in
+  // a position to send (wrong role, no channel).
   function sendPointer(viewKey, x, y) {
     if (!_canSendAnnotation()) return false;
     _pendingPointer = { viewKey: viewKey, x: x, y: y };
@@ -1254,13 +2103,7 @@ function createLiveSession(options) {
         if (Object.prototype.hasOwnProperty.call(extra, k)) packet[k] = extra[k];
       }
     }
-    try {
-      dataConn.send(packet);
-      return true;
-    } catch (e) {
-      log("stroke send failed", e);
-      return false;
-    }
+    return _sendAnnotationPacket(packet, false);
   }
 
   function sendStrokeBegin(viewKey, strokeId, color, width, points) {
@@ -1289,17 +2132,25 @@ function createLiveSession(options) {
       seq: seq,
       ts: Date.now(),
     };
-    try {
-      dataConn.send(packet);
-      return true;
-    } catch (e) {
-      log("clear send failed", e);
-      return false;
-    }
+    return _sendAnnotationPacket(packet, false);
   }
 
   function sendNavLock(viewKey, locked) {
     if (!_canSendAnnotation()) return false;
+    // Hub floor bookkeeping for the HOST's own gestures (multi-guest
+    // only). A host lock while a guest holds the floor is suppressed
+    // (race window — the host's own client-side gate normally prevents
+    // this); a host release must never clear a GUEST's active hold on
+    // the other receivers.
+    if (_floorManaged && state.role === "agent") {
+      if (locked === true) {
+        if (_floorHolder && _floorHolder !== "host") return false;
+        _floorHolder = "host";
+      } else {
+        if (_floorHolder && _floorHolder !== "host") return false;
+        if (_floorHolder === "host") _floorHolder = null;
+      }
+    }
     var seq = ++_sendSeq;
     var packet = {
       type: "nav_lock",
@@ -1308,13 +2159,7 @@ function createLiveSession(options) {
       seq: seq,
       ts: Date.now(),
     };
-    try {
-      dataConn.send(packet);
-      return true;
-    } catch (e) {
-      log("nav_lock send failed", e);
-      return false;
-    }
+    return _sendAnnotationPacket(packet, false);
   }
 
   // Idempotent erase of one or more committed strokes in a view. The peer
@@ -1337,13 +2182,7 @@ function createLiveSession(options) {
       seq: seq,
       ts: Date.now(),
     };
-    try {
-      dataConn.send(packet);
-      return true;
-    } catch (e) {
-      log("stroke_delete send failed", e);
-      return false;
-    }
+    return _sendAnnotationPacket(packet, false);
   }
 
   function dispose() {
@@ -1357,6 +2196,14 @@ function createLiveSession(options) {
         // ignore
       }
     }
+    for (var mk in mediaCalls) {
+      if (!Object.prototype.hasOwnProperty.call(mediaCalls, mk)) continue;
+      try {
+        mediaCalls[mk].close();
+      } catch (e) {
+        // ignore
+      }
+    }
     if (pendingIncomingCall) {
       try {
         pendingIncomingCall.close();
@@ -1365,12 +2212,31 @@ function createLiveSession(options) {
       }
       pendingIncomingCall = null;
     }
+    for (var pk in pendingIncomingCalls) {
+      if (!Object.prototype.hasOwnProperty.call(pendingIncomingCalls, pk)) continue;
+      try {
+        pendingIncomingCalls[pk].close();
+      } catch (e) {
+        // ignore
+      }
+    }
     voiceEnabledByUser = false;
     if (dataConn) {
       try {
         dataConn.close();
       } catch (e) {
         // ignore
+      }
+    }
+    for (var gk in guestConns) {
+      if (!Object.prototype.hasOwnProperty.call(guestConns, gk)) continue;
+      var slot = guestConns[gk];
+      if (slot && slot.conn) {
+        try {
+          slot.conn.close();
+        } catch (e) {
+          // ignore
+        }
       }
     }
     if (localMicStream && typeof localMicStream.getTracks === "function") {
@@ -1397,9 +2263,17 @@ function createLiveSession(options) {
     peer = null;
     dataConn = null;
     mediaCall = null;
+    guestConns = {};
+    guestOrder = [];
+    mediaCalls = {};
+    pendingIncomingCalls = {};
+    permissions = {};
     localMicStream = null;
     _sendSeq = 0;
     _lastRecvSeq = 0;
+    _ingestSeq = 0;
+    _teleportEvId = 0;
+    _floorHolder = null;
     _currentViewKey = "";
     _pendingPointer = null;
     _flushScheduled = false;
@@ -1411,6 +2285,8 @@ function createLiveSession(options) {
       error: null,
       isConnected: false,
       remoteStream: null,
+      remoteStreams: {},
+      guests: [],
       voiceCallActive: false,
       incomingTeleportEvent: null,
       incomingPointerEvent: null,
@@ -1429,6 +2305,10 @@ function createLiveSession(options) {
     joinAsVisitor: joinAsVisitor,
     startVoice: startVoice,
     teleportVisitor: teleportVisitor,
+    teleportVisitorTo: teleportVisitorTo,
+    sendControl: sendControl,
+    sendControlTo: sendControlTo,
+    setGuestPermission: setGuestPermission,
     shareLocationWithAgent: shareLocationWithAgent,
     noteCurrentView: noteCurrentView,
     sendPointer: sendPointer,
@@ -3712,28 +4592,79 @@ function annoBindViewportEvents(win, cb) {
   }
 
   // ── Teleport / iframe rewrite (single iframe) ────────────────────────
-  // Build a "quiet" Matterport show URL for a synced/teleported view. Changing
-  // ss/sr requires reloading the iframe (no Matterport SDK); these verified
-  // params stop that reload from replaying Matterport's startup UI:
-  //   mls=2 reduce Matterport presentation/branding · hr=0 suppress highlight reel ·
-  //   help=0 no help prompt · dh=1 KEEP Dollhouse access · fp=1 KEEP Floor Plan access ·
-  //   vr=0 suppress VR mode/prompt · play=1 start directly in the tour ·
-  //   qs=1 Quickstart — bypasses Matterport's fly-in so dh=1 does NOT replay the
-  //   Dollhouse fly-in animation on every View Sync iframe URL refresh (2.2.8).
-  // Idempotent (re-strips its own + legacy params before re-appending); preserves
-  // m + ss/sr; only ever decorates real Matterport show URLs.
+  // Build a "quiet" Matterport show URL for a synced/teleported view.
+  //
+  // Changing ss/sr requires reloading the iframe (there is no Matterport SDK
+  // here), and a reload replays Matterport's startup chrome — the title card,
+  // the help prompt, the VR nag, the highlight reel — on TOP of a view the
+  // group is meant to be looking at together. These params suppress it.
+  //
+  // ── 2.24.0: the curated embed's params are PRESERVED, not overwritten ──
+  // The previous version stripped the operator's chrome params (brand, title,
+  // dh, hr, …) and re-appended a fixed set of its own. So an Atlas entry
+  // curated as "no branding, no title" got that chrome BACK on every single
+  // View Sync — the UI reappearing mid-tour, repeatedly. That is the defect.
+  //
+  // Now only ss/sr are stripped (they are the view state, always replaced) and
+  // everything the curated URL already specifies WINS. QUIET_DEFAULTS fill in
+  // only the keys the operator left unset, so a clean embed stays clean without
+  // taking the choice away from whoever curated the entry.
+  //
+  //   brand/title/help/dh/fp/f/views/tour/gt/hr/search/vr/pin/portal/tagNav = 0
+  //     — hide Matterport's own UI so the synced view arrives unobstructed
+  //   play=1  — land directly in the tour rather than on the intro splash
+  //   qs=1    — Quickstart. NOT optional: without it Matterport replays its
+  //             fly-in animation on EVERY sync reload (fixed in 2.2.8; kept
+  //             here deliberately even though a sync is otherwise "quiet").
+  //
+  // Idempotent (re-parses whatever it produced last time); preserves m; only
+  // ever decorates real Matterport show URLs.
   function normalizeMatterportLiveSyncUrl(baseUrl, ss, sr) {
+    // Declared INSIDE the function on purpose: the parity tests extract this
+    // function by brace-matching and eval it standalone, so a module-scoped
+    // constant would be a ReferenceError there and nowhere else.
+    var QUIET_SYNC_DEFAULTS = [
+      ["play", "1"], ["qs", "1"], ["brand", "0"], ["title", "0"], ["help", "0"],
+      ["dh", "0"], ["fp", "0"], ["f", "0"], ["views", "0"], ["tour", "0"],
+      ["gt", "0"], ["hr", "0"], ["search", "0"], ["vr", "0"], ["pin", "0"],
+      ["portal", "0"], ["tagNav", "0"],
+    ];
     if (!baseUrl) return baseUrl;
     if (!/matterport\.com/i.test(baseUrl)) return baseUrl;
-    var stripped = baseUrl.replace(/[?&](ss|sr|mls|hr|help|dh|fp|vr|play|qs|title|brand|hl)=[^&]*/g, function (m) {
+    // Drop only the view state; every other curated param survives.
+    var stripped = baseUrl.replace(/[?&](ss|sr)=[^&]*/g, function (m) {
       return m.charAt(0) === "?" ? "?" : "";
     });
     stripped = stripped.replace(/\?&/g, "?").replace(/[?&]$/, "");
-    var sep = stripped.indexOf("?") === -1 ? "?" : "&";
-    var qs = "ss=" + encodeURIComponent(ss);
+
+    // Which keys did the operator already decide? Compared lowercase so a
+    // curated "TagNav=1" still beats the default, but the emitted casing stays
+    // exactly as Matterport documents it.
+    var qIdx = stripped.indexOf("?");
+    var present = {};
+    if (qIdx !== -1) {
+      var pairs = stripped.slice(qIdx + 1).split("&");
+      for (var i = 0; i < pairs.length; i++) {
+        var eq = pairs[i].indexOf("=");
+        if (eq > 0) present[pairs[i].slice(0, eq).toLowerCase()] = true;
+      }
+    }
+
+    // Defaults first, ss/sr LAST. Order matters: it makes the output a true
+    // string fixed point, so re-normalizing a URL this function already produced
+    // returns it byte-identical — which is what applyTeleport's no-reload guard
+    // compares. Appending ss/sr first would shuffle them to the tail on the
+    // second pass and read as a changed src.
+    var qs = "";
+    for (var j = 0; j < QUIET_SYNC_DEFAULTS.length; j++) {
+      var k = QUIET_SYNC_DEFAULTS[j][0];
+      if (present[k.toLowerCase()]) continue; // the curated value wins
+      qs += "&" + k + "=" + QUIET_SYNC_DEFAULTS[j][1];
+    }
+    qs += "&ss=" + encodeURIComponent(ss);
     if (sr) qs += "&sr=" + encodeURIComponent(sr);
-    qs += "&mls=2&hr=0&help=0&dh=1&fp=1&vr=0&play=1&qs=1";
-    return stripped + sep + qs;
+    if (stripped.indexOf("?") === -1) qs = "?" + qs.slice(1);
+    return stripped + qs;
   }
 
   function applyTeleport(ss, sr) {
