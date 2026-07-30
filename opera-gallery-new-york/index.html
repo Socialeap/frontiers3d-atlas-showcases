@@ -8,7 +8,7 @@
 <meta property="og:title" content="Opera Gallery New York — Frontiers|3D" />
 <meta property="og:description" content="A premier three-level gallery on Madison Avenue showcasing an exceptional collection of modern and contemporary art. Visitors can explore works by 20th-century masters like Picasso, Chagall, and Botero alongside contemporary pieces by Yayoi Kusama and Mel Bochner. The space features dramatic dark walls that make the vibrant artworks pop and is fully accessible via stairs or elevator. Offering free admission, it is a sophisticated and welcoming destination for art lovers visiting the Upper East Side, conveniently located near Central Park, The Metropolitan Museum of Art, and world-class luxury" />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.24.0" />
+<meta name="f3d-runtime" content="2.25.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -40,6 +40,10 @@
   body.live-tour-active .f3d-foot{display:none}
 
   /* ── About / Summary panel ─────────────────────────────────────── */
+  .f3d-buildinfo{position:absolute;top:calc(100% + 6px);right:1rem;z-index:1400;min-width:260px;padding:.6rem .75rem;border-radius:10px;background:rgba(8,10,26,.97);border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 28px rgba(0,0,0,.45);font:500 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:rgba(255,255,255,.92)}
+  .f3d-buildinfo dl{display:grid;grid-template-columns:auto 1fr;gap:.15rem .75rem;margin:0}
+  .f3d-buildinfo dt{color:rgba(255,255,255,.55)}
+  .f3d-buildinfo dd{margin:0;word-break:break-all}
   .about-backdrop{position:fixed;inset:0;z-index:2200;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);padding:16px}
   .about-backdrop.open{display:flex}
   .about-box{position:relative;width:min(520px,94vw);max-height:84vh;overflow-y:auto;background:rgba(18,20,34,.96);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:20px 22px;box-shadow:0 25px 80px -15px rgba(0,0,0,.75)}
@@ -181,7 +185,11 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
 }
 
 /* ── Location-sync pulse pill (both roles) ────────────────────────── */
-#loc-sync{position:fixed;top:60px;left:12px;z-index:1240;display:none;align-items:center;gap:8px;padding:6px 14px 6px 10px;border-radius:999px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.18);color:#fff;font:600 12px/1 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);box-shadow:0 6px 20px rgba(0,0,0,0.32);cursor:help;user-select:none;max-width:min(280px,calc(100vw - 24px))}
+/* z-index 1320/1325: ABOVE the showcase chrome bar (.f3d-bar, 1300) — the
+   pill sat at 1240 and was simply painted behind the header. Still below
+   #lt-panel (2000) and .about-backdrop (2200), so nothing that should
+   cover the pill stops doing so. */
+#loc-sync{position:fixed;top:60px;left:12px;z-index:1320;display:none;align-items:center;gap:8px;padding:6px 14px 6px 10px;border-radius:999px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.18);color:#fff;font:600 12px/1 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);box-shadow:0 6px 20px rgba(0,0,0,0.32);cursor:pointer;user-select:none;max-width:min(280px,calc(100vw - 24px))}
 body.live-tour-active #loc-sync{display:inline-flex}
 #loc-sync:hover,#loc-sync:focus-visible{background:rgba(0,0,0,0.72)}
 #loc-sync:focus-visible{outline:2px solid var(--lt-accent);outline-offset:2px}
@@ -195,7 +203,7 @@ body.live-tour-active #loc-sync{display:inline-flex}
 #loc-sync[data-state="success"] .loc-sync-dot::after{content:"";position:absolute;width:6px;height:3px;border-left:2px solid #16a34a;border-bottom:2px solid #16a34a;transform:rotate(-45deg) translate(0.5px,-1px)}
 #loc-sync[data-state="waiting"]{opacity:0.65}
 #loc-sync[data-state="waiting"] .loc-sync-dot{background:rgba(255,255,255,0.5)}
-#loc-sync-tips{position:fixed;top:96px;left:12px;z-index:1245;display:none;flex-direction:column;width:min(264px,calc(100vw - 24px));padding:10px 14px 12px;border-radius:12px;background:rgba(0,0,0,0.82);border:1px solid rgba(255,255,255,0.16);color:#fff;font:500 12px/1.45 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%);box-shadow:0 12px 28px rgba(0,0,0,0.42);pointer-events:auto}
+#loc-sync-tips{position:fixed;top:96px;left:12px;z-index:1325;display:none;flex-direction:column;width:min(264px,calc(100vw - 24px));padding:10px 14px 12px;border-radius:12px;background:rgba(0,0,0,0.82);border:1px solid rgba(255,255,255,0.16);color:#fff;font:500 12px/1.45 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%);box-shadow:0 12px 28px rgba(0,0,0,0.42);pointer-events:auto}
 body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 #loc-sync-tips ol{margin:0;padding-left:20px}
 #loc-sync-tips li{margin-bottom:3px;color:rgba(255,255,255,0.94)}
@@ -247,6 +255,19 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
       <span class="f3d-btn-label">Share</span>
     </button>
     
+    <!-- Build diagnostics. Hidden unless the page is opened with
+         ?f3d-debug=1 — a version string on a client-facing showcase is a
+         branding cost, and the query param gives the same answer without it.
+         Every value is read from the f3d-* <meta> markers at runtime rather
+         than interpolated here, so the badge can never disagree with the
+         markers a diagnosis actually relies on. -->
+    <button id="f3d-build-btn" type="button" class="f3d-iconbtn" hidden
+            aria-expanded="false" aria-controls="f3d-build-info"
+            title="Build information">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2l7 4v6c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+      <span class="f3d-btn-label">Build</span>
+    </button>
+    <div id="f3d-build-info" class="f3d-buildinfo" hidden role="dialog" aria-label="Build information"></div>
   </div>
 </header>
 <!-- f3d:runtime-markup:toolbar BEGIN v=1 family=atlas -->
@@ -346,7 +367,7 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
   </div>
 </aside>
 
-<div id="loc-sync" data-state="waiting" tabindex="0" aria-label="Tour sync status — hover for instructions">
+<div id="loc-sync" data-state="waiting" tabindex="0" role="button" aria-label="Tour sync status — select for instructions on syncing views">
   <span class="loc-sync-dot" aria-hidden="true"></span>
   <span class="loc-sync-label" aria-live="polite">Connecting…</span>
 </div>
@@ -470,6 +491,20 @@ function _sanitizeGuestName(v, ordinal) {
   s = s.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ");
   s = s.replace(/^\s+|\s+$/g, "").slice(0, 24);
   if (!s) s = "Guest " + ordinal;
+  return s;
+}
+
+// Sanitize a participant avatar URL arriving over the wire (2.25.0).
+// This value is REMOTE, UNTRUSTED data that ends up in an <img src>, so the
+// rules are deliberately strict and fail closed: https only (no data:, no
+// javascript:, no protocol-relative), no credentials, length-capped, and any
+// parse failure yields null rather than a "best effort" string.
+function _sanitizeAvatarUrl(v) {
+  if (typeof v !== "string") return null;
+  var s = v.replace(/[\u0000-\u001f\u007f]/g, "").trim();
+  if (!s || s.length > 512) return null;
+  if (s.slice(0, 8).toLowerCase() !== "https://") return null;
+  if (s.indexOf("@") !== -1 && s.indexOf("@") < s.indexOf("/", 8)) return null;
   return s;
 }
 
@@ -789,6 +824,7 @@ function createLiveSession(options) {
       out.push({
         peerId: id,
         name: slot.name,
+        avatarUrl: slot.avatarUrl || null,
         syncView: perm.syncView === true,
         annotate: perm.annotate === true,
       });
@@ -1067,6 +1103,7 @@ function createLiveSession(options) {
             conn && conn.metadata && conn.metadata.name,
             guestOrdinal,
           ),
+          avatarUrl: _sanitizeAvatarUrl(conn && conn.metadata && conn.metadata.avatarUrl),
           lastRecvSeq: 0,
         };
         guestConns[remoteId] = slot;
@@ -1267,7 +1304,7 @@ function createLiveSession(options) {
   // ── Visitor ────────────────────────────────────────────────────────
   // `name` (optional, 2.12.0) travels to the agent as connection
   // metadata and is sanitized THERE — the agent never trusts it raw.
-  function joinAsVisitor(pinInput, name) {
+  function joinAsVisitor(pinInput, name, opts2) {
     if (disposed) return Promise.reject(new Error("session disposed"));
     if (!_ensurePeerCtor()) {
       return Promise.reject(new Error(state.error || "peer-unavailable"));
@@ -1284,6 +1321,10 @@ function createLiveSession(options) {
     var visitorId = LIVE_SESSION_VISITOR_PREFIX + _generateVisitorSuffix();
     var agentId = LIVE_SESSION_AGENT_PREFIX + clean;
     var cleanName = _coerceString(name).slice(0, 64);
+    // Optional identity extras. Atlas Live Rooms require a Passport, so a
+    // signed-in avatar exists there; the standalone presentation's anonymous
+    // PIN join simply omits it and every consumer treats null as "no picture".
+    var cleanAvatar = _sanitizeAvatarUrl(opts2 && opts2.avatarUrl);
     _patch({
       role: "visitor",
       status: "connecting",
@@ -1305,7 +1346,7 @@ function createLiveSession(options) {
       p.on("open", function () {
         var conn = p.connect(agentId, {
           reliable: true,
-          metadata: { v: 1, name: cleanName },
+          metadata: { v: 1, name: cleanName, avatarUrl: cleanAvatar },
         });
         _attachDataConnection(conn);
         // Deferred voice (P0 iPad): the connect transition stays
@@ -2828,7 +2869,20 @@ function annoBindViewportEvents(win, cb) {
     } catch (_e) {}
   }
 
+  // Did the LOCAL microphone actually open? null = not attempted yet.
+  //
+  // This matters because the controller falls back to a silent AudioContext
+  // track when the mic is blocked, so a media call connects and a remoteStream
+  // arrives whether or not this user can be heard. Before 2.25.0 the UI read
+  // that stream as success and said "Voice connected — you can talk now" to
+  // someone whose mic had never opened: confidently wrong, with no prompt, no
+  // error, and no control to retry. The controller already reports the truth
+  // through onDiagnostic; nothing was listening.
+  var micGranted = null;
+
   function markMilestone(name) {
+    if (name === "mic_granted") micGranted = true;
+    else if (name === "mic_denied") micGranted = false;
     try {
       if (!window.sessionStorage) return;
       window.sessionStorage.setItem(MILESTONE_LAST_KEY, String(name) + "@" + Date.now());
@@ -2947,6 +3001,18 @@ function annoBindViewportEvents(win, cb) {
   // the controller reports diagnostic milestones via markMilestone.
   function newSession() {
     return createLiveSession({
+      // 2.25.0 — MULTI-GUEST ON ATLAS. This used to pass no maxGuests at all,
+      // so the controller took its default of 1 — and at 1 the agent keeps the
+      // pre-2.12 semantics where a newly opened connection DISPLACES the
+      // previous one. A third participant therefore did not get a polite
+      // refusal; they silently kicked whoever joined before them. Atlas topped
+      // out at two people while the Builder glue had passed 8 since 2.12.0.
+      // Not a regression — Atlas multi-guest was simply never wired.
+      maxGuests: 8,
+      // Guests arrive with NO grants; the host's roster checkboxes are the only
+      // way to hand out Sync View or Annotation. Matches the Builder glue and
+      // the owner-approved grant model, rather than the permissive default.
+      guestPermissionDefaults: { syncView: false, annotate: false },
       deferVoice: IS_IOS_WEBKIT,
       onDiagnostic: markMilestone,
       PeerCtor: lazyPeerCtor,
@@ -4251,6 +4317,11 @@ function annoBindViewportEvents(win, cb) {
     } catch (_e) {}
   })();
 
+  // True while the user has CLICKED the pill to keep the explanation open.
+  // Pinned tips ignore mouseleave/blur — otherwise moving the cursor away
+  // would close the very thing they just asked to read.
+  var tipsPinned = false;
+
   function showTips() {
     if (!tipsEl) return;
     if (tipsTimer) {
@@ -4263,6 +4334,7 @@ function annoBindViewportEvents(win, cb) {
   }
   function scheduleHideTips() {
     if (!tipsEl) return;
+    if (tipsPinned) return;
     if (tipsTimer) {
       try {
         clearTimeout(tipsTimer);
@@ -4533,7 +4605,29 @@ function annoBindViewportEvents(win, cb) {
     syncBtn.addEventListener("mouseleave", scheduleHideTips);
     syncBtn.addEventListener("focus", showTips);
     syncBtn.addEventListener("blur", scheduleHideTips);
+    // 2.25.0: click PINS the explanation open instead of relying on hover.
+    // Hover-only meant the instructions were undiscoverable — nothing about a
+    // status pill suggests pointing at it — and unreachable on touch. Pinned
+    // survives mouseleave; the next click, Escape, or leaving the tour closes
+    // it. Kept on the existing show/hide helpers so there is still exactly one
+    // tips element and one set of styles.
+    syncBtn.addEventListener("click", function () {
+      if (tipsPinned) {
+        tipsPinned = false;
+        hideTips();
+      } else {
+        tipsPinned = true;
+        showTips();
+      }
+    });
   }
+  document.addEventListener("keydown", function (e) {
+    if (!tipsPinned) return;
+    if (e && (e.key === "Escape" || e.key === "Esc")) {
+      tipsPinned = false;
+      hideTips();
+    }
+  });
   if (tipsEl) {
     tipsEl.addEventListener("mouseenter", showTips);
     tipsEl.addEventListener("mouseleave", scheduleHideTips);
@@ -4962,9 +5056,14 @@ function annoBindViewportEvents(win, cb) {
       // expectations.
       show(liveExtras);
       reportVoiceCapability();
-      // Deferred voice (iOS): voice did not auto-start; offer the
-      // explicit gesture-driven activation.
-      if (IS_IOS_WEBKIT && enableVoiceBtn && !state.remoteStream) {
+      // Offer the explicit, gesture-driven activation on EVERY platform, not
+      // just deferred-voice iOS. On desktop voice auto-starts — but if that
+      // automatic getUserMedia is dismissed, blocked by policy, or finds no
+      // device, the controller resolves null rather than throwing and swaps in
+      // a silent track. The session then looks healthy while the user is
+      // inaudible, and before 2.25.0 there was no control anywhere to try
+      // again. The button hides itself the moment real voice is confirmed.
+      if (enableVoiceBtn && !state.remoteStream) {
         show(enableVoiceBtn);
       }
       // Guest: collapse the panel so the tour fills the screen. Host keeps
@@ -5004,19 +5103,33 @@ function annoBindViewportEvents(win, cb) {
     if (state.remoteStream && !voiceConnected) {
       voiceConnected = true;
       voiceAttemptPending = false;
-      setVoiceStatus("Voice connected — you can talk now.", "live");
-      if (enableVoiceBtn) {
-        enableVoiceBtn.hidden = true;
-        enableVoiceBtn.disabled = false;
+      if (micGranted === false) {
+        // Audio is flowing INBOUND only — this user hears the room but is
+        // carrying the controller's silent placeholder track outbound. Saying
+        // "you can talk now" here is the defect: it is the one state where the
+        // user needs to act, and the old copy told them everything was fine.
+        setVoiceStatus("You can hear the room, but your mic is off — tap Enable voice.", "warn");
+        if (enableVoiceBtn) {
+          enableVoiceBtn.hidden = false;
+          enableVoiceBtn.disabled = false;
+        }
+      } else {
+        setVoiceStatus("Voice connected — you can talk now.", "live");
+        if (enableVoiceBtn) {
+          enableVoiceBtn.hidden = true;
+          enableVoiceBtn.disabled = false;
+        }
       }
     } else if (!state.remoteStream && voiceConnected) {
       voiceConnected = false;
       if (state.isConnected) {
         reportVoiceCapability();
-        // The established voice path dropped: re-offer the explicit
-        // restart on deferred-voice sessions (the button was hidden on
-        // connect, and the status above tells the user to tap it).
-        if (IS_IOS_WEBKIT && enableVoiceBtn) {
+        // The established voice path dropped: hand the explicit restart back.
+        // This used to be iOS-only, which left desktop users with no way to
+        // recover from a dismissed prompt or a dropped call short of leaving
+        // and rejoining. A user gesture is what a mic retry needs on EVERY
+        // platform, not just WebKit.
+        if (enableVoiceBtn) {
           enableVoiceBtn.hidden = false;
           enableVoiceBtn.disabled = false;
         }
@@ -5217,6 +5330,60 @@ function annoBindViewportEvents(win, cb) {
   if(aboutClose) aboutClose.addEventListener("click",closeAbout);
   if(aboutPanel) aboutPanel.addEventListener("click",function(e){ if(e.target===aboutPanel) closeAbout(); });
   document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeAbout(); });
+
+  // ── Build diagnostics (?f3d-debug=1) ────────────────────────────────
+  // Answers "what runtime is this package actually on?" without opening the
+  // file. Every value comes from the f3d-* <meta> markers, so the badge and
+  // the markers can never disagree. Inert — and invisible — without the flag.
+  (function(){
+    var buildBtn=document.getElementById("f3d-build-btn");
+    var buildPanel=document.getElementById("f3d-build-info");
+    if(!buildBtn||!buildPanel) return;
+    var RUNTIME_RELEASED="2026-07-30";
+    var on=false;
+    try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
+    if(!on) return;
+    buildBtn.hidden=false;
+    var FIELDS=[
+      ["Runtime","f3d-runtime"],
+      ["Schema","f3d-package-schema"],
+      ["Family","f3d-package-family"],
+      ["Capabilities","f3d-capabilities"]
+    ];
+    function meta(name){
+      var el=document.querySelector('meta[name="'+name+'"]');
+      var v=el?el.getAttribute("content"):null;
+      // An ABSENT marker is the diagnostic signal for a pre-marker package —
+      // say so rather than rendering a blank row that reads as "no value".
+      return (v===null||v==="")?(el?"(empty)":"(not present)"):v;
+    }
+    function row(dl,label,value){
+      var dt=document.createElement("dt");
+      dt.textContent=label;
+      var dd=document.createElement("dd");
+      dd.textContent=value;
+      dl.appendChild(dt); dl.appendChild(dd);
+    }
+    var dl=document.createElement("dl");
+    row(dl,FIELDS[0][0],meta(FIELDS[0][1]));
+    // Released is INTERPOLATED, not read from a marker: see the note on
+    // ATLAS_RUNTIME_RELEASED for why it is not a fifth canonical <meta>. It is
+    // baked at generation time, so it dates the runtime this package carries.
+    row(dl,"Released",RUNTIME_RELEASED);
+    for(var i=1;i<FIELDS.length;i++) row(dl,FIELDS[i][0],meta(FIELDS[i][1]));
+    buildPanel.appendChild(dl);
+    buildBtn.addEventListener("click",function(){
+      var open=buildPanel.hidden;
+      buildPanel.hidden=!open;
+      buildBtn.setAttribute("aria-expanded",open?"true":"false");
+    });
+    document.addEventListener("keydown",function(e){
+      if(e.key==="Escape"&&!buildPanel.hidden){
+        buildPanel.hidden=true;
+        buildBtn.setAttribute("aria-expanded","false");
+      }
+    });
+  })();
 
   var shareBtn=document.getElementById("share-btn");
   var SHARE_TITLE="Opera Gallery New York";
