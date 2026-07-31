@@ -8,7 +8,7 @@
 <meta property="og:title" content="Inside Park at St. Bart&#39;s — Frontiers|3D" />
 <meta property="og:description" content="A contemporary American restaurant set in the dramatic 30-foot-ceilinged Great Hall of the historic St. Bartholomew&amp;#39;s Church on Park Avenue. With original stained-glass windows and a 4,000-square-foot covered terrace, it offers an atmospheric 140-seat venue for dining and private events in Midtown East." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.26.1" />
+<meta name="f3d-runtime" content="2.27.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -424,6 +424,29 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 //   { type: "stroke_delete", viewKey, seq, strokeIds, ts }
 //   { type: "clear", viewKey, seq, ts }
 //   { type: "nav_lock", viewKey, seq, locked, ts }
+//   { type: "room", kind, payload, from, ts }
+//
+// 2.28.0 — ROOM EVENTS. A generic, additive envelope for session-level
+// social state (roster, chat, reactions, attention, speaking, mute) that
+// is NOT view or annotation data. The controller stays deliberately
+// ignorant of what a `kind` means; it owns only the three things that
+// must be enforced at the hub and cannot be enforced anywhere else:
+//
+//   1. IDENTITY IS STAMPED, NEVER ACCEPTED. A guest packet's `from` is
+//      overwritten with the hub's own peer id for that connection. A
+//      tampered client therefore cannot speak as anyone else — which is
+//      what makes "a participant may never toggle another participant's
+//      attention" a property of the protocol rather than of the UI.
+//   2. GUESTS MAY ONLY ORIGINATE ALLOWLISTED KINDS (roomGuestKinds,
+//      default EMPTY). Host-authored kinds — permission grants, mute
+//      directives, the roster itself — are unforgeable by construction
+//      because a guest-sent copy dies at the hub.
+//   3. RATE + SIZE LIMITS PER GUEST. One guest cannot flood the channel
+//      that everyone else's ink and voice share.
+//
+// Empty defaults mean every pre-2.28 embedder is byte-behavior
+// unchanged: with no allowlist, a `room` packet from a guest is dropped.
+
 //
 // `viewKey` is derived from the most recent teleport (ss + "|" + sr)
 // on both ends; receivers drop annotation packets whose viewKey
@@ -589,6 +612,14 @@ var LIVE_SESSION_POINTER_BACKPRESSURE_BYTES = 65536;
 // (host bandwidth/CPU scale with guest count; see the design record).
 var LIVE_SESSION_MAX_GUESTS_CEILING = 8;
 
+// Guest-originated room-event limits (2.28.0). The serialized payload cap
+// is applied to GUEST packets only: the hub is trusted to send a chat
+// backlog to a late joiner, a guest is not trusted to send anything large.
+var LIVE_SESSION_ROOM_PAYLOAD_MAX_CHARS = 4096;
+var LIVE_SESSION_ROOM_KIND_MAX_CHARS = 32;
+var LIVE_SESSION_ROOM_RATE_EVENTS = 30;
+var LIVE_SESSION_ROOM_RATE_WINDOW_MS = 5000;
+
 // Factory for a single live-session controller. Each call returns an
 // independent state machine; the page is expected to keep at most one
 // alive at a time.
@@ -619,6 +650,16 @@ var LIVE_SESSION_MAX_GUESTS_CEILING = 8;
 //   guestPermissionDefaults: {syncView, annotate} — what a new guest
 //     may do before setGuestPermission() is called (default both true
 //     = pre-2.12 permissive behavior).
+//   exclusiveSyncView: boolean — whether granting Sync View to one guest
+//     revokes it from every other (default TRUE, the owner decision of
+//     2026-07-12). That decision was made for the Builder's model, where
+//     the host hands a single driver token to one guest at a time. The
+//     Atlas showcase runs the opposite model by design: every guest joins
+//     holding Sync View so anyone can pull the group to their view, and
+//     under that model an exclusive grant would silently revoke everyone
+//     else the first time the host re-checked a box. Embedders that start
+//     permissive pass false; the Builder keeps the default and is
+//     unchanged.
 function createLiveSession(options) {
   var opts = options || {};
   var log = _makeLogger(!!opts.debug);
@@ -629,6 +670,17 @@ function createLiveSession(options) {
     maxGuests = Math.floor(opts.maxGuests);
     if (maxGuests < 1) maxGuests = 1;
     if (maxGuests > LIVE_SESSION_MAX_GUESTS_CEILING) maxGuests = LIVE_SESSION_MAX_GUESTS_CEILING;
+  }
+  var exclusiveSyncView = opts.exclusiveSyncView !== false;
+  // Kinds a GUEST may originate. Empty by default, so an embedder that
+  // never opts in behaves exactly as it did pre-2.28: any `room` packet
+  // arriving from a guest is dropped at the hub.
+  var roomGuestKinds = {};
+  if (Array.isArray(opts.roomGuestKinds)) {
+    for (var rk = 0; rk < opts.roomGuestKinds.length; rk++) {
+      var kindName = _coerceString(opts.roomGuestKinds[rk]);
+      if (kindName) roomGuestKinds[kindName] = 1;
+    }
   }
   var permDefaults = { syncView: true, annotate: true };
   if (_isPlainObject(opts.guestPermissionDefaults)) {
@@ -681,6 +733,7 @@ function createLiveSession(options) {
     incomingNavLockEvent: null,
     incomingStrokeDeleteEvent: null,
     incomingLocationShareEvent: null,
+    incomingRoomEvent: null,
   };
 
   var listeners = [];
@@ -728,6 +781,11 @@ function createLiveSession(options) {
   // back-to-back permission markers on guest join), which made the
   // second event look like a duplicate. evId can never collide.
   var _teleportEvId = 0;
+  // Monotonic identity for incomingRoomEvent (2.28.0). Same reasoning as
+  // _teleportEvId: two room packets flushed in one SCTP batch share a
+  // millisecond, so a ts-based dedupe in the embedder would silently swallow
+  // the second one. Chat cannot afford that.
+  var _roomEvId = 0;
   // Annotation-floor holder at the hub (multi-guest sessions only —
   // maxGuests===1 keeps the exact pre-2.12 pass-through semantics).
   // null | "host" | <guest peerId>. With 3+ parties a single boolean
@@ -1599,6 +1657,10 @@ function createLiveSession(options) {
       });
       return;
     }
+    if (type === "room") {
+      _handleGuestRoomPacket(remoteId, slot, payload);
+      return;
+    }
     if (_ANNOTATION_TYPES[type] === 1) {
       var seq = +payload.seq || 0;
       if (seq <= slot.lastRecvSeq) return;
@@ -1671,6 +1733,141 @@ function createLiveSession(options) {
     }
   }
 
+  // ── Room events (2.28.0) ───────────────────────────────────────────
+  // Serialized size of a guest-originated payload. A guest that sends
+  // something unserializable (a cycle) is rejected rather than allowed to
+  // throw inside the receive handler.
+  function _roomPayloadTooBig(payload) {
+    if (payload === undefined || payload === null) return false;
+    var text;
+    try {
+      text = JSON.stringify(payload);
+    } catch (e) {
+      return true;
+    }
+    return typeof text === "string" && text.length > LIVE_SESSION_ROOM_PAYLOAD_MAX_CHARS;
+  }
+
+  // Fixed-window token bucket per guest slot. Deliberately crude: the goal
+  // is to bound one guest's share of the channel, not to be fair.
+  function _roomRateLimited(slot) {
+    var now = Date.now();
+    if (!slot.roomWindowStart || now - slot.roomWindowStart >= LIVE_SESSION_ROOM_RATE_WINDOW_MS) {
+      slot.roomWindowStart = now;
+      slot.roomWindowCount = 0;
+    }
+    slot.roomWindowCount = (slot.roomWindowCount || 0) + 1;
+    return slot.roomWindowCount > LIVE_SESSION_ROOM_RATE_EVENTS;
+  }
+
+  function _deliverRoomEvent(kind, payload, from, fromName) {
+    _roomEvId++;
+    _patch({
+      incomingRoomEvent: {
+        kind: kind,
+        payload: payload,
+        from: from,
+        fromName: fromName,
+        evId: _roomEvId,
+        ts: Date.now(),
+      },
+    });
+  }
+
+  // Hub ingest for a guest-originated room packet. Every authority check
+  // that exists lives here, because this is the only place a tampered
+  // client cannot reach around.
+  function _handleGuestRoomPacket(remoteId, slot, packet) {
+    var kind = _coerceString(packet.kind);
+    if (!kind || kind.length > LIVE_SESSION_ROOM_KIND_MAX_CHARS) return;
+    // Authority 1: guests may only originate allowlisted kinds. Everything
+    // host-authored (roster, permission, mute) is unforgeable because a
+    // guest-sent copy never gets past this line.
+    if (roomGuestKinds[kind] !== 1) return;
+    if (_roomRateLimited(slot)) return;
+    if (_roomPayloadTooBig(packet.payload)) return;
+    // Authority 2: identity is STAMPED from the connection, never read from
+    // the packet. This is what makes "you can only act as yourself" true of
+    // the wire rather than of the UI.
+    var out = {
+      type: "room",
+      kind: kind,
+      payload: packet.payload,
+      from: remoteId,
+      fromName: slot.name,
+      ts: Date.now(),
+    };
+    _deliverRoomEvent(kind, packet.payload, remoteId, slot.name);
+    // Fan out to every OTHER guest so the room is coherent for everyone,
+    // not just the hub. The originator already has its own copy locally.
+    var ids = _openGuestIds();
+    for (var i = 0; i < ids.length; i++) {
+      if (ids[i] === remoteId) continue;
+      var target = guestConns[ids[i]];
+      if (!target || !target.open) continue;
+      try {
+        target.conn.send(out);
+      } catch (e) {
+        log("room relay failed", e);
+      }
+    }
+  }
+
+  // Agent: broadcast a room event to every guest. Host-authored events are
+  // stamped "host" so a receiver can tell hub-authoritative state (roster,
+  // permission, mute) from a relayed peer message.
+  function sendRoomEvent(kind, payload) {
+    var k = _coerceString(kind);
+    if (!k) return false;
+    if (state.role === "agent") {
+      if (!state.isConnected) return false;
+      var packet = { type: "room", kind: k, payload: payload, from: "host", ts: Date.now() };
+      var sent = 0;
+      _forEachOpenGuest(function (id, slot) {
+        try {
+          slot.conn.send(packet);
+          sent++;
+        } catch (e) {
+          log("room send failed", e);
+        }
+      });
+      return sent > 0;
+    }
+    if (state.role === "visitor") {
+      if (!dataConn || !state.isConnected) return false;
+      // No `from` on the wire: the hub stamps it. Sending one would be
+      // ignored anyway, and omitting it makes that explicit.
+      try {
+        dataConn.send({ type: "room", kind: k, payload: payload, ts: Date.now() });
+        return true;
+      } catch (e) {
+        log("room send failed", e);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  // Agent-only: address one guest. The late-joiner hydration path — roster,
+  // recent chat, and that guest's own permissions — without replaying any
+  // of it to the participants who already have it.
+  function sendRoomEventTo(peerId, kind, payload) {
+    if (state.role !== "agent") return false;
+    if (!state.isConnected) return false;
+    var id = _coerceString(peerId);
+    var k = _coerceString(kind);
+    if (!id || !k) return false;
+    var slot = guestConns[id];
+    if (!slot || !slot.open) return false;
+    try {
+      slot.conn.send({ type: "room", kind: k, payload: payload, from: "host", ts: Date.now() });
+      return true;
+    } catch (e) {
+      log("targeted room send failed", e);
+      return false;
+    }
+  }
+
   // ── Visitor inbound (single sender: the agent) ─────────────────────
   function _handleIncomingData(payload) {
     if (!_isPlainObject(payload)) return;
@@ -1701,6 +1898,20 @@ function createLiveSession(options) {
       _patch({
         incomingTeleportEvent: { ss: ss, sr: sr, ts: Date.now(), evId: _teleportEvId },
       });
+      return;
+    }
+    if (type === "room") {
+      // Everything arriving here came through the hub, which already
+      // stamped `from`. A guest therefore cannot impersonate anyone even
+      // on this leg: the only sender it can hear is the host.
+      var rkind = _coerceString(payload.kind);
+      if (!rkind) return;
+      _deliverRoomEvent(
+        rkind,
+        payload.payload,
+        _coerceString(payload.from) || "host",
+        _coerceString(payload.fromName),
+      );
       return;
     }
     if (type === "location_share") {
@@ -1796,6 +2007,17 @@ function createLiveSession(options) {
       }
       return false;
     });
+  }
+
+  // The local microphone stream, once acquired (null before startVoice on a
+  // deferred session, or when the user declined). Exposed (2.28.0) for the
+  // two things only the embedder can do: measure this participant's own
+  // audio level for a speaking indicator, and toggle `track.enabled` for
+  // mute. Deliberately a getter and not a setter — the controller never
+  // hands out the ability to ACQUIRE a microphone, which is what keeps
+  // "a host can silence you but can never switch you on" structural.
+  function getLocalStream() {
+    return localMicStream;
   }
 
   // Agent-only: iterate open guest slots.
@@ -1898,9 +2120,12 @@ function createLiveSession(options) {
   }
 
   // Agent-only (2.12.0): grant/revoke a guest capability at the hub.
-  // kind: "syncView" | "annotate". Granting syncView is EXCLUSIVE —
-  // at most ONE guest holds it at a time (owner decision 2026-07-12),
-  // so granting guest B auto-revokes every other guest. Returns the
+  // kind: "syncView" | "annotate". Granting syncView is EXCLUSIVE by
+  // default — at most ONE guest holds it at a time (owner decision
+  // 2026-07-12), so granting guest B auto-revokes every other guest.
+  // An embedder whose guests all start with the grant (the Atlas
+  // showcase) passes exclusiveSyncView:false, because there the first
+  // re-check of a box would otherwise revoke the whole group. Returns the
   // list of {peerId, kind, allowed} changes actually applied (the glue
   // uses it to push exactly the right ctl markers), or an empty array.
   function setGuestPermission(peerId, kind, allowed) {
@@ -1916,7 +2141,7 @@ function createLiveSession(options) {
         annotate: permDefaults.annotate,
       };
     }
-    if (kind === "syncView" && want) {
+    if (kind === "syncView" && want && exclusiveSyncView) {
       for (var i = 0; i < guestOrder.length; i++) {
         var otherId = guestOrder[i];
         if (otherId === id) continue;
@@ -2317,6 +2542,7 @@ function createLiveSession(options) {
     _lastRecvSeq = 0;
     _ingestSeq = 0;
     _teleportEvId = 0;
+    _roomEvId = 0;
     _floorHolder = null;
     _currentViewKey = "";
     _pendingPointer = null;
@@ -2339,6 +2565,7 @@ function createLiveSession(options) {
       incomingNavLockEvent: null,
       incomingStrokeDeleteEvent: null,
       incomingLocationShareEvent: null,
+      incomingRoomEvent: null,
     };
   }
 
@@ -2348,10 +2575,13 @@ function createLiveSession(options) {
     initializeAsAgent: initializeAsAgent,
     joinAsVisitor: joinAsVisitor,
     startVoice: startVoice,
+    getLocalStream: getLocalStream,
     teleportVisitor: teleportVisitor,
     teleportVisitorTo: teleportVisitorTo,
     sendControl: sendControl,
     sendControlTo: sendControlTo,
+    sendRoomEvent: sendRoomEvent,
+    sendRoomEventTo: sendRoomEventTo,
     setGuestPermission: setGuestPermission,
     shareLocationWithAgent: shareLocationWithAgent,
     noteCurrentView: noteCurrentView,
@@ -2830,6 +3060,23 @@ function annoBindViewportEvents(win, cb) {
   var clearBtn = document.getElementById("anno-clear-btn");
   var navlockEl = document.getElementById("lt-navlock");
 
+  // ── Guest permissions (2.27.0) ───────────────────────────────────────
+  // Wire vocabulary shared with the Builder glue since 2.12.0. These strings
+  // are PROTOCOL: exported packages are re-served for years, so a host on a
+  // newer build must keep speaking exactly what an older guest understands.
+  // Never rename them.
+  var GUEST_SYNC_CTL_ON = "f3dctl:guestSync:1";
+  var GUEST_SYNC_CTL_OFF = "f3dctl:guestSync:0";
+  var ANNOT_CTL_ON = "f3dctl:annot:1";
+  var ANNOT_CTL_OFF = "f3dctl:annot:0";
+  // A guest's OWN view of what it may do. Both start true because this runtime
+  // joins guests permissively (see newSession) — the host's roster revokes,
+  // it does not hand out. The hub enforces the real answer regardless; these
+  // only decide what this guest's UI offers, so a revoked guest is told rather
+  // than left clicking a control whose packets are being dropped.
+  var mySyncAllowed = true;
+  var myAnnotAllowed = true;
+
   // Location-sync pill refs.
   var syncBtn = document.getElementById("loc-sync");
   var syncLabelEl = syncBtn ? syncBtn.querySelector(".loc-sync-label") : null;
@@ -3019,8 +3266,30 @@ function annoBindViewportEvents(win, cb) {
       // none. With defaults false and no way to grant, guests simply LOST view
       // sync and annotation (owner-reported). The controller's own default
       // ({ syncView:true, annotate:true }) exists precisely for this embedder:
-      // its docs name "the Atlas runtime" as the pre-2.12 permissive case. If
-      // Atlas ever gets a roster UI, re-tighten these in the same change.
+      // its docs name "the Atlas runtime" as the pre-2.12 permissive case.
+      //
+      // 2.27.0 — SYNC VIEW IS NOW HOST-GRANTED, annotation stays permissive.
+      // The owner's rule, stated directly: "any participant may pull the group
+      // view to their view ONLY IF granted that ability by the host."
+      //
+      // That is a different shape from both previous attempts, and the
+      // difference is what makes it safe:
+      //   - 2.25.0 set BOTH grants false while this runtime had no roster at
+      //     all, so nobody could ever be granted anything. That is the
+      //     regression, and its cause was the missing UI, not the default.
+      //   - 2.26.0 fixed it by reverting to fully permissive, which was right
+      //     while there was still no roster.
+      //   - 2.27.0 ships the roster (below), so a false default is now
+      //     grantable — the condition that made 2.25.0 a regression is gone.
+      //
+      // Annotation is deliberately left permissive: the owner's instruction
+      // covers view sync only, and tightening drawing as well would re-create
+      // the half of 2.25.0 nobody asked to change.
+      guestPermissionDefaults: { syncView: false, annotate: true },
+      // Non-exclusive: the host may authorise several people at once and the
+      // roster revokes. The Builder's single-driver token model is unchanged
+      // and still the controller's default.
+      exclusiveSyncView: false,
       deferVoice: IS_IOS_WEBKIT,
       onDiagnostic: markMilestone,
       PeerCtor: lazyPeerCtor,
@@ -4445,6 +4714,14 @@ function annoBindViewportEvents(win, cb) {
     }
     var ok = false;
     var role = session.getState().role;
+    // A revoked guest is TOLD, not silently dropped. Without this the hub
+    // discards the packet and the pill still pulses "success" — the failure
+    // mode this whole surface keeps being reported for.
+    if (role === "visitor" && !mySyncAllowed) {
+      setPulseState("idle");
+      setVoiceStatus("The host has turned off view sync for you.", "warn");
+      return false;
+    }
     try {
       if (role === "visitor") ok = session.shareLocationWithAgent(parsed.ss, parsed.sr);
       else if (role === "agent") ok = session.teleportVisitor(parsed.ss, parsed.sr);
@@ -5014,9 +5291,164 @@ function annoBindViewportEvents(win, cb) {
     }
   }
 
+  // ── Guest affordances + host roster (2.27.0) ─────────────────────────
+  //
+  // Owner report: "only the host can Sync views of other participants… why
+  // wasn't the panel with the guest names and permission boxes restored?"
+  // The honest answer to the second half is that this runtime never had one —
+  // the roster is a Builder surface (#lg-guest-roster) and no Atlas build ever
+  // shipped it. It is added here rather than described.
+  //
+  // Built in JS rather than baked into the exported markup, exactly as the
+  // Builder does it, so an older exported package that lacks the container
+  // simply renders no roster instead of failing.
+
+  function refreshSyncAffordance() {
+    if (!syncBtn) return;
+    try {
+      syncBtn.setAttribute("aria-disabled", mySyncAllowed ? "false" : "true");
+      syncBtn.classList.toggle("is-revoked", !mySyncAllowed);
+      syncBtn.title = mySyncAllowed
+        ? ""
+        : "The host has turned off view sync for you.";
+    } catch (_e) {}
+  }
+
+  function refreshAnnotAffordance() {
+    if (!annotateBtn) return;
+    try {
+      annotateBtn.disabled = !myAnnotAllowed;
+      annotateBtn.title = myAnnotAllowed
+        ? ""
+        : "The host has turned off annotation for you.";
+    } catch (_e) {}
+  }
+
+  var rosterContainer = null;
+  function ensureRoster() {
+    if (rosterContainer || !hostBlock) return rosterContainer;
+    try {
+      var wrap = document.createElement("div");
+      wrap.id = "lt-guest-roster-wrap";
+      wrap.style.marginTop = "8px";
+      var head = document.createElement("div");
+      head.textContent = "Participants";
+      head.style.fontSize = "10px";
+      head.style.letterSpacing = ".08em";
+      head.style.textTransform = "uppercase";
+      head.style.opacity = ".6";
+      head.style.marginBottom = "4px";
+      wrap.appendChild(head);
+      rosterContainer = document.createElement("div");
+      rosterContainer.id = "lt-guest-roster";
+      wrap.appendChild(rosterContainer);
+      hostBlock.appendChild(wrap);
+    } catch (_e) {
+      rosterContainer = null;
+    }
+    return rosterContainer;
+  }
+
+  // The controller applies the grant at the hub and returns EVERY change it
+  // made; the glue mirrors each one to the affected guest as a ctl marker so
+  // their UI matches what the hub will actually accept.
+  function applyPermissionChange(peerId, kind, allowed) {
+    try {
+      if (!session || typeof session.setGuestPermission !== "function") return;
+      var changes = session.setGuestPermission(peerId, kind, allowed) || [];
+      for (var i = 0; i < changes.length; i++) {
+        if (typeof session.sendControlTo === "function") {
+          session.sendControlTo(
+            changes[i].peerId,
+            changes[i].kind === "syncView"
+              ? changes[i].allowed
+                ? GUEST_SYNC_CTL_ON
+                : GUEST_SYNC_CTL_OFF
+              : changes[i].allowed
+                ? ANNOT_CTL_ON
+                : ANNOT_CTL_OFF,
+          );
+        }
+      }
+    } catch (_e) {}
+  }
+
+  function buildPermCheckbox(g, kind, labelText) {
+    var lab = document.createElement("label");
+    try {
+      lab.style.display = "inline-flex";
+      lab.style.alignItems = "center";
+      lab.style.gap = "4px";
+      lab.style.fontSize = "10px";
+      lab.style.opacity = ".75";
+      lab.style.cursor = "pointer";
+    } catch (_e) {}
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = kind === "syncView" ? g.syncView === true : g.annotate === true;
+    cb.setAttribute("data-peer", g.peerId);
+    cb.setAttribute("data-kind", kind);
+    cb.setAttribute("aria-label", labelText + " for " + (g.name || "guest"));
+    cb.addEventListener("change", function () {
+      applyPermissionChange(g.peerId, kind, cb.checked === true);
+    });
+    lab.appendChild(cb);
+    var t = document.createElement("span");
+    t.textContent = labelText;
+    lab.appendChild(t);
+    return lab;
+  }
+
+  function renderGuestRoster(guests) {
+    var host = ensureRoster();
+    if (!host) return;
+    host.innerHTML = "";
+    if (!guests || guests.length === 0) {
+      var empty = document.createElement("div");
+      empty.textContent = "No guests yet.";
+      empty.style.fontSize = "11px";
+      empty.style.opacity = ".5";
+      host.appendChild(empty);
+      return;
+    }
+    for (var i = 0; i < guests.length; i++) {
+      var g = guests[i];
+      var row = document.createElement("div");
+      try {
+        row.style.display = "flex";
+        row.style.alignItems = "center";
+        row.style.gap = "8px";
+        row.style.padding = "3px 0";
+      } catch (_e) {}
+      var nm = document.createElement("span");
+      // Guest names are UNTRUSTED remote data — textContent only, never markup.
+      nm.textContent = g.name || "Guest";
+      try {
+        nm.style.flex = "1";
+        nm.style.minWidth = "0";
+        nm.style.fontSize = "12px";
+        nm.style.overflow = "hidden";
+        nm.style.textOverflow = "ellipsis";
+        nm.style.whiteSpace = "nowrap";
+      } catch (_e) {}
+      row.appendChild(nm);
+      row.appendChild(buildPermCheckbox(g, "syncView", "Sync"));
+      row.appendChild(buildPermCheckbox(g, "annotate", "Annotate"));
+      host.appendChild(row);
+    }
+  }
+
   // ── State subscriber ─────────────────────────────────────────────────
   function onState(state) {
     if (pinValue && state.pin) pinValue.textContent = state.pin;
+
+    if (state.role === "agent") {
+      // Names + per-guest grants, re-rendered from the state patch (the
+      // controller is the only source of who is connected and what they hold).
+      try {
+        renderGuestRoster(state.guests || []);
+      } catch (_e) {}
+    }
 
     if (state.role === "agent" && hostStatus) {
       if (state.status === "initializing") setText(hostStatus, "Reserving session…");
@@ -5166,7 +5598,25 @@ function annoBindViewportEvents(win, cb) {
     // Guest follows host teleports (dedupe by ts; last-sender-wins).
     if (state.role === "visitor" && state.incomingTeleportEvent && state.incomingTeleportEvent.ts !== lastTeleportTs) {
       lastTeleportTs = state.incomingTeleportEvent.ts;
-      if (lastOwnSendTs === 0 || Date.now() - lastOwnSendTs >= SYNC_SUPPRESS_MS) {
+      // CONTROL MARKERS ride the teleport channel with an "f3dctl:" prefix
+      // (the Builder has consumed them since 2.12.0). Atlas never sent any, so
+      // it never looked for them — and applied whatever arrived as COORDINATES.
+      // The moment the host roster below can grant or revoke, that latent hole
+      // becomes live: a permission marker would be parsed as a position and
+      // teleport the guest somewhere meaningless. Intercept first, and never
+      // fall through to applyTeleport.
+      if (String(state.incomingTeleportEvent.ss || "").indexOf("f3dctl:") === 0) {
+        var ctl = String(state.incomingTeleportEvent.ss);
+        if (ctl === GUEST_SYNC_CTL_ON || ctl === GUEST_SYNC_CTL_OFF) {
+          mySyncAllowed = ctl === GUEST_SYNC_CTL_ON;
+          refreshSyncAffordance();
+        } else if (ctl === ANNOT_CTL_ON || ctl === ANNOT_CTL_OFF) {
+          myAnnotAllowed = ctl === ANNOT_CTL_ON;
+          refreshAnnotAffordance();
+        }
+        // Unknown markers are ignored on purpose — a newer host must be able
+        // to send one to an already-exported package without breaking it.
+      } else if (lastOwnSendTs === 0 || Date.now() - lastOwnSendTs >= SYNC_SUPPRESS_MS) {
         applyTeleport(state.incomingTeleportEvent.ss, state.incomingTeleportEvent.sr);
         // Remote-provenance record: stops an immediate ambient echo of
         // the just-applied coords without poisoning the outbound dedupe
@@ -5186,6 +5636,26 @@ function annoBindViewportEvents(win, cb) {
         // moment later must still transmit.
         lastAppliedRemoteKey = state.incomingLocationShareEvent.ss + "|" + state.incomingLocationShareEvent.sr;
         lastAppliedRemoteTs = Date.now();
+        // RELAY (2.27.0) — the host is the hub, so a guest's share reaches
+        // ONLY the host. Restoring the guest's permission (2.26.0) let the
+        // packet arrive; nothing then carried it to the other guests, so
+        // "everyone follows" still worked in exactly one direction and the
+        // owner reported that only the host could move the group. Re-emitting
+        // it as a host teleport is what makes a guest's sync reach everyone.
+        //
+        // The hub already refused this packet unless the sender holds the Sync
+        // View grant, so the relay inherits that gate rather than adding a
+        // second one. The originator receives their own view back and applies
+        // nothing: applyTeleport compares the resulting URL string and a
+        // fixed point is a no-op.
+        try {
+          if (typeof session.teleportVisitor === "function") {
+            session.teleportVisitor(
+              state.incomingLocationShareEvent.ss,
+              state.incomingLocationShareEvent.sr,
+            );
+          }
+        } catch (_e) {}
         if (letterboxWrap) {
           try {
             letterboxWrap.classList.add("follow-pulse");
