@@ -8,7 +8,7 @@
 <meta property="og:title" content="Parker &amp; Quinn — Frontiers|3D" />
 <meta property="og:description" content="An American bistro inside Midtown&amp;#39;s Refinery Hotel, offering a warm, hospitality-forward setting with vintage-inspired decor. It serves seasonal American fare and craft cocktails just steps from Bryant Park and the Theatre District." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.26.0" />
+<meta name="f3d-runtime" content="2.26.1" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -26,6 +26,12 @@
   .f3d-title{font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .f3d-loc{font-size:.7rem;color:#94a3b8}
   .f3d-actions{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:.4rem;max-width:100%}
+  /* Author display beats the UA's [hidden]{display:none} regardless of
+     specificity, so without this rule a hidden .f3d-iconbtn RENDERS ANYWAY —
+     which is exactly how the Build button appeared for everyone, flag or not,
+     wired to nothing. Owner-reported; reproduced in headless Chromium
+     (hidden=true, computed display flex). */
+  .f3d-iconbtn[hidden]{display:none}
   .f3d-iconbtn{appearance:none;display:inline-flex;align-items:center;gap:.35rem;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:#fff;border-radius:7px;padding:.4rem .7rem;font:600 12px/1 inherit;font-family:inherit;cursor:pointer;text-decoration:none;transition:background .18s,opacity .18s}
   .f3d-iconbtn:hover{background:rgba(255,255,255,.15)}
   .f3d-iconbtn svg{width:14px;height:14px}
@@ -5344,8 +5350,11 @@ function annoBindViewportEvents(win, cb) {
     var RUNTIME_RELEASED="2026-07-31";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
-    if(!on) return;
-    buildBtn.hidden=false;
+    // The flag gates VISIBILITY only. The wiring below runs regardless, so the
+    // button can never again be visible-but-dead: 2.26.0 shipped exactly that
+    // (a CSS rule defeated [hidden] while the early return here skipped the
+    // listener), and the two failures compounded into an unresponsive control.
+    if(on) buildBtn.hidden=false;
     var FIELDS=[
       ["Runtime","f3d-runtime"],
       ["Schema","f3d-package-schema"],
