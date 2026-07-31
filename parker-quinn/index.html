@@ -8,7 +8,7 @@
 <meta property="og:title" content="Parker &amp; Quinn — Frontiers|3D" />
 <meta property="og:description" content="An American bistro inside Midtown&amp;#39;s Refinery Hotel, offering a warm, hospitality-forward setting with vintage-inspired decor. It serves seasonal American fare and craft cocktails just steps from Bryant Park and the Theatre District." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.25.0" />
+<meta name="f3d-runtime" content="2.26.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -36,8 +36,6 @@
   @media(max-width:560px){.f3d-iconbtn .f3d-btn-label{display:none}.f3d-iconbtn{padding:.4rem .5rem}}
   .f3d-stage{position:relative;flex:1;min-height:0}
   .f3d-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#020617}
-  .f3d-foot{padding:.5rem 1rem;font-size:.72rem;color:#94a3b8;background:#070b1f;border-top:1px solid rgba(255,255,255,.05)}
-  body.live-tour-active .f3d-foot{display:none}
 
   /* ── About / Summary panel ─────────────────────────────────────── */
   .f3d-buildinfo{position:absolute;top:calc(100% + 6px);right:1rem;z-index:1400;min-width:260px;padding:.6rem .75rem;border-radius:10px;background:rgba(8,10,26,.97);border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 28px rgba(0,0,0,.45);font:500 12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:rgba(255,255,255,.92)}
@@ -309,7 +307,6 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 <!-- f3d:runtime-markup:stage END -->
   </div>
 </main>
-<footer class="f3d-foot">An American bistro inside Midtown&#39;s Refinery Hotel, offering a warm, hospitality-forward setting with vintage-inspired decor. It serves seasonal American fare and craft cocktails just steps from Bryant Park and the Theatre District.</footer>
 
 <!-- About / Summary panel -->
 <div id="about-panel" class="about-backdrop" role="dialog" aria-modal="true" aria-label="About this showcase">
@@ -3009,10 +3006,15 @@ function annoBindViewportEvents(win, cb) {
       // out at two people while the Builder glue had passed 8 since 2.12.0.
       // Not a regression — Atlas multi-guest was simply never wired.
       maxGuests: 8,
-      // Guests arrive with NO grants; the host's roster checkboxes are the only
-      // way to hand out Sync View or Annotation. Matches the Builder glue and
-      // the owner-approved grant model, rather than the permissive default.
-      guestPermissionDefaults: { syncView: false, annotate: false },
+      // 2.26.0 — NO guestPermissionDefaults override, deliberately, reversing
+      // 2.25.0's { syncView:false, annotate:false }. That override copied the
+      // Builder's owner-approved grant model — but the Builder HAS a roster UI
+      // with per-guest checkboxes to hand grants out, and this runtime has
+      // none. With defaults false and no way to grant, guests simply LOST view
+      // sync and annotation (owner-reported). The controller's own default
+      // ({ syncView:true, annotate:true }) exists precisely for this embedder:
+      // its docs name "the Atlas runtime" as the pre-2.12 permissive case. If
+      // Atlas ever gets a roster UI, re-tighten these in the same change.
       deferVoice: IS_IOS_WEBKIT,
       onDiagnostic: markMilestone,
       PeerCtor: lazyPeerCtor,
@@ -5339,7 +5341,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-07-30";
+    var RUNTIME_RELEASED="2026-07-31";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     if(!on) return;
