@@ -8,7 +8,7 @@
 <meta property="og:title" content="Inside Park at St. Bart&#39;s — Frontiers|3D" />
 <meta property="og:description" content="A contemporary American restaurant set in the dramatic 30-foot-ceilinged Great Hall of the historic St. Bartholomew&amp;#39;s Church on Park Avenue. With original stained-glass windows and a 4,000-square-foot covered terrace, it offers an atmospheric 140-seat venue for dining and private events in Midtown East." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.28.0" />
+<meta name="f3d-runtime" content="2.29.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -39,7 +39,18 @@
   .f3d-iconbtn.lt-launch:hover{opacity:.9;background:#818cf8}
   .f3d-claim{border-color:rgba(129,140,248,.45);background:rgba(129,140,248,.14);color:#c7d2fe}
   .f3d-claim:hover{background:rgba(129,140,248,.24)}
-  @media(max-width:560px){.f3d-iconbtn .f3d-btn-label{display:none}.f3d-iconbtn{padding:.4rem .5rem}}
+  /* Header controls are ICON-ONLY (owner-directed): the labels were spending
+     header width the title and the participant row need. Clipped rather than
+     display:none so the accessible name survives — a screen reader still
+     announces "About" / "Share", and the icons alone would otherwise be
+     unlabelled to anyone not reading the title attribute.
+     .is-flashing is the one escape: the Share button reports "Copied!" by
+     rewriting this very label, so hiding it unconditionally would have
+     silently removed the only confirmation that the copy worked. */
+  .f3d-iconbtn .f3d-btn-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .f3d-iconbtn.is-flashing{position:relative}
+  .f3d-iconbtn.is-flashing .f3d-btn-label{position:static;width:auto;height:auto;margin:0;overflow:visible;clip:auto}
+  .f3d-iconbtn{padding:.4rem .55rem}
   .f3d-stage{position:relative;flex:1;min-height:0}
   .f3d-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#020617}
 
@@ -111,7 +122,9 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
 .lt-launch.is-waiting .lt-dot{background:#fff;opacity:0.9}
 .lt-launch.connected .lt-dot{background:#fff;animation:lt-pulse 1.6s ease-in-out infinite}
 @keyframes lt-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,0.5)}50%{box-shadow:0 0 0 6px rgba(255,255,255,0)}}
-@media(max-width:560px){.lt-launch .lt-launch-label{display:none}}
+/* Icon-only, at every width (owner-directed). Clipped, not display:none, so
+   the button keeps an accessible name beyond its title attribute. */
+.lt-launch .lt-launch-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
 /* ── Control panel (right drawer) ─────────────────────────────────── */
 #lt-panel{position:fixed;top:0;right:0;width:min(340px,92vw);height:100%;z-index:2000;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.3s ease;background:rgba(10,12,20,0.62);-webkit-backdrop-filter:blur(28px) saturate(160%);backdrop-filter:blur(28px) saturate(160%);border-left:1px solid rgba(255,255,255,0.08);box-shadow:-8px 0 32px rgba(0,0,0,0.25)}
@@ -121,7 +134,13 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
 .lt-status-chip{font:600 10px/1 system-ui,-apple-system,sans-serif;color:#fff;padding:3px 8px;border-radius:999px;background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.45)}
 .lt-panel-close{margin-left:auto;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.75);font-size:16px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s}
 .lt-panel-close:hover{background:rgba(255,255,255,0.2)}
-.lt-panel-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+/* Scrolls, but the scrollbar is not painted: the panel is narrow and the
+   gutter was costing width that real content needs. Keyboard, wheel and
+   touch scrolling are untouched — only the indicator is suppressed —
+   and the panel keeps its own visible boundary, so nothing here removes
+   a cue a reader depends on to know the region moves. */
+.lt-panel-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;scrollbar-width:none;-ms-overflow-style:none}
+.lt-panel-body::-webkit-scrollbar{width:0;height:0;display:none}
 .lt-intro{margin:0 0 4px;font-size:12.5px;line-height:1.55;color:rgba(255,255,255,0.78)}
 .lt-role-choose{display:flex;flex-direction:column;gap:8px}
 /* Host / guest blocks are flex columns for TWO reasons, both visible bugs
@@ -141,13 +160,13 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
    This is the SAME defect PR #344 fixed for .f3d-iconbtn. Fixed once here for
    every descendant of the panel rather than per element, so a future
    display: rule cannot reintroduce it one selector at a time. */
-#lt-panel [hidden]{display:none!important}
+#lt-panel[hidden],#lt-panel [hidden]{display:none}
 /* The chat panel is NOT a descendant of #lt-panel — it is appended to the
    letterbox so it can overlay the stage — so the rule above cannot reach it,
    and its own display:flex would defeat hidden exactly the same way. Caught
    by an adversarial re-read, not by the browser probe, which had only ever
    opened the panel and never closed it. */
-#lt-chat[hidden]{display:none!important}
+#lt-chat[hidden]{display:none}
 /* ── Participant HUD (2.28.0) ──────────────────────────────────────────────
    Avatars, reactions and chat for the IN-TOUR Explore Together. Built here
    rather than only in the Atlas parent because that is where the owner
@@ -245,6 +264,25 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
 .lt-input:focus{border-color:var(--lt-accent)}
 .lt-input::placeholder{color:rgba(255,255,255,0.35);letter-spacing:0.22em}
 .lt-stops{display:flex;flex-direction:column;gap:4px;max-height:34vh;overflow-y:auto}
+/* With the accordion in place the OUTER container must stop scrolling, or the
+   summary scrolls away with its own list and there are two nested scrollers
+   fighting over one gesture. The inner list owns the overflow instead. */
+.lt-stops.has-accordion{max-height:none;overflow:visible}
+.lt-stops-acc{border:1px solid rgba(255,255,255,0.12);border-radius:8px;background:rgba(255,255,255,0.04)}
+.lt-stops-sum{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.6);list-style:none}
+.lt-stops-sum:hover{color:#fff}
+.lt-stops-sum:focus-visible{outline:2px solid var(--lt-accent);outline-offset:2px}
+/* The default marker is a bullet in Safari and a triangle elsewhere; drawing
+   our own keeps the row identical across browsers and lets it rotate. */
+.lt-stops-sum::-webkit-details-marker{display:none}
+.lt-stops-sum::marker{content:""}
+.lt-stops-sum::before{content:"";width:0;height:0;flex:0 0 auto;border-left:5px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform 0.15s ease}
+.lt-stops-acc[open] .lt-stops-sum::before{transform:rotate(90deg)}
+.lt-stops-count{margin-left:auto;padding:1px 6px;border-radius:9px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);font-size:10px;letter-spacing:0}
+/* Same treatment as the panel body: scrolls, paints no gutter. */
+.lt-stops-list{display:flex;flex-direction:column;gap:4px;padding:0 8px 8px;max-height:30vh;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}
+.lt-stops-list::-webkit-scrollbar{width:0;height:0;display:none}
+@media(prefers-reduced-motion:reduce){.lt-stops-sum::before{transition:none}}
 .lt-stop-btn{border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#fff;border-radius:6px;padding:8px 10px;font:500 12px/1.3 inherit;font-family:inherit;cursor:pointer;text-align:left;transition:background 0.2s}
 .lt-stop-btn:hover:not(:disabled){background:rgba(255,255,255,0.14)}
 .lt-stop-btn:disabled{opacity:0.45;cursor:not-allowed}
@@ -3753,12 +3791,29 @@ function annoBindViewportEvents(win, cb) {
     if (prev === "rope" && mode !== "rope") {
       commitActiveRope();
     }
-    // The peer-freeze is now GESTURE-scoped (the shared annotation floor),
-    // engaged on pointerdown and released on gesture end — not tied to which
-    // tool is selected. A tool change just ends any floor this side holds;
-    // navigation stays normal between gestures (both peers free).
+    // MODE-scoped floor (Component F, 2.12.1) — this replaces the GESTURE-
+    // scoped rule that used to live here as an unconditional release.
+    //
+    // Under the old rule the freeze engaged on pointerdown and lifted on
+    // gesture end, so between strokes every other participant's scene was free
+    // to move: the owner's report that the host could still pan while a guest
+    // was annotating, leaving already-drawn marks looking misplaced when it was
+    // the scene that had moved.
+    //
+    // Now: entering a mark-making tool holds the floor for the whole turn, and
+    // it is released by leaving the tool (the toolbar's ×, or Pointer) or by
+    // Clear. Note this MUST be the last word on the floor in this function —
+    // an acquire earlier in setToolMode was silently undone by the release
+    // that used to sit here, which is a failure only a live session shows.
+    //
+    // A refused acquire (someone else holds the floor) is not fatal: the tool
+    // still selects and the per-gesture acquire retries, exactly as before.
     try {
-      releaseLocalFloor();
+      if (isAnnotatingMode(mode)) {
+        if (!isAnnotatingMode(prev)) acquireLocalFloor();
+      } else {
+        releaseLocalFloor();
+      }
     } catch (_e) {}
   }
 
@@ -4108,6 +4163,74 @@ function annoBindViewportEvents(win, cb) {
   // invisible sequential-annotation rule. On success it broadcasts
   // nav_lock(true) so the peer freezes its Matterport and won't begin a
   // competing gesture, and arms a bounded local safety timeout.
+  // 2.29.0 — MODE-SCOPED FLOOR KEEPALIVE.
+  //
+  // The floor used to be GESTURE-scoped here: acquired on pointerdown,
+  // released on pointerup, with an 8s watchdog and a keepalive that only fired
+  // during an active drag. So the moment an annotator paused between strokes,
+  // every other participant's watchdog expired and their scene unfroze — the
+  // owner's report: "the Host is still able to move/pan his view", making
+  // already-drawn marks look misplaced when it was the scene that moved.
+  //
+  // Component F has specified MODE-scoped since 2.12.1 ("from the moment any
+  // participant activates an annotation tool until they exit the mode, every
+  // OTHER participant's scene is frozen, host included"). The Builder
+  // implements it; this runtime never did. This closes that gap rather than
+  // inventing a new rule.
+  //
+  // The watchdog is deliberately KEPT. It is what stops a crashed annotator
+  // locking the room forever: heartbeats stop when the tab dies, and everyone
+  // else frees ~8s later. Holding the floor for minutes is safe only because
+  // something alive keeps saying so.
+  // A repeating timer, and the watchdog it keeps re-arming, hold Node's event
+  // loop open — which hangs the headless runner that drives this glue. Browsers
+  // return a number from setTimeout/setInterval and have no unref, so this is a
+  // no-op there; the guard is what stops one environment paying for the other's
+  // constraint. Applied to EVERY floor timer, because a held mode re-arms the
+  // 8s watchdog every 2.6s, so unref'ing only the interval fixes nothing.
+  function unrefTimer(t) {
+    try {
+      if (t && typeof t.unref === "function") t.unref();
+    } catch (_e) {}
+    return t;
+  }
+
+  var floorKeepaliveTimer = null;
+  function startFloorKeepalive() {
+    if (floorKeepaliveTimer) return;
+    floorKeepaliveTimer = setInterval(function () {
+      var st = session.getState();
+      // Self-terminate rather than beat forever: a floor that is no longer held,
+      // or a session that has ended, has nobody to keep frozen.
+      if (!localFloorHeld || !st.isConnected || (st.role !== "agent" && st.role !== "visitor")) {
+        stopFloorKeepalive();
+        return;
+      }
+      // Push the LOCAL watchdog out (it would otherwise release a deliberately
+      // held mode after 8 idle seconds) and re-assert to the peers, whose own
+      // watchdogs only re-arm when they hear from us.
+      refreshLocalFloor();
+      lastFloorHeartbeatTs = Date.now();
+      session.sendNavLock(currentViewKey, true);
+    }, FLOOR_HEARTBEAT_MS);
+    unrefTimer(floorKeepaliveTimer);
+  }
+  function stopFloorKeepalive() {
+    if (!floorKeepaliveTimer) return;
+    try {
+      clearInterval(floorKeepaliveTimer);
+    } catch (_e) {}
+    floorKeepaliveTimer = null;
+  }
+
+  // Is this a mark-making mode? Pointer is excluded deliberately: it paints
+  // nothing, so freezing the room for a moving cursor would be a tax with no
+  // benefit. Draw / Focus Rope / Eraser are the tools whose output is pinned
+  // to an exact view, which is what the freeze exists to protect.
+  function isAnnotatingMode(mode) {
+    return mode === "draw" || mode === "rope" || mode === "eraser";
+  }
+
   function acquireLocalFloor() {
     if (remoteGestureActive) return false;
     if (!localFloorHeld) {
@@ -4123,9 +4246,12 @@ function annoBindViewportEvents(win, cb) {
         clearTimeout(localFloorTimer);
       } catch (_e) {}
     }
-    localFloorTimer = setTimeout(function () {
-      releaseLocalFloor();
-    }, FLOOR_SAFETY_MS);
+    localFloorTimer = unrefTimer(
+      setTimeout(function () {
+        releaseLocalFloor();
+      }, FLOOR_SAFETY_MS),
+    );
+    startFloorKeepalive();
     return true;
   }
   // releaseLocalFloor: idempotent; call on EVERY gesture-end path (pointerup,
@@ -4139,6 +4265,7 @@ function annoBindViewportEvents(win, cb) {
       localFloorTimer = null;
     }
     lastFloorHeartbeatTs = 0; // stop heartbeats; next gesture starts a fresh cadence
+    stopFloorKeepalive();
     if (!localFloorHeld) return;
     localFloorHeld = false;
     var s = session.getState();
@@ -4157,9 +4284,11 @@ function annoBindViewportEvents(win, cb) {
         clearTimeout(localFloorTimer);
       } catch (_e) {}
     }
-    localFloorTimer = setTimeout(function () {
-      releaseLocalFloor();
-    }, FLOOR_SAFETY_MS);
+    localFloorTimer = unrefTimer(
+      setTimeout(function () {
+        releaseLocalFloor();
+      }, FLOOR_SAFETY_MS),
+    );
   }
   // Throttled keepalive for the PEER's remote watchdog. The local watchdog is
   // refreshed in-process (refreshLocalFloor), but the peer only re-arms its own
@@ -4194,11 +4323,13 @@ function annoBindViewportEvents(win, cb) {
       remoteFloorTimer = null;
     }
     if (remoteGestureActive) {
-      remoteFloorTimer = setTimeout(function () {
-        remoteGestureActive = false;
-        applyNavLock(false);
-        remoteFloorTimer = null;
-      }, FLOOR_SAFETY_MS);
+      remoteFloorTimer = unrefTimer(
+        setTimeout(function () {
+          remoteGestureActive = false;
+          applyNavLock(false);
+          remoteFloorTimer = null;
+        }, FLOOR_SAFETY_MS),
+      );
     }
   }
   function refreshRemoteFloor() {
@@ -4288,6 +4419,12 @@ function annoBindViewportEvents(win, cb) {
     if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
       session.sendClear(currentViewKey);
     }
+    // Clearing your own viewport ends your turn — owner-specified alongside
+    // the × . With the marks gone there is nothing left pinned to this exact
+    // view, so holding everyone else still would be a lock with no purpose.
+    try {
+      releaseLocalFloor();
+    } catch (_e) {}
   }
 
   function canAnnotateLocal() {
@@ -4480,7 +4617,12 @@ function annoBindViewportEvents(win, cb) {
       try {
         annoCanvas.releasePointerCapture(e.pointerId);
       } catch (_e) {}
-      releaseLocalFloor(); // gesture ended → free the peer immediately
+      // A gesture ending is NOT the turn ending under the mode-scoped floor:
+      // the whole point is that peers stay frozen BETWEEN strokes, which is
+      // where the owner saw the host pan away. The floor is released by
+      // leaving the tool or by Clear. When no mark-making tool is active
+      // (a stray gesture, solo annotate) this still frees the peer at once.
+      if (!isAnnotatingMode(toolMode)) releaseLocalFloor();
     });
     // iOS system gestures can abort a touch mid-stroke (pointercancel) or
     // strip capture without a matching up (lostpointercapture). Both
@@ -4502,7 +4644,9 @@ function annoBindViewportEvents(win, cb) {
       try {
         annoCanvas.releasePointerCapture(e.pointerId);
       } catch (_e) {}
-      releaseLocalFloor(); // abort is a gesture-end path → free the peer
+      // Same rule as the normal gesture end above: an aborted stroke does not
+      // end the turn while the tool is still held.
+      if (!isAnnotatingMode(toolMode)) releaseLocalFloor();
     }
     annoCanvas.addEventListener("pointercancel", handlePointerAbort);
     annoCanvas.addEventListener("lostpointercapture", handlePointerAbort);
@@ -5244,16 +5388,77 @@ function annoBindViewportEvents(win, cb) {
   }
 
   // ── Tour stops (optional; Host only) ─────────────────────────────────
+  // Whether the host has opened the stops accordion. Kept across re-renders:
+  // renderStops() rebuilds its subtree, and snapping the list shut under
+  // someone who had just opened it is the kind of small betrayal that makes a
+  // panel feel broken.
+  var stopsAccordionOpen = false;
+
+  // The baked "Tour stops" caption. When the accordion renders it becomes the
+  // <summary>, so the static one must go — otherwise the label appears twice.
+  function stopsStaticLabel() {
+    try {
+      return document.querySelector(".lt-stops-label");
+    } catch (_e) {
+      return null;
+    }
+  }
+
   function renderStops() {
     if (!stopsWrap) return;
     stopsWrap.innerHTML = "";
+    var label = stopsStaticLabel();
     if (!STOPS.length) {
+      if (label) label.hidden = false;
+      stopsWrap.classList.remove("has-accordion");
       var empty = document.createElement("div");
       empty.className = "lt-stops-empty";
-      empty.textContent = "No saved stops yet — press U inside the tour and copy the link to bring your guest along.";
+      // Names the control Matterport actually shows, and says plainly that the
+      // clipboard is the whole gesture — the old wording ("copy the link to
+      // bring your guest along") read as though a paste step were still owed.
+      empty.textContent =
+        "No saved stops yet — press U inside the tour and click “COPY TO CLIPBOARD” … no need to paste.";
       stopsWrap.appendChild(empty);
       return;
     }
+
+    // ── Stops exist: collapse them behind a disclosure (owner-directed) ──
+    //
+    // A saved-stops list is the tallest thing in this panel and it is needed
+    // rarely — the host reaches for it to move the group, not while reading
+    // anything else. Closed by default reclaims that vertical space for the
+    // roster and the live controls.
+    //
+    // Native <details>/<summary> rather than a hand-built toggle. It has been
+    // Baseline WIDELY AVAILABLE since January 2020 — six years, comfortably
+    // inside the conservative target this runtime needs, since exported
+    // packages are re-served for years. In exchange it brings keyboard
+    // operation, the correct expanded/collapsed semantics for assistive tech,
+    // and find-in-page reveal for free. A div-and-JS version would have to
+    // re-implement all three, and would get at least one of them wrong.
+    if (label) label.hidden = true;
+    stopsWrap.classList.add("has-accordion");
+
+    var acc = document.createElement("details");
+    acc.className = "lt-stops-acc";
+    acc.open = stopsAccordionOpen === true;
+    acc.addEventListener("toggle", function () {
+      stopsAccordionOpen = acc.open === true;
+    });
+
+    var sum = document.createElement("summary");
+    sum.className = "lt-stops-sum";
+    var sumText = document.createElement("span");
+    sumText.textContent = "Tour stops";
+    sum.appendChild(sumText);
+    var count = document.createElement("span");
+    count.className = "lt-stops-count";
+    count.textContent = String(STOPS.length);
+    sum.appendChild(count);
+    acc.appendChild(sum);
+
+    var list = document.createElement("div");
+    list.className = "lt-stops-list";
     var connected = session.getState().isConnected;
     STOPS.forEach(function (stop) {
       var btn = document.createElement("button");
@@ -5268,8 +5473,10 @@ function annoBindViewportEvents(win, cb) {
           applyTeleport(stop.ss, stop.sr || "");
         }
       });
-      stopsWrap.appendChild(btn);
+      list.appendChild(btn);
     });
+    acc.appendChild(list);
+    stopsWrap.appendChild(acc);
   }
 
   // ── Invite / share-the-PIN ───────────────────────────────────────────
@@ -7015,7 +7222,14 @@ function annoBindViewportEvents(win, cb) {
     var lbl=shareBtn.querySelector(".f3d-btn-label");
     var prev=lbl?lbl.textContent:"";
     if(lbl) lbl.textContent=label;
-    setTimeout(function(){ if(lbl) lbl.textContent=prev||"Share"; },2000);
+    // The label is clipped in the icon-only header, so reveal it for exactly
+    // as long as the confirmation is showing — otherwise "Copied!" would be
+    // announced but never seen.
+    try{ shareBtn.classList.add("is-flashing"); }catch(_e){}
+    setTimeout(function(){
+      if(lbl) lbl.textContent=prev||"Share";
+      try{ shareBtn.classList.remove("is-flashing"); }catch(_e){}
+    },2000);
   }
   if(shareBtn){
     shareBtn.addEventListener("click",function(){
