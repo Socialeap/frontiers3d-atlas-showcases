@@ -8,7 +8,7 @@
 <meta property="og:title" content="Indigo Hotel — Frontiers|3D" />
 <meta property="og:description" content="Hotel Indigo offers stylish, neighborhood-inspired boutique accommodations across prime Manhattan locations like the Lower East Side and Wall Street. Each property blends contemporary design with local culture, featuring unique amenities like vibrant rooftop lounges and modern fitness centers." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.31.1" />
+<meta name="f3d-runtime" content="2.32.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -657,13 +657,55 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 var LIVE_SESSION_AGENT_PREFIX = "TourAgent-";
 var LIVE_SESSION_VISITOR_PREFIX = "TourGuest-";
 
-// 4-digit numeric PIN, zero-padded so a leading-zero PIN like 0123
-// stays 4 chars wide on the wire and on screen.
-function _generatePin() {
-  var n = Math.floor(Math.random() * 10000);
-  var s = String(n);
-  while (s.length < 4) s = "0" + s;
+// Numeric PIN, zero-padded so a leading-zero PIN like 0123 stays full
+// width on the wire and on screen. Width is caller-chosen (default 4) —
+// see LIVE_SESSION_PIN_DIGITS_DEFAULT for why widening matters.
+var LIVE_SESSION_PIN_DIGITS_DEFAULT = 4;
+var LIVE_SESSION_PIN_DIGITS_MAX = 10;
+
+function _generatePin(digits) {
+  var d = LIVE_SESSION_PIN_DIGITS_DEFAULT;
+  if (typeof digits === "number" && isFinite(digits)) {
+    d = Math.floor(digits);
+    if (d < LIVE_SESSION_PIN_DIGITS_DEFAULT) d = LIVE_SESSION_PIN_DIGITS_DEFAULT;
+    if (d > LIVE_SESSION_PIN_DIGITS_MAX) d = LIVE_SESSION_PIN_DIGITS_MAX;
+  }
+  var s = "";
+  for (var i = 0; i < d; i++) s += String(Math.floor(Math.random() * 10));
   return s;
+}
+
+// The broker id a guest dials.
+//
+// WHY A NAMESPACE. The PIN *is* the address: the id is literally
+// "TourAgent-" + pin on one SHARED PUBLIC PeerJS broker. With a bare
+// 4-digit PIN that is a single 10,000-entry global space, which fails
+// twice over — ~50% birthday collision at only ~118 concurrent sessions
+// WORLDWIDE (a hard concurrency ceiling, not a rare accident), and it is
+// enumerable, so an uninvited party can find a live tour by walking the
+// range and occupy a guest slot.
+//
+// Prefixing a per-presentation namespace fixes both without asking a
+// human to type more: collisions become per-presentation instead of
+// global, and blind enumeration of the broker finds nothing, because an
+// attacker must already know the specific presentation's namespace.
+//
+// Empty namespace reproduces the historical id EXACTLY. That is
+// deliberate: an embedder that does not opt in behaves byte-for-byte as
+// before, so already-exported presentations are unaffected until they
+// are regenerated with a namespace of their own.
+function _sanitizeNamespace(v) {
+  var raw = typeof v === "string" ? v : "";
+  var out = "";
+  for (var i = 0; i < raw.length && out.length < 24; i++) {
+    var c = raw.charAt(i);
+    if ((c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9")) out += c;
+  }
+  return out;
+}
+
+function _agentPeerId(ns, pin) {
+  return LIVE_SESSION_AGENT_PREFIX + (ns ? ns + "-" : "") + pin;
 }
 
 function _generateVisitorSuffix() {
@@ -846,6 +888,16 @@ function createLiveSession(options) {
     if (maxGuests > LIVE_SESSION_MAX_GUESTS_CEILING) maxGuests = LIVE_SESSION_MAX_GUESTS_CEILING;
   }
   var exclusiveSyncView = opts.exclusiveSyncView !== false;
+  // Per-presentation broker namespace + PIN width. Both default to the
+  // historical behaviour (no namespace, 4 digits) so an embedder that does
+  // not opt in is unchanged. See _agentPeerId for why they exist.
+  var sessionNamespace = _sanitizeNamespace(opts.sessionNamespace);
+  var pinDigits = LIVE_SESSION_PIN_DIGITS_DEFAULT;
+  if (typeof opts.pinDigits === "number" && isFinite(opts.pinDigits)) {
+    pinDigits = Math.floor(opts.pinDigits);
+    if (pinDigits < LIVE_SESSION_PIN_DIGITS_DEFAULT) pinDigits = LIVE_SESSION_PIN_DIGITS_DEFAULT;
+    if (pinDigits > LIVE_SESSION_PIN_DIGITS_MAX) pinDigits = LIVE_SESSION_PIN_DIGITS_MAX;
+  }
   // Kinds a GUEST may originate. Empty by default, so an embedder that
   // never opts in behaves exactly as it did pre-2.28: any `room` packet
   // arriving from a guest is dropped at the hub.
@@ -1203,8 +1255,8 @@ function createLiveSession(options) {
       _patch({ status: "error", error: msg });
       return Promise.reject(new Error(msg));
     }
-    var pin = _generatePin();
-    var id = LIVE_SESSION_AGENT_PREFIX + pin;
+    var pin = _generatePin(pinDigits);
+    var id = _agentPeerId(sessionNamespace, pin);
     return new Promise(function (resolve, reject) {
       var p;
       try {
@@ -1544,9 +1596,9 @@ function createLiveSession(options) {
     if (!_ensurePeerCtor()) {
       return Promise.reject(new Error(state.error || "peer-unavailable"));
     }
-    var clean = _coerceString(pinInput).replace(/\D/g, "").slice(0, 4);
-    if (clean.length !== 4) {
-      var msg = "Enter the 4-digit PIN from your host.";
+    var clean = _coerceString(pinInput).replace(/\D/g, "").slice(0, pinDigits);
+    if (clean.length !== pinDigits) {
+      var msg = "Enter the " + pinDigits + "-digit PIN from your host.";
       _patch({ status: "error", error: msg });
       return Promise.reject(new Error(msg));
     }
@@ -1554,7 +1606,7 @@ function createLiveSession(options) {
       return Promise.resolve({ pin: state.pin, peerId: state.peerId });
     }
     var visitorId = LIVE_SESSION_VISITOR_PREFIX + _generateVisitorSuffix();
-    var agentId = LIVE_SESSION_AGENT_PREFIX + clean;
+    var agentId = _agentPeerId(sessionNamespace, clean);
     var cleanName = _coerceString(name).slice(0, 64);
     // Optional identity extras. Atlas Live Rooms require a Passport, so a
     // signed-in avatar exists there; the standalone presentation's anonymous
@@ -2169,14 +2221,14 @@ function createLiveSession(options) {
         if (!localMicStream || !peer) return false;
         var call = null;
         try {
-          call = peer.call(LIVE_SESSION_AGENT_PREFIX + (state.pin || ""), localMicStream);
+          call = peer.call(_agentPeerId(sessionNamespace, state.pin || ""), localMicStream);
         } catch (e) {
           log("startVoice call failed", e);
           return false;
         }
         if (!call) return false;
         _diagSafe("media_call_started");
-        _wireMediaCall(call, LIVE_SESSION_AGENT_PREFIX + (state.pin || ""));
+        _wireMediaCall(call, _agentPeerId(sessionNamespace, state.pin || ""));
         return true;
       }
       return false;
@@ -7633,7 +7685,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-08-01";
+    var RUNTIME_RELEASED="2026-08-02";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
