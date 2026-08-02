@@ -8,7 +8,7 @@
 <meta property="og:title" content="Inside Park at St. Bart&#39;s — Frontiers|3D" />
 <meta property="og:description" content="A contemporary American restaurant set in the dramatic 30-foot-ceilinged Great Hall of the historic St. Bartholomew&amp;#39;s Church on Park Avenue. With original stained-glass windows and a 4,000-square-foot covered terrace, it offers an atmospheric 140-seat venue for dining and private events in Midtown East." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.29.0" />
+<meta name="f3d-runtime" content="2.31.1" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -91,8 +91,13 @@ body.live-tour-active #lt-navlock.locked{display:block}
 body.live-tour-active #anno-letterbox-wrap:has(#lt-navlock.locked) #matterport-frame{pointer-events:none}
 
 #anno-toolbar{display:none;justify-content:center;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 12px;background:rgba(10,12,20,0.92);border-bottom:1px solid rgba(255,255,255,0.08);position:relative;z-index:1250;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-body.live-tour-active #anno-toolbar{display:flex}
-body.anno-solo-mode #anno-toolbar{display:flex}
+/* 2.30.0 — the annotation bar is CLOSED by default (owner-directed). It used
+   to appear the moment a session went live and never go away, spending a
+   permanent strip of the viewport on tools nobody had asked for. A header
+   toggle now opens it; both conditions must hold, so "in a session" alone no
+   longer implies "showing the toolbar". */
+body.live-tour-active.anno-bar-open #anno-toolbar{display:flex}
+body.anno-solo-mode.anno-bar-open #anno-toolbar{display:flex}
 body.live-tour-active #lt-annotate-btn{display:none}
 .f3d-iconbtn.lt-annotate[aria-pressed="true"]{background:rgba(129,140,248,0.28);border-color:rgba(129,140,248,0.55)}
 .anno-tool-btn{appearance:none;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border-radius:6px;padding:6px 10px;font:600 12px/1 inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:background 0.15s,border-color 0.15s,color 0.15s;font-family:inherit;-webkit-tap-highlight-color:transparent}
@@ -110,6 +115,41 @@ body.anno-rope-active .anno-rope-group .anno-shape-wrap{display:inline-flex}
 .anno-shape-select option{background:#11141d;color:#fff}
 .anno-exit-btn{font-size:16px;line-height:1;padding:4px 9px 6px}
 .anno-exit-btn:hover{background:rgba(255,107,107,0.18);border-color:rgba(255,107,107,0.45);color:#ff6b6b}
+
+/* The header control that opens the bar. Built in JS by the glue (so an
+   upgraded older package gets it too), styled here — this CSS lives inside
+   the replaceable f3d:runtime-css span, unlike the .f3d-iconbtn base rules,
+   which are page shell. Hence the explicit [hidden] rule: a package generated
+   before PR #344 has no .f3d-iconbtn[hidden] and its author display:inline-flex
+   would render this button on an idle showcase. An ID beats a class, in every
+   generation, regardless of source order. */
+#lt-annobar-btn[hidden]{display:none}
+#lt-annobar-btn[aria-pressed="true"]{background:rgba(129,140,248,0.28);border-color:rgba(129,140,248,0.55)}
+
+/* ── The personal freeze release (2.30.0) ──────────────────────────────
+   Taking the annotation floor pulls every other view to the annotator's and
+   freezes it, so their marks land where they drew them. This is the way out.
+   It frees THIS viewer's camera only: the floor, and with it the right to
+   draw, still belong to whoever holds them. The toolbar × does the same job,
+   but the bar is closed by default now — without a surfaced control a frozen
+   participant would be looking for the exit behind a button they have no
+   reason to press. Sits above #lt-navlock (z-index 4) so it stays clickable
+   through the very overlay that is blocking the scene. */
+#lt-freeze-note[hidden]{display:none}
+#lt-freeze-note{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:8;display:flex;align-items:center;gap:8px;max-width:min(92%,420px);padding:6px 6px 6px 12px;border-radius:999px;background:rgba(10,12,20,0.82);-webkit-backdrop-filter:blur(10px) saturate(150%);backdrop-filter:blur(10px) saturate(150%);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.92);font:600 12px/1.3 inherit;font-family:inherit;box-shadow:0 4px 18px rgba(0,0,0,0.35)}
+#lt-freeze-note.is-dismissed{opacity:0.72;padding:6px 12px}
+/* Already released — the × has nothing left to do, so its place is taken by
+   the way BACK. Exactly one control is present at a time (the glue also
+   toggles the hidden ATTRIBUTE, so the accessibility tree agrees with the
+   pixels). */
+#lt-freeze-note.is-dismissed .lt-freeze-x{display:none}
+.lt-freeze-rejoin[hidden]{display:none}
+.lt-freeze-x[hidden]{display:none}
+.lt-freeze-rejoin{flex:none;appearance:none;border:1px solid rgba(56,189,248,0.45);background:rgba(56,189,248,0.16);color:#bae6fd;border-radius:999px;padding:3px 10px;font:600 11px/1.4 inherit;font-family:inherit;cursor:pointer;transition:background 0.18s}
+.lt-freeze-rejoin:hover{background:rgba(56,189,248,0.28);color:#fff}
+#lt-freeze-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt-freeze-x{flex:none;appearance:none;width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.14);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:background 0.18s}
+.lt-freeze-x:hover{background:rgba(255,107,107,0.3)}
 
 /* Engage the 16:9 letterbox once a session is live. */
 body.live-tour-active #viewer{display:flex;align-items:center;justify-content:center;background:#000}
@@ -3492,10 +3532,17 @@ function annoBindViewportEvents(win, cb) {
       // covers view sync only, and tightening drawing as well would re-create
       // the half of 2.25.0 nobody asked to change.
       guestPermissionDefaults: { syncView: false, annotate: true },
-      // Non-exclusive: the host may authorise several people at once and the
-      // roster revokes. The Builder's single-driver token model is unchanged
-      // and still the controller's default.
-      exclusiveSyncView: false,
+      // Sync View is EXCLUSIVE — one driver at a time (owner-directed
+      // 2026-08-01, and what PRODUCT_END_STATES.md Component F has specified
+      // since 2026-07-12). Granting it to one guest auto-revokes every other,
+      // which is the controller's default, so the override is simply gone.
+      //
+      // The revoke is not silent: setGuestPermission returns every change it
+      // made, and applyPermissionChange already fans a control marker out to
+      // each affected guest — so a guest who loses the grant is told, and
+      // their own Sync affordance goes disabled rather than failing quietly
+      // at the hub. That fan-out shipped in 2.27.0 and is what makes an
+      // exclusive grant safe to turn on here.
       // 2.28.0 — exactly the three kinds a GUEST may originate. Everything
       // else the HUD sends (roster, chat with its assigned sequence number,
       // the approved reaction) is host-authored and unforgeable, because a
@@ -3538,8 +3585,18 @@ function annoBindViewportEvents(win, cb) {
     };
   }
   var session = COLLAB_ELIGIBLE ? newSession() : soloStubSession();
-  var lastTeleportTs = 0;
-  var lastShareTs = 0;
+  // 2.31.1 — dedupe key for the teleport/share channels, NOT a timestamp.
+  //
+  // These were `.ts` alone, and Date.now() has millisecond resolution while
+  // two packets flushed in one SCTP batch land in the SAME millisecond. The
+  // controller says so itself ("evId never collides") and stamps a monotonic
+  // evId on both events for exactly this reason; the Builder has consumed
+  // `evId ?? ts` since 2.12.0. Atlas never did — which was harmless only
+  // while nothing sent two packets back to back. hydrateGuestGrants does
+  // (2.30.0), so the second marker of every join pair was being discarded as
+  // a duplicate before it could be read.
+  var lastTeleportKey = null;
+  var lastShareKey = null;
   var wasConnected = false;
 
   // ── Annotation state (normalized [0,1] over the 16:9 letterbox) ──────
@@ -3597,6 +3654,28 @@ function annoBindViewportEvents(win, cb) {
   var localFloorHeld = false;
   var localFloorTimer = null;
   var lastFloorHeartbeatTs = 0;
+  // 2.30.0 — set when THIS participant dismissed the freeze while someone else
+  // still holds the floor. Sticky for the duration of that holder's turn (see
+  // setRemoteFloor), because the holder re-asserts nav_lock(true) roughly every
+  // 2.6s and without this the next heartbeat would silently re-freeze a
+  // participant who had just deliberately unfrozen themselves.
+  var freezeDismissed = false;
+  var FREEZE_TEXT_FROZEN = "View frozen while someone is annotating";
+  var FREEZE_TEXT_RELEASED = "Someone is annotating — your view is free";
+  // 2.30.0 — set when this participant released the freeze and may therefore
+  // have moved their own camera.
+  //
+  // currentViewKey carries two meanings that were identical until the release
+  // existed: "the view my iframe is showing" and "the view my annotations are
+  // stamped and filtered against". Panning after a release breaks the first
+  // while leaving the second intact — and applyTeleport's quiet-sync guard
+  // trusts exactly that equivalence. Without this flag the NEXT auto-sync is a
+  // guaranteed no-op for precisely the people who used the release: newKey
+  // still equals currentViewKey, so the frame is never reassigned and they
+  // stay frozen at a view the annotator is not drawing on. Which is the
+  // misalignment this whole feature exists to prevent, reintroduced by its
+  // own escape hatch.
+  var viewDivergedLocally = false;
   // Eraser tool: tap- or drag-delete of committed strokes (geometric hit
   // test). eraserDeletedIds dedupes a drag so each stroke is removed once.
   var ANNO_ERASER_TOLERANCE_PX = 12;
@@ -3737,6 +3816,14 @@ function annoBindViewportEvents(win, cb) {
       document.body.classList.remove("live-tour-host");
       document.body.classList.remove("live-tour-guest");
     }
+    // 2.30.0 — the annotation bar is a per-session thing: create its header
+    // toggle when a session engages, and put both the bar and the toggle away
+    // when it ends, so a stale ✎ can never linger over an idle showcase.
+    try {
+      ensureBarToggle();
+      if (!active && !soloAnnotate) setAnnoBarOpen(false);
+      refreshBarToggleVisibility();
+    } catch (_e) {}
   }
 
   // ── Annotation rendering ────────────────────────────────────────────
@@ -4238,6 +4325,11 @@ function annoBindViewportEvents(win, cb) {
       lastFloorHeartbeatTs = Date.now(); // the initial lock is the first beat
       var s = session.getState();
       if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+        // Sync THEN freeze, in that order and only on the acquiring edge (this
+        // branch runs once per turn, not once per stroke). Reversing them would
+        // freeze the room at whatever each participant was looking at and then
+        // move it, which is the misalignment the freeze exists to prevent.
+        pushMyViewToRoom();
         session.sendNavLock(currentViewKey, true);
       }
     }
@@ -4314,8 +4406,28 @@ function annoBindViewportEvents(win, cb) {
   // auto-clears so a peer that crashes mid-gesture can never lock this side
   // out; ongoing remote stroke activity refreshes it.
   function setRemoteFloor(active) {
-    remoteGestureActive = active === true;
-    applyNavLock(remoteGestureActive);
+    var next = active === true;
+    // 2.31.0 — THE DISMISSAL IS NO LONGER TIED TO FLOOR TRANSITIONS AT ALL.
+    //
+    // 2.30.0 cleared it on every edge, on the theory that the opt-out belonged
+    // to one holder's turn. Two paths reach a false edge that is NOT the holder
+    // finishing, and both silently re-froze someone who had deliberately
+    // unfrozen themselves — the exact hostage behavior the release exists to
+    // remove, through doors nobody was looking at:
+    //
+    //   1. ANY participant pressing Clear. The clear handler calls
+    //      setRemoteFloor(false), which wiped the flag; the holder's next
+    //      ~2.6s heartbeat then read as a fresh acquisition and re-locked.
+    //   2. The 8s safety watchdog. One late or dropped heartbeat did the same.
+    //
+    // Neither is distinguishable from a genuine end-of-turn on this wire —
+    // there is no holder identity in nav_lock — so the fix is not a smarter
+    // edge test. Once you have said "let me look around", you stay free until
+    // YOU say otherwise (the notice's Re-join control) or the session ends.
+    // Owner-directed 2026-08-01, after both paths were reproduced.
+    remoteGestureActive = next;
+    applyNavLock(remoteGestureActive && !freezeDismissed);
+    refreshFreezeNotice();
     if (remoteFloorTimer) {
       try {
         clearTimeout(remoteFloorTimer);
@@ -4325,8 +4437,12 @@ function annoBindViewportEvents(win, cb) {
     if (remoteGestureActive) {
       remoteFloorTimer = unrefTimer(
         setTimeout(function () {
+          // Deliberately does NOT clear freezeDismissed — see setRemoteFloor.
+          // A watchdog expiry means we stopped HEARING the holder, not that
+          // this participant changed their mind about following them.
           remoteGestureActive = false;
           applyNavLock(false);
+          refreshFreezeNotice();
           remoteFloorTimer = null;
         }, FLOOR_SAFETY_MS),
       );
@@ -4334,6 +4450,244 @@ function annoBindViewportEvents(win, cb) {
   }
   function refreshRemoteFloor() {
     if (remoteGestureActive) setRemoteFloor(true);
+  }
+
+  // ── Annotation bar toggle + the personal freeze release (2.30.0) ─────
+  //
+  // TOOLBAR. The bar used to appear the moment a session went live and never
+  // leave, spending a permanent strip of the viewport on tools nobody had
+  // asked for. It is closed by default now and opened from a header control.
+  // Built in JS, not baked into the exported markup, so an UPGRADED older
+  // package gets the control too — the Upgrade Center replaces runtime spans,
+  // not markup.
+  //
+  // FREEZE RELEASE. When someone starts annotating, everyone else's view is
+  // pulled to theirs and frozen so the marks land where they were drawn. But
+  // the freeze must not be a hostage situation: any participant can release
+  // THEIR OWN view at any moment without waiting for the annotator to finish.
+  //
+  // The subtle part is what "release" must NOT do. remoteGestureActive carries
+  // two jobs — freeze my Matterport, and block me from starting a competing
+  // gesture. A release that cleared it would let me start drawing on top of
+  // the current holder, which is the one thing the shared floor exists to
+  // prevent. So the visual freeze gets its own flag and the floor arbitration
+  // is left exactly as it was: I can look around, I still cannot draw.
+  var annoBarOpen = false;
+  var barToggleBtn = null;
+
+  // A stroked 24x24 icon from a list of path "d" values, matching the header's
+  // existing buttons. createElementNS, not innerHTML: SVG children need the SVG
+  // namespace, and the glue is deliberately free of markup sinks.
+  function buildSvgIcon(paths) {
+    var NS = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("aria-hidden", "true");
+    for (var i = 0; i < paths.length; i++) {
+      var p = document.createElementNS(NS, "path");
+      p.setAttribute("d", paths[i]);
+      svg.appendChild(p);
+    }
+    return svg;
+  }
+
+  function setAnnoBarOpen(on) {
+    annoBarOpen = on === true;
+    try {
+      document.body.classList.toggle("anno-bar-open", annoBarOpen);
+    } catch (_e) {}
+    if (barToggleBtn) {
+      barToggleBtn.setAttribute("aria-pressed", annoBarOpen ? "true" : "false");
+      barToggleBtn.title = annoBarOpen ? "Hide annotation tools" : "Show annotation tools";
+    }
+    // Closing the bar disarms whatever was selected. Otherwise a tool stays
+    // live with no visible way to turn it off — and under the mode-scoped
+    // floor that would hold every other participant frozen behind a toolbar
+    // its owner can no longer see.
+    if (!annoBarOpen && toolMode !== "none") setToolMode("none");
+    // Reallocation is cheap and idempotent, but the letterbox is 44px shorter
+    // with the bar open, so the backing store has to follow it.
+    scheduleCanvasResize();
+  }
+
+  function refreshBarToggleVisibility() {
+    if (!barToggleBtn) return;
+    var live = false;
+    try {
+      var st = session.getState();
+      live = st.role === "agent" || st.role === "visitor";
+    } catch (_e) {}
+    barToggleBtn.hidden = !(live || soloAnnotate);
+  }
+
+  function ensureBarToggle() {
+    if (barToggleBtn) return barToggleBtn;
+    try {
+      var actions = document.querySelector(".f3d-actions");
+      if (!actions) return null;
+      barToggleBtn = document.createElement("button");
+      barToggleBtn.type = "button";
+      barToggleBtn.id = "lt-annobar-btn";
+      barToggleBtn.className = "f3d-iconbtn lt-annobar";
+      barToggleBtn.hidden = true;
+      barToggleBtn.setAttribute("aria-pressed", "false");
+      barToggleBtn.setAttribute("aria-controls", "anno-toolbar");
+      barToggleBtn.setAttribute("aria-label", "Annotation tools");
+      barToggleBtn.title = "Show annotation tools";
+      // Built with createElementNS rather than innerHTML: the glue is scanned
+      // for markup sinks, and an SVG needs the SVG namespace anyway.
+      barToggleBtn.appendChild(
+        buildSvgIcon([
+          "M12 20h9",
+          "M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z",
+        ]),
+      );
+      barToggleBtn.addEventListener("click", function () {
+        setAnnoBarOpen(!annoBarOpen);
+      });
+      actions.insertBefore(barToggleBtn, actions.firstChild);
+    } catch (_e) {
+      barToggleBtn = null;
+    }
+    return barToggleBtn;
+  }
+
+  // ── The freeze notice: who is drawing, and how to get your view back ──
+  // The toolbar's × can also release the freeze, but the bar is closed by
+  // default now — so without this there would be moments where a participant
+  // is frozen and the only control that frees them is behind a button they
+  // have no reason to press. This is the discoverable affordance.
+  var freezeNotice = null;
+  // Held rather than re-queried: refreshFreezeNotice runs on every inbound
+  // nav_lock, including the holder's ~2.6s heartbeat, and these two never move.
+  var freezeXBtn = null;
+  var freezeRejoinBtn = null;
+  function ensureFreezeNotice() {
+    if (freezeNotice) return freezeNotice;
+    try {
+      var wrap = document.getElementById("anno-letterbox-wrap");
+      if (!wrap) return null;
+      freezeNotice = document.createElement("div");
+      freezeNotice.id = "lt-freeze-note";
+      freezeNotice.hidden = true;
+      var txt = document.createElement("span");
+      txt.id = "lt-freeze-text";
+      txt.textContent = FREEZE_TEXT_FROZEN;
+      freezeNotice.appendChild(txt);
+      var x = document.createElement("button");
+      x.type = "button";
+      x.className = "lt-freeze-x";
+      x.setAttribute("aria-label", "Unfreeze my view");
+      x.title = "Unfreeze my view";
+      x.textContent = "×";
+      x.addEventListener("click", releaseMyFreeze);
+      freezeXBtn = x;
+      freezeNotice.appendChild(x);
+      // 2.31.0 — the way BACK. The dismissal is sticky now, so without this the
+      // only route to following the annotator again would be ending the
+      // session. "Sticky until you say otherwise" needs a place to say it.
+      var rejoin = document.createElement("button");
+      rejoin.type = "button";
+      rejoin.className = "lt-freeze-rejoin";
+      rejoin.hidden = true;
+      rejoin.setAttribute("aria-label", "Re-join the shared view");
+      rejoin.title = "Follow the annotator again";
+      rejoin.textContent = "Re-join";
+      rejoin.addEventListener("click", rejoinSharedView);
+      freezeRejoinBtn = rejoin;
+      freezeNotice.appendChild(rejoin);
+      wrap.appendChild(freezeNotice);
+    } catch (_e) {
+      freezeNotice = null;
+      freezeXBtn = null;
+      freezeRejoinBtn = null;
+    }
+    return freezeNotice;
+  }
+
+  // Release only THIS participant's freeze. Deliberately does not touch
+  // remoteGestureActive, and deliberately broadcasts nothing: the floor still
+  // belongs to whoever holds it, so this frees my camera and not my right to
+  // draw — and it must not unfreeze the rest of the room on their behalf.
+  function releaseMyFreeze() {
+    if (!remoteGestureActive) return;
+    freezeDismissed = true;
+    // From here on the iframe may show something currentViewKey does not
+    // describe — see the flag's declaration for why the next sync depends on
+    // knowing that.
+    viewDivergedLocally = true;
+    applyNavLock(false);
+    refreshFreezeNotice();
+  }
+
+  // Opt back IN. The counterpart to releaseMyFreeze, and the only thing besides
+  // the session ending that clears the dismissal — which is what makes sticky
+  // honest rather than a one-way door.
+  function rejoinSharedView() {
+    freezeDismissed = false;
+    // Their camera has almost certainly drifted since they took it back, so the
+    // next inbound view must actually reload rather than compare equal.
+    viewDivergedLocally = true;
+    applyNavLock(remoteGestureActive === true);
+    refreshFreezeNotice();
+  }
+
+  function refreshFreezeNotice() {
+    // Don't materialize the notice just to report that nothing is frozen —
+    // teardown paths call setRemoteFloor(false) on sessions that never froze.
+    if (!freezeNotice && remoteGestureActive !== true) return;
+    var el = ensureFreezeNotice();
+    if (!el) return;
+    var frozen = remoteGestureActive === true && !freezeDismissed;
+    el.hidden = remoteGestureActive !== true;
+    try {
+      var txt = document.getElementById("lt-freeze-text");
+      if (txt) txt.textContent = frozen ? FREEZE_TEXT_FROZEN : FREEZE_TEXT_RELEASED;
+      // Exactly one control at a time: × while frozen, Re-join once released.
+      // Toggled with `hidden` and not only CSS, because a button hidden by a
+      // stylesheet is still focusable and still announced.
+      el.classList.toggle("is-dismissed", !frozen);
+      if (freezeXBtn) freezeXBtn.hidden = !frozen;
+      if (freezeRejoinBtn) freezeRejoinBtn.hidden = frozen;
+    } catch (_e) {}
+  }
+
+  // The annotator's view, pushed to the room at the moment they take the floor
+  // (owner-directed 2026-08-01: "all views AUTOMATICALLY SYNC — if they
+  // weren't already — and freeze when a participant has activated the
+  // annotation tool"). Sent BEFORE the nav_lock: both ride the same ordered
+  // channel, so recipients converge their view key first and the annotator's
+  // opening stroke is not dropped by the stale-frame filter.
+  //
+  // LIMITATION, stated rather than hidden: this runtime has no Matterport SDK
+  // connection — the whole clipboard/"press U" flow exists precisely because it
+  // cannot read the live camera. currentViewKey is therefore the last view the
+  // group AGREED on, not wherever the annotator's camera happens to point. That
+  // is already the view every stroke is stamped with and rendered against, so
+  // re-asserting it tightens the existing contract; it does not invent a new one.
+  function pushMyViewToRoom() {
+    var key = currentViewKey || "";
+    var bar = key.indexOf("|");
+    if (bar < 0) return false;
+    var ss = key.slice(0, bar);
+    var sr = key.slice(bar + 1);
+    if (!ss) return false;
+    var st = session.getState();
+    if (!st.isConnected) return false;
+    try {
+      if (st.role === "agent") return session.teleportVisitor(ss, sr) === true;
+      // A guest without the Sync View grant may still annotate (annotation is
+      // permissive here, sync is host-granted) — they simply cannot move the
+      // group. The hub would drop the packet anyway; skipping it keeps the
+      // freeze working for them without a pointless send.
+      if (st.role === "visitor" && mySyncAllowed) {
+        return session.shareLocationWithAgent(ss, sr) === true;
+      }
+    } catch (_e) {}
+    return false;
   }
 
   // ── Eraser hit-testing (point-to-polyline distance, touch-tolerant) ──
@@ -4445,10 +4799,18 @@ function annoBindViewportEvents(win, cb) {
     if (annotateBtn) annotateBtn.setAttribute("aria-pressed", soloAnnotate ? "true" : "false");
     if (soloAnnotate) {
       ensureAnnoCanvasAllocated();
+      // Solo annotation IS the request for the toolbar, so opening it is the
+      // whole point of the button — unlike a live session, where the bar now
+      // waits to be asked for.
+      ensureBarToggle();
+      setAnnoBarOpen(true);
+      refreshBarToggleVisibility();
       setToolMode("draw");
     } else {
+      setAnnoBarOpen(false);
       setToolMode("none");
       wipeAnnotations();
+      refreshBarToggleVisibility();
     }
   }
 
@@ -4715,14 +5077,25 @@ function annoBindViewportEvents(win, cb) {
           setSoloAnnotate(false);
           return;
         }
+        // 2.30.0 — SOMEONE ELSE HOLDS THE FLOOR. × then means "give me my view
+        // back", nothing more: it must not wipe the marks they are still
+        // drawing, and it must not broadcast nav_lock(false), which used to
+        // unfreeze the WHOLE room on behalf of a participant who never held the
+        // floor (until the holder's next heartbeat re-froze everyone ~2.6s
+        // later — a global flicker masquerading as a local control).
+        if (remoteGestureActive && !localFloorHeld) {
+          releaseMyFreeze();
+          setAnnoBarOpen(false);
+          return;
+        }
+        // No trailing sendNavLock(false) here any more. Clear and setToolMode
+        // each release a floor this client actually holds, so the extra
+        // broadcast could only ever fire when it held NOTHING — and then it was
+        // an unlock sent on someone else's behalf. That case now has its own
+        // branch above, which keeps it local.
         handleClearLocallyAndBroadcast();
         setToolMode("none");
-        try {
-          var st = session.getState();
-          if ((st.role === "agent" || st.role === "visitor") && st.isConnected) {
-            session.sendNavLock(currentViewKey, false);
-          }
-        } catch (_e) {}
+        setAnnoBarOpen(false);
         return;
       }
     });
@@ -4791,6 +5164,14 @@ function annoBindViewportEvents(win, cb) {
     var tgt = e.target;
     if (tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || tgt.isContentEditable)) return;
     var k = (e.key || "").toLowerCase();
+    // A tool hotkey is an explicit request for the tools, so it opens the bar
+    // that 2.30.0 now keeps closed — otherwise D would arm Draw behind a hidden
+    // toolbar, with no visible way to see which tool is live or to put it away.
+    if (k === "p" || k === "d" || k === "r" || k === "e") {
+      ensureBarToggle();
+      if (!annoBarOpen) setAnnoBarOpen(true);
+      refreshBarToggleVisibility();
+    }
     if (k === "p") {
       setToolMode("pointer");
       e.preventDefault();
@@ -5056,6 +5437,9 @@ function annoBindViewportEvents(win, cb) {
       // across a sync. We do NOT wipe here; Clear and the Eraser are the only
       // ways to remove marks in a shared scene.
       currentViewKey = key;
+      // Sharing where you NOW are re-converges the key with the iframe, so a
+      // divergence opened by releasing the freeze is settled without a reload.
+      viewDivergedLocally = false;
       lastSentLocationKey = key;
       lastSentLocationTs = now;
       lastOwnSendTs = now;
@@ -5370,7 +5754,12 @@ function annoBindViewportEvents(win, cb) {
     // view — set by an inbound teleport/follow AND by a LOCAL clipboard send in
     // attemptSendLocation — so this also catches an echo of a just-sent/just-
     // followed view, not only repeats of a prior teleport. Capture BEFORE converge.
-    var sameView = (newKey === currentViewKey);
+    // 2.30.0 — a participant who released the freeze and panned away is NOT at
+    // currentViewKey any more, however much the key still says so. Forcing the
+    // reload is the whole point of pulling them back, and it costs one replay
+    // of Matterport's startup UI for someone who deliberately wandered off —
+    // a trade the quiet-sync guard below was never weighing.
+    var sameView = newKey === currentViewKey && !viewDivergedLocally;
     // Converge the view key (outbound annotation stamping + stale-frame filter),
     // but do NOT wipe — 2.2.5: a View Sync / follow keeps Host and Guest in one
     // shared scene where committed annotations persist. Empty-key strokes drawn
@@ -5382,6 +5771,9 @@ function annoBindViewportEvents(win, cb) {
     // would replay Matterport's startup UI (e.g. guest shares V, host follows and
     // sends V back; the echo must not reload the guest, who is already at V).
     if (sameView) return;
+    // Reassigning src puts the iframe back where the key says it is, so the
+    // two meanings of currentViewKey are one again.
+    viewDivergedLocally = false;
     try {
       frame.src = normalizeMatterportLiveSyncUrl(MP_BASE, ss, sr);
     } catch (_e) {}
@@ -5669,6 +6061,18 @@ function annoBindViewportEvents(win, cb) {
     try {
       setRemoteFloor(false);
     } catch (_e) {}
+    // The dismissal survives floor transitions on purpose (see setRemoteFloor),
+    // so the SESSION is what has to forget it — otherwise the next tour would
+    // start carrying a stale opt-out nobody in it ever made.
+    freezeDismissed = false;
+    viewDivergedLocally = false;
+    // A NEW session starts on the hub's defaults, so carrying the last one's
+    // grants forward is how a guest ends up staring at an Annotate button
+    // disabled by a host who revoked it in a tour they already left.
+    mySyncAllowed = true;
+    myAnnotAllowed = true;
+    lastTeleportKey = null;
+    lastShareKey = null;
     eraserActive = false;
     eraserDeletedIds = null;
     resetLocationSyncUi();
@@ -5773,6 +6177,54 @@ function annoBindViewportEvents(win, cb) {
       // everyone else's HUD would disagree about who is driving.
       hudPublishRoster(true);
     } catch (_e) {}
+  }
+
+  // ── Join-time grant hydration (2.30.0) ───────────────────────────────
+  // A guest arrives with the hub's DEFAULTS already applied — on Atlas that is
+  // syncView:false. But no CHANGE was made, so setGuestPermission is never
+  // called, applyPermissionChange never fires, and nothing ever tells them.
+  // Their Sync pill therefore looks live, pulses "success" when clicked, and
+  // the packet dies at the hub: exactly the silent failure 2.27.0's revoke
+  // marker was added to stop, missed at the one moment every single guest
+  // passes through. (mySyncAllowed initializes to true, which was correct back
+  // when the defaults were permissive and was never revisited.)
+  //
+  // Not a regression from exclusivity — it has been true since 2.27.0 — but
+  // exclusivity is what makes it matter: with at most ONE grant outstanding,
+  // up to seven guests are now looking at a control that cannot work.
+  //
+  // The Builder hydrates on join; this runtime never did.
+  var hydratedGuests = Object.create(null);
+  function hydrateGuestGrants(guests) {
+    if (!guests || typeof session.sendControlTo !== "function") return;
+    var seen = Object.create(null);
+    for (var i = 0; i < guests.length; i++) {
+      var g = guests[i];
+      if (!g || !g.peerId) continue;
+      seen[g.peerId] = true;
+      if (hydratedGuests[g.peerId]) continue;
+      try {
+        // Marked hydrated only on a delivered pair. A guest can appear in the
+        // roster patch a beat before its data channel opens, and a send
+        // refused then must be retried on the next patch rather than recorded
+        // as done — otherwise the one guest whose timing was unlucky is the
+        // one left uninformed.
+        var okSync = session.sendControlTo(
+          g.peerId,
+          g.syncView === true ? GUEST_SYNC_CTL_ON : GUEST_SYNC_CTL_OFF,
+        );
+        var okAnnot = session.sendControlTo(
+          g.peerId,
+          g.annotate === true ? ANNOT_CTL_ON : ANNOT_CTL_OFF,
+        );
+        if (okSync && okAnnot) hydratedGuests[g.peerId] = true;
+      } catch (_e) {}
+    }
+    // Forget departed peers so a reconnect is hydrated again rather than
+    // inheriting a record of a channel that no longer exists.
+    for (var id in hydratedGuests) {
+      if (!seen[id]) delete hydratedGuests[id];
+    }
   }
 
   function buildPermCheckbox(g, kind, labelText) {
@@ -6772,6 +7224,11 @@ function annoBindViewportEvents(win, cb) {
       try {
         renderGuestRoster(state.guests || []);
       } catch (_e) {}
+      // Tell each NEW guest what they actually hold, before they discover it
+      // by clicking something that silently does nothing.
+      try {
+        hydrateGuestGrants(state.guests || []);
+      } catch (_e) {}
       try {
         hudSyncMembership(state);
         // Also on the first connected patch, so the host's own avatar is
@@ -6788,6 +7245,13 @@ function annoBindViewportEvents(win, cb) {
     if (state.isConnected) {
       try {
         hudEnsureControls();
+      } catch (_e) {}
+      // The annotation-bar toggle rides the same first-connected patch: the
+      // bar itself stays closed (2.30.0), but the control that opens it has
+      // to be there the moment there is anything to annotate.
+      try {
+        ensureBarToggle();
+        refreshBarToggleVisibility();
       } catch (_e) {}
     }
     try {
@@ -6944,8 +7408,10 @@ function annoBindViewportEvents(win, cb) {
     }
 
     // Guest follows host teleports (dedupe by ts; last-sender-wins).
-    if (state.role === "visitor" && state.incomingTeleportEvent && state.incomingTeleportEvent.ts !== lastTeleportTs) {
-      lastTeleportTs = state.incomingTeleportEvent.ts;
+    var tEv = state.incomingTeleportEvent;
+    var tKey = tEv ? (tEv.evId !== undefined ? tEv.evId : tEv.ts) : null;
+    if (state.role === "visitor" && tEv && tKey !== lastTeleportKey) {
+      lastTeleportKey = tKey;
       // CONTROL MARKERS ride the teleport channel with an "f3dctl:" prefix
       // (the Builder has consumed them since 2.12.0). Atlas never sent any, so
       // it never looked for them — and applied whatever arrived as COORDINATES.
@@ -6975,8 +7441,10 @@ function annoBindViewportEvents(win, cb) {
     }
 
     // Host auto-follows guest location shares (dedupe by ts).
-    if (state.role === "agent" && state.incomingLocationShareEvent && state.incomingLocationShareEvent.ts !== lastShareTs) {
-      lastShareTs = state.incomingLocationShareEvent.ts;
+    var shEv = state.incomingLocationShareEvent;
+    var shKey = shEv ? (shEv.evId !== undefined ? shEv.evId : shEv.ts) : null;
+    if (state.role === "agent" && shEv && shKey !== lastShareKey) {
+      lastShareKey = shKey;
       if (lastOwnSendTs === 0 || Date.now() - lastOwnSendTs >= SYNC_SUPPRESS_MS) {
         applyTeleport(state.incomingLocationShareEvent.ss, state.incomingLocationShareEvent.sr);
         // Remote-provenance record (see visitor branch above): the
@@ -7165,7 +7633,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-07-31";
+    var RUNTIME_RELEASED="2026-08-01";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
