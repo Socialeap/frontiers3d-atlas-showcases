@@ -8,7 +8,7 @@
 <meta property="og:title" content="MATERIALISITIC AND FINE WITH IT — Frontiers|3D" />
 <meta property="og:description" content="A site-specific collage installation by Brooklyn-based artist Alissa D. Polan, shown at mhPROJECTnyc gallery in New York&amp;#39;s East Village. Built from a year of the artist&amp;#39;s online-shopping screenshots, the work explores identity, consumption, and how a self-portrait can be assembled from data and desire." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.33.0" />
+<meta name="f3d-runtime" content="2.35.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -390,6 +390,47 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
    top/left above where env() is unsupported. */
 #loc-sync{top:calc(60px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px))}
 #loc-sync-tips{top:calc(96px + env(safe-area-inset-top,0px));left:calc(12px + env(safe-area-inset-left,0px))}
+
+/* ── "Nobody can move the group yet" — the host's grant prompt (2.34.0) ──
+   Sync View is default-OFF and EXCLUSIVE by owner directive, so a grant is
+   genuinely owed at the start of most tours — but the checkbox that gives it
+   lives in #lt-panel, the drawer a host closes to actually tour. Nothing told
+   them. This sits on the stage, where the host is already looking, and grants
+   in one click when there is exactly one guest to grant to.
+   BOTTOM-anchored, deliberately: #lt-freeze-note owns the top of the stage and
+   both can legitimately be visible at once. z-index 7 keeps it above the
+   reaction layer (6) and below the chat panel (8). */
+#lt-sync-note[hidden]{display:none}
+#lt-sync-note{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:8px;max-width:min(94%,480px);padding:6px 6px 6px 12px;border-radius:999px;background:rgba(10,12,20,0.86);-webkit-backdrop-filter:blur(10px) saturate(150%);backdrop-filter:blur(10px) saturate(150%);border:1px solid rgba(251,191,36,0.42);color:rgba(255,255,255,0.94);font:600 12px/1.3 inherit;font-family:inherit;box-shadow:0 4px 18px rgba(0,0,0,0.4)}
+#lt-sync-note-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt-sync-note-btn{flex:none;appearance:none;border:1px solid rgba(251,191,36,0.5);background:rgba(251,191,36,0.18);color:#fde68a;border-radius:999px;padding:4px 11px;font:600 11px/1.4 inherit;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background 0.18s}
+.lt-sync-note-btn:hover{background:rgba(251,191,36,0.3);color:#fff}
+.lt-sync-note-x{flex:none;appearance:none;width:22px;height:22px;border-radius:50%;border:none;background:rgba(255,255,255,0.14);color:#fff;font-size:15px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;transition:background 0.18s}
+.lt-sync-note-x:hover{background:rgba(255,107,107,0.3)}
+@media(pointer: coarse){.lt-sync-note-btn{min-height:32px}.lt-sync-note-x{width:32px;height:32px}}
+
+/* ── The microphone control (2.35.0) ──────────────────────────────────────
+   Live Tour is desktop-only and voice is NOT deferred there, so the mic goes
+   live the moment a session connects. This is both the mute control and the
+   indicator that it is happening — one element, so there is nothing to keep
+   in sync. State is carried by colour AND by which icon is shown, so it does
+   not depend on colour perception alone. The [hidden] rule is explicit for
+   the same reason .f3d-iconbtn needed one in PR #344: an author display rule
+   in an older package would otherwise defeat the attribute. */
+#lt-mic-btn[hidden]{display:none}
+#lt-mic-btn:disabled{opacity:.45;cursor:not-allowed}
+/* Live: a green ring plus a steady green dot — "you are being heard". */
+#lt-mic-btn.is-live{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.55);color:#bbf7d0}
+#lt-mic-btn.is-live::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(10,14,39,.9)}
+#lt-mic-btn.is-muted{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.55);color:#fecaca}
+#lt-mic-btn.is-off{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:rgba(255,255,255,.55)}
+#lt-mic-btn{position:relative}
+@media(prefers-reduced-motion:reduce){#lt-mic-btn.is-live::after{animation:none}}
+
+/* The guest side of the same gap: the refusal is now readable on the pill
+   itself, which is the only element on screen for the whole session. */
+#loc-sync[data-state="blocked"]{background:rgba(120,53,15,0.82);border-color:rgba(251,191,36,0.55)}
+#loc-sync[data-state="blocked"] .loc-sync-dot{background:#fbbf24;animation:none}
 
 #lt-audio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 /* f3d:runtime-css END */
@@ -3431,6 +3472,14 @@ function annoBindViewportEvents(win, cb) {
   function markMilestone(name) {
     if (name === "mic_granted") micGranted = true;
     else if (name === "mic_denied") micGranted = false;
+    // The permission verdict arrives asynchronously, AFTER the connected
+    // patch that built the button — so the button has to be told, or it sits
+    // disabled for the whole tour on a machine whose mic works perfectly.
+    if (name === "mic_granted" || name === "mic_denied") {
+      try {
+        refreshMicButton();
+      } catch (_e) {}
+    }
     try {
       if (!window.sessionStorage) return;
       window.sessionStorage.setItem(MILESTONE_LAST_KEY, String(name) + "@" + Date.now());
@@ -3638,7 +3687,7 @@ function annoBindViewportEvents(win, cb) {
       // else the HUD sends (roster, chat with its assigned sequence number,
       // the approved reaction) is host-authored and unforgeable, because a
       // guest-sent copy is dropped at the hub before it reaches any state.
-      roomGuestKinds: ["attn", "chat_req", "react_req"],
+      roomGuestKinds: ["attn", "chat_req", "react_req", "mute"],
       deferVoice: IS_IOS_WEBKIT,
       onDiagnostic: markMilestone,
       PeerCtor: lazyPeerCtor,
@@ -4614,6 +4663,148 @@ function annoBindViewportEvents(win, cb) {
     barToggleBtn.hidden = !(live || soloAnnotate);
   }
 
+  // ── The microphone control (2.35.0) ──────────────────────────────────
+  //
+  // Live Tour is desktop-only, and deferVoice is passed as IS_IOS_WEBKIT —
+  // so on every machine that can actually run a tour, the microphone is
+  // acquired and TRANSMITTING from the moment the session connects. Until
+  // now there was no way to stop that and nothing on screen saying it was
+  // happening: every participant was hot-mic'd by default, with leaving the
+  // tour as the only mute. Owner-directed 2026-08-03.
+  //
+  // ONE control, not a button plus a separate lamp. The button's appearance
+  // IS the state, so there is nothing to keep in sync and one place to look.
+  //
+  // THE STATE IT REPORTS IS THE TRUTH, which matters more here than it looks:
+  // when getUserMedia fails on desktop the controller answers with a
+  // SYNTHESIZED SILENT TRACK (_silentTrackStream) and the call proceeds
+  // normally. A lamp wired to "is there a call?" would therefore sit green
+  // while the participant transmits silence — the "can you hear me?" failure,
+  // made worse by a UI insisting they are fine. micGranted is fed by the
+  // controller's own mic_granted/mic_denied diagnostics, so "live" means the
+  // microphone was actually granted, never merely that a call exists.
+  var micBtn = null;
+  var micMuted = false;
+  var micIconOn = null;
+  var micIconOff = null;
+
+  /** The local audio tracks, or an empty list when voice never started. */
+  function micTracks() {
+    try {
+      if (!session || typeof session.getLocalStream !== "function") return [];
+      var s = session.getLocalStream();
+      if (!s || typeof s.getAudioTracks !== "function") return [];
+      return s.getAudioTracks() || [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  function micUsable() {
+    return micGranted === true && micTracks().length > 0;
+  }
+
+  function applyMicMuted() {
+    // track.enabled=false transmits silence with no renegotiation — the
+    // standard mute, and genuinely off at the source rather than ignored by
+    // the receiver.
+    var tracks = micTracks();
+    for (var i = 0; i < tracks.length; i++) {
+      try {
+        tracks[i].enabled = !micMuted;
+      } catch (_e) {}
+    }
+  }
+
+  function refreshMicButton() {
+    if (!micBtn) return;
+    var live = false;
+    try {
+      var st = session.getState();
+      live = st.role === "agent" || st.role === "visitor";
+    } catch (_e) {}
+    micBtn.hidden = !live;
+    if (!live) return;
+    var usable = micUsable();
+    micBtn.disabled = !usable;
+    micBtn.setAttribute("aria-pressed", usable && micMuted ? "true" : "false");
+    micBtn.classList.toggle("is-live", usable && !micMuted);
+    micBtn.classList.toggle("is-muted", usable && micMuted);
+    micBtn.classList.toggle("is-off", !usable);
+    if (micIconOn) micIconOn.hidden = !(usable && !micMuted);
+    if (micIconOff) micIconOff.hidden = usable && !micMuted;
+    micBtn.title = !usable
+      ? micGranted === false
+        ? "Microphone blocked by the browser — others cannot hear you. Allow mic access and rejoin."
+        : "Microphone not active yet."
+      : micMuted
+        ? "You are muted — click to unmute"
+        : "Your microphone is live — click to mute";
+    micBtn.setAttribute(
+      "aria-label",
+      !usable ? "Microphone unavailable" : micMuted ? "Unmute microphone" : "Mute microphone",
+    );
+  }
+
+  function setMicMuted(next) {
+    micMuted = next === true;
+    applyMicMuted();
+    refreshMicButton();
+    // Tell the room. The roster already carried a `muted` field and already
+    // rendered a mute badge on every avatar — since 2.28.0 — but nothing ever
+    // set it, so the badge could not appear. This is the missing producer for
+    // UI that was already built and shipped.
+    try {
+      if (hudIsHost()) {
+        hudFlagsFor("host").muted = micMuted;
+        hudPublishRoster(true);
+      } else {
+        session.sendRoomEvent(HUD_KIND_MUTE, { on: micMuted });
+      }
+    } catch (_e) {}
+  }
+
+  function ensureMicButton() {
+    if (micBtn) return micBtn;
+    try {
+      var actions = document.querySelector(".f3d-actions");
+      if (!actions) return null;
+      micBtn = document.createElement("button");
+      micBtn.type = "button";
+      micBtn.id = "lt-mic-btn";
+      micBtn.className = "f3d-iconbtn lt-mic";
+      micBtn.hidden = true;
+      micBtn.setAttribute("aria-pressed", "false");
+      // Two icons, one shown at a time, so the muted state is legible without
+      // relying on colour alone.
+      micIconOn = buildSvgIcon([
+        "M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z",
+        "M19 10v2a7 7 0 0 1-14 0v-2",
+        "M12 19v4",
+      ]);
+      micIconOff = buildSvgIcon([
+        "M1 1l22 22",
+        "M9 9v3a3 3 0 0 0 5.12 2.12",
+        "M15 9.34V4a3 3 0 0 0-5.94-.6",
+        "M19 10v2a7 7 0 0 1-11.79 5.07",
+        "M12 19v4",
+      ]);
+      micIconOff.hidden = true;
+      micBtn.appendChild(micIconOn);
+      micBtn.appendChild(micIconOff);
+      micBtn.addEventListener("click", function () {
+        if (!micUsable()) return;
+        setMicMuted(!micMuted);
+      });
+      actions.insertBefore(micBtn, actions.firstChild);
+    } catch (_e) {
+      micBtn = null;
+      micIconOn = null;
+      micIconOff = null;
+    }
+    return micBtn;
+  }
+
   function ensureBarToggle() {
     if (barToggleBtn) return barToggleBtn;
     try {
@@ -5330,6 +5521,13 @@ function annoBindViewportEvents(win, cb) {
     syncing: "Syncing…",
     success: "Synced",
     waiting: "Connecting…",
+    // 2.34.0 — the refusal finally lands somewhere the guest can SEE. A
+    // blocked send used to write its explanation to #lt-voice-status, which
+    // lives inside #lt-panel — the drawer you close to press U in the tour —
+    // and then set this pill to "Sync ready", which is the opposite of true.
+    // The pill is the ONLY element that is always on screen during a session
+    // (body.live-tour-active #loc-sync), so it is where the answer belongs.
+    blocked: "Ask host to enable sync",
   };
 
   // Whether ANY ambient (non-manual) clipboard read may run right now.
@@ -5507,8 +5705,17 @@ function annoBindViewportEvents(win, cb) {
     // discards the packet and the pill still pulses "success" — the failure
     // mode this whole surface keeps being reported for.
     if (role === "visitor" && !mySyncAllowed) {
-      setPulseState("idle");
-      setVoiceStatus("The host has turned off view sync for you.", "warn");
+      // "idle" here rendered "Sync ready" on the always-visible pill at the
+      // exact moment the send was refused, and the real explanation went to a
+      // status line inside the closed panel — so the guest's honest reading of
+      // the screen was "I clicked COPY and nothing happened." (Owner-reported
+      // 2026-08-03 after a live 2.33.0 tour.)
+      setPulseState("blocked");
+      // Wording matters as much as placement: sync has been OFF BY DEFAULT for
+      // guests since 2.27.0, so "the host has turned it off" described a
+      // deliberate revocation that never happened and told the guest not to
+      // bother asking. Name the actual next step instead.
+      setVoiceStatus("View sync isn’t enabled for you yet — ask the host to tick “Sync” beside your name.", "warn");
       return false;
     }
     try {
@@ -6171,6 +6378,15 @@ function annoBindViewportEvents(win, cb) {
     myAnnotAllowed = true;
     lastTeleportKey = null;
     lastShareKey = null;
+    // A dismissal belongs to the room it was made in; a fresh session asks
+    // again. (The element itself is hidden by refreshSyncNotice's role check.)
+    syncNoticeDismissedFor = null;
+    if (syncNotice) syncNotice.hidden = true;
+    // A new session starts unmuted with a fresh, unresolved permission state —
+    // inheriting either would describe a microphone that no longer exists.
+    micMuted = false;
+    micGranted = null;
+    if (micBtn) micBtn.hidden = true;
     eraserActive = false;
     eraserDeletedIds = null;
     resetLocationSyncUi();
@@ -6204,7 +6420,14 @@ function annoBindViewportEvents(win, cb) {
       syncBtn.classList.toggle("is-revoked", !mySyncAllowed);
       syncBtn.title = mySyncAllowed
         ? ""
-        : "The host has turned off view sync for you.";
+        : "The host hasn’t enabled view sync for you yet. Ask them to tick “Sync” beside your name in their Explore Together panel.";
+      // A grant that arrives while the pill is still showing the refusal must
+      // clear it — otherwise the one guest who tried early keeps reading
+      // "Ask host to enable sync" for the rest of the tour, after the host
+      // has already done exactly that.
+      if (mySyncAllowed && syncBtn.getAttribute("data-state") === "blocked") {
+        setPulseState("idle");
+      }
     } catch (_e) {}
   }
 
@@ -6274,6 +6497,12 @@ function annoBindViewportEvents(win, cb) {
       // avatar row follows the grant. Without this the host's checkbox and
       // everyone else's HUD would disagree about who is driving.
       hudPublishRoster(true);
+      // The notice must answer to the grant immediately, not wait for the next
+      // state patch — a host who unticks the last grant has re-created exactly
+      // the situation it exists to report.
+      try {
+        refreshSyncNotice(session.getState());
+      } catch (_e) {}
     } catch (_e) {}
   }
 
@@ -6459,6 +6688,157 @@ function annoBindViewportEvents(win, cb) {
     }
   }
 
+  // ── Host: "nobody can move the group yet" (2.34.0) ────────────────────
+  //
+  // Sync View is default-OFF and EXCLUSIVE (owner-directed 2026-08-01), which
+  // is the approved model — a guest may pull the group only if the host grants
+  // it. What was missing is that NOTHING told the host a grant was owed. The
+  // roster carrying the checkbox lives inside #lt-panel, the drawer a host
+  // closes to actually tour, so a host who never opens it never learns the
+  // control exists; meanwhile the guest presses COPY TO CLIPBOARD and, from
+  // their side, simply nothing happens.
+  //
+  // Owner-reported 2026-08-03 from a live 2.33.0 tour, initially as "the host
+  // can't sync" — the diagnosis was inverted, and that inversion is itself the
+  // evidence: the state was invisible from BOTH seats.
+  //
+  // This is the deliberate alternative to granting sync by default, which is
+  // not merely a policy change but structurally impossible: at most ONE guest
+  // may hold the grant, so "on for everyone" would be revoked to one arbitrary
+  // guest the moment it applied.
+  //
+  // Built in JS and attached to the stage, like the freeze notice — the
+  // Upgrade Center replaces runtime spans, not markup, so an upgraded package
+  // gets it too.
+  var syncNotice = null;
+  var syncNoticeText = null;
+  var syncNoticeAction = null;
+  // Dismissal is keyed to WHO is in the room, not to the session: a host who
+  // waves this away has answered for the room as it stood. A new guest joining
+  // is a new question, so it asks again — without becoming a nag when nothing
+  // has changed.
+  var syncNoticeDismissedFor = null;
+  var syncNoticeOnAction = null;
+  // The room AS RENDERED. The × must answer for what the host is actually
+  // looking at, so this is captured at render rather than re-derived from
+  // getState() at click time — those can differ if a patch lands in between,
+  // and the dismissal would then be recorded against a room nobody saw.
+  var syncNoticeSignature = "";
+  function guestSignature(guests) {
+    var ids = [];
+    for (var i = 0; i < guests.length; i++) {
+      if (guests[i] && guests[i].peerId) ids.push(String(guests[i].peerId));
+    }
+    return ids.sort().join(",");
+  }
+  function ensureSyncNotice() {
+    if (syncNotice) return syncNotice;
+    try {
+      var wrap = document.getElementById("anno-letterbox-wrap");
+      if (!wrap) return null;
+      syncNotice = document.createElement("div");
+      syncNotice.id = "lt-sync-note";
+      syncNotice.hidden = true;
+      syncNoticeText = document.createElement("span");
+      syncNoticeText.id = "lt-sync-note-text";
+      syncNotice.appendChild(syncNoticeText);
+      syncNoticeAction = document.createElement("button");
+      syncNoticeAction.type = "button";
+      syncNoticeAction.className = "lt-sync-note-btn";
+      // ONE listener for the life of the element, dispatching through a
+      // mutable handler. The target guest changes as people join and leave, so
+      // re-binding per render would either stack listeners (granting several
+      // people from one click) or need cloneNode/replaceChild — more DOM
+      // surface for no benefit.
+      syncNoticeAction.addEventListener("click", function () {
+        if (typeof syncNoticeOnAction === "function") syncNoticeOnAction();
+      });
+      syncNotice.appendChild(syncNoticeAction);
+      var x = document.createElement("button");
+      x.type = "button";
+      x.className = "lt-sync-note-x";
+      x.setAttribute("aria-label", "Dismiss");
+      x.title = "Dismiss";
+      x.textContent = "×";
+      x.addEventListener("click", function () {
+        syncNoticeDismissedFor = syncNoticeSignature;
+        if (syncNotice) syncNotice.hidden = true;
+      });
+      syncNotice.appendChild(x);
+      wrap.appendChild(syncNotice);
+    } catch (_e) {
+      syncNotice = null;
+      syncNoticeText = null;
+      syncNoticeAction = null;
+    }
+    return syncNotice;
+  }
+
+  // Guest display names are UNTRUSTED remote data: textContent only, and
+  // bounded so a 500-character name cannot push the action button off-stage.
+  function shortGuestName(name) {
+    var s = String(name || "Guest");
+    return s.length > 22 ? s.slice(0, 21) + "…" : s;
+  }
+
+  function refreshSyncNotice(state) {
+    if (!state || state.role !== "agent") {
+      if (syncNotice) syncNotice.hidden = true;
+      return;
+    }
+    var guests = state.guests || [];
+    if (!state.isConnected || guests.length === 0) {
+      if (syncNotice) syncNotice.hidden = true;
+      return;
+    }
+    var granted = null;
+    for (var i = 0; i < guests.length; i++) {
+      if (guests[i] && guests[i].syncView === true) {
+        granted = guests[i];
+        break;
+      }
+    }
+    var sig = guestSignature(guests);
+    // Someone already holds it (exclusivity means that is the whole answer),
+    // or the host dismissed this exact room.
+    if (granted || syncNoticeDismissedFor === sig) {
+      if (syncNotice) syncNotice.hidden = true;
+      return;
+    }
+    var el = ensureSyncNotice();
+    if (!el || !syncNoticeText || !syncNoticeAction) return;
+    syncNoticeSignature = sig;
+    syncNoticeText.textContent =
+      guests.length === 1
+        ? "Only you can move the group."
+        : "Only you can move the group — no guest can sync the view.";
+    // Re-point the handler each render: the target guest changes as people
+    // join and leave, and a stale closure would grant the wrong person.
+    if (guests.length === 1 && guests[0] && guests[0].peerId) {
+      var only = guests[0];
+      syncNoticeAction.textContent = "Let " + shortGuestName(only.name) + " sync";
+      syncNoticeAction.title = "Give this guest permission to pull everyone to their view";
+      syncNoticeOnAction = function () {
+        applyPermissionChange(only.peerId, "syncView", true);
+        if (syncNotice) syncNotice.hidden = true;
+      };
+    } else {
+      syncNoticeAction.textContent = "Choose who can sync";
+      syncNoticeAction.title = "Open the participant list and tick “Sync” beside a guest";
+      syncNoticeOnAction = function () {
+        openPanel();
+        try {
+          var r = document.getElementById("lt-guest-roster-wrap");
+          if (r && typeof r.scrollIntoView === "function") {
+            r.scrollIntoView({ block: "nearest" });
+          }
+        } catch (_e) {}
+        if (syncNotice) syncNotice.hidden = true;
+      };
+    }
+    el.hidden = false;
+  }
+
   // ── State subscriber ─────────────────────────────────────────────────
   // ── Participant HUD (2.28.0) ────────────────────────────────────────
   //
@@ -6490,6 +6870,11 @@ function annoBindViewportEvents(win, cb) {
   var HUD_KIND_CHAT_HIST = "chat_hist";
   var HUD_KIND_REACTION = "reaction";
   var HUD_KIND_ATTN = "attn";
+  // 2.35.0 — a guest telling the room it has muted itself. Guest-originated,
+  // so it is added to roomGuestKinds; the controller stamps the sender, which
+  // is what makes "you can only mute yourself" a property of the wire rather
+  // than of this code.
+  var HUD_KIND_MUTE = "mute";
   var HUD_KIND_CHAT_REQ = "chat_req";
   var HUD_KIND_REACT_REQ = "react_req";
 
@@ -7174,6 +7559,15 @@ function annoBindViewportEvents(win, cb) {
         hudPublishRoster(true);
         return;
       }
+      if (kind === HUD_KIND_MUTE) {
+        // Same guarantee as attention: the sender is stamped at the hub, so a
+        // guest can only ever report its OWN microphone. This is display
+        // state — it does not mute anyone remotely, and cannot: the only
+        // track a participant can disable is the one they are sending.
+        hudFlagsFor(from).muted = !!(payload && payload.on);
+        hudPublishRoster(true);
+        return;
+      }
       if (kind === HUD_KIND_CHAT_REQ) {
         var text = hudSanitizeChat(payload && payload.t);
         if (!text) return;
@@ -7333,6 +7727,12 @@ function annoBindViewportEvents(win, cb) {
         // drawn before anyone joins rather than only once someone does.
         if (!hudPeople.length) hudPublishRoster(state.isConnected === true);
       } catch (_e) {}
+      // Tell the HOST when a grant is owed. Rides the same patch as the
+      // roster, so it appears the moment a guest joins and clears itself the
+      // moment anyone holds the grant.
+      try {
+        refreshSyncNotice(state);
+      } catch (_e) {}
     }
 
     // 2.28.0 — the participant HUD rides the same state stream. Room events
@@ -7350,6 +7750,14 @@ function annoBindViewportEvents(win, cb) {
       try {
         ensureBarToggle();
         refreshBarToggleVisibility();
+      } catch (_e) {}
+      // The microphone control rides the same patch. It is built disabled and
+      // becomes usable when the controller reports the mic was actually
+      // granted (see refreshMicButton), so it never claims "live" before the
+      // permission is settled.
+      try {
+        ensureMicButton();
+        refreshMicButton();
       } catch (_e) {}
     }
     try {
