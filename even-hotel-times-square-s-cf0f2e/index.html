@@ -12,7 +12,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
 Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.32.0" />
+<meta name="f3d-runtime" content="2.33.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -523,7 +523,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
     <div id="lt-host-block" hidden>
       <div class="lt-pin-display">
         <div class="lt-pin-label">Your tour PIN</div>
-        <div id="lt-pin-value" class="lt-pin-value">----</div>
+        <div id="lt-pin-value" class="lt-pin-value">------</div>
       </div>
       <button id="lt-invite-btn" type="button" class="lt-btn primary">Share invite</button>
       <div id="lt-invite-status" class="lt-mini-status" aria-live="polite"></div>
@@ -534,9 +534,9 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
       <button type="button" class="lt-btn lt-leave-btn" hidden>Leave tour</button>
     </div>
     <div id="lt-guest-block" hidden>
-      <label class="lt-field-label" for="lt-pin-input">Enter the 4-digit PIN from your host</label>
+      <label class="lt-field-label" for="lt-pin-input">Enter the 6-digit PIN from your host</label>
       <div class="lt-join-row">
-        <input id="lt-pin-input" class="lt-input" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Tour PIN" />
+        <input id="lt-pin-input" class="lt-input" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Tour PIN" />
         <button id="lt-join-btn" type="button" class="lt-btn primary">Join</button>
       </div>
       <div id="lt-guest-status" class="lt-status" aria-live="polite"></div>
@@ -3549,6 +3549,41 @@ function annoBindViewportEvents(win, cb) {
     return new Peer(id);
   }
 
+  // ── 2.33.0: the Atlas family adopts the namespaced broker id + 6-digit PIN.
+  // 2.32.0 landed the capability in the shared controller and wired it in the
+  // BUILDER glue only — this glue kept calling createLiveSession with neither
+  // option, so every curated showcase stayed on legacy 4-digit PINs in one
+  // GLOBAL broker id space. That gap mattered most exactly here: all curated
+  // showcases share one domain and one public PeerJS broker, so two hosts on
+  // two different showcases could collide on nothing more than the same PIN.
+  // Same derivation as the Builder's f3dTourNamespace: computed from the
+  // normalised pathname at PAGE LOAD, never baked at generation time, so the
+  // generated HTML stays byte-deterministic and every participant on the same
+  // showcase URL derives the same value. Pathname ONLY, no hostname — the
+  // Netlify alias and a future custom domain serve the SAME paths, and a host
+  // on one alias must still pair with a guest on the other. Host and guest
+  // always load the same showcase page, so both sides agree by construction.
+  var LT_PIN_DIGITS = 6;
+  function ltPinPlaceholder() {
+    var s = "";
+    for (var i = 0; i < LT_PIN_DIGITS; i++) s += "-";
+    return s;
+  }
+  function ltTourNamespace() {
+    try {
+      var p = String((typeof location !== "undefined" && location && location.pathname) || "").toLowerCase();
+      while (p.length > 1 && p.charAt(p.length - 1) === "/") p = p.slice(0, -1);
+      if (!p) return "";
+      var h = 5381;
+      for (var i = 0; i < p.length; i++) {
+        h = (((h * 33) ^ p.charCodeAt(i)) >>> 0);
+      }
+      return h.toString(36);
+    } catch (e) {
+      return "";
+    }
+  }
+
   // Session factory: every (re)creation carries the same policy — voice
   // is DEFERRED on iOS (no automatic getUserMedia / AudioContext / media
   // call during the connect transition; see the Enable voice button) and
@@ -3563,6 +3598,10 @@ function annoBindViewportEvents(win, cb) {
       // out at two people while the Builder glue had passed 8 since 2.12.0.
       // Not a regression — Atlas multi-guest was simply never wired.
       maxGuests: 8,
+      // 2.33.0 — namespaced broker id + 6-digit PIN (see ltTourNamespace above
+      // for why, and why the namespace is pathname-derived at page load).
+      sessionNamespace: ltTourNamespace(),
+      pinDigits: LT_PIN_DIGITS,
       // 2.26.0 — NO guestPermissionDefaults override, deliberately, reversing
       // 2.25.0's { syncView:false, annotate:false }. That override copied the
       // Builder's owner-approved grant model — but the Builder HAS a roster UI
@@ -3833,7 +3872,7 @@ function annoBindViewportEvents(win, cb) {
     if (joinBtn) joinBtn.disabled = false;
     if (hostStartBtn) hostStartBtn.disabled = false;
     if (pinInput) pinInput.value = "";
-    if (pinValue) pinValue.textContent = "----";
+    if (pinValue) pinValue.textContent = ltPinPlaceholder();
     setText(hostStatus, "");
     setText(guestStatus, "");
     setText(inviteStatus, "");
@@ -6047,9 +6086,9 @@ function annoBindViewportEvents(win, cb) {
 
   if (joinBtn && pinInput) {
     joinBtn.addEventListener("click", function () {
-      var pin = (pinInput.value || "").replace(/\D/g, "").slice(0, 4);
-      if (pin.length !== 4) {
-        setText(guestStatus, "Enter the 4-digit PIN from your host.");
+      var pin = (pinInput.value || "").replace(/\D/g, "").slice(0, LT_PIN_DIGITS);
+      if (pin.length !== LT_PIN_DIGITS) {
+        setText(guestStatus, "Enter the " + LT_PIN_DIGITS + "-digit PIN from your host.");
         return;
       }
       joinBtn.disabled = true;
@@ -6084,8 +6123,15 @@ function annoBindViewportEvents(win, cb) {
         joinBtn.click();
       }
     });
+    // Keep the baked markup honest at runtime too: an UPGRADED older package
+    // regenerates its markup on the Atlas path, but belt-and-braces here means
+    // the input can never cap entry below the PIN the controller now issues.
+    pinInput.setAttribute("maxlength", String(LT_PIN_DIGITS));
+    var zeros = "";
+    for (var zi = 0; zi < LT_PIN_DIGITS; zi++) zeros += "0";
+    pinInput.setAttribute("placeholder", zeros);
     pinInput.addEventListener("input", function () {
-      pinInput.value = (pinInput.value || "").replace(/\D/g, "").slice(0, 4);
+      pinInput.value = (pinInput.value || "").replace(/\D/g, "").slice(0, LT_PIN_DIGITS);
     });
   }
   } // end if (COLLAB_ELIGIBLE) — collaboration role/panel wiring
@@ -7691,7 +7737,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-08-02";
+    var RUNTIME_RELEASED="2026-08-03";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
