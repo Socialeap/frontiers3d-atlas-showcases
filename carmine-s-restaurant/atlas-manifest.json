@@ -3,11 +3,11 @@
   "version": 1,
   "kind": "curated_showcase",
   "package_schema": 2,
-  "runtime_version": "2.33.0",
+  "runtime_version": "2.35.0",
   "runtime_released": "2026-08-03",
   "capabilities": [],
   "package_family": "atlas",
   "curation_job_id": "7f3b1db7-4750-40a5-9fdf-b3b458bf6e0c",
   "matterport_id": "oWAzYDi8nrJ",
-  "issued_at": "2026-08-03T00:49:36.258Z"
+  "issued_at": "2026-08-03T03:59:43.841Z"
 }
