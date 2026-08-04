@@ -12,7 +12,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
 Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.40.0" />
+<meta name="f3d-runtime" content="2.41.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -456,6 +456,17 @@ body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-
 #loc-sync[data-state="blocked"] .loc-sync-dot{background:#fbbf24;animation:none}
 
 #lt-audio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+/* Ambient-sound toggle (2.41.0) — same base treatment as the mic button, and
+   the same one-glyph-at-a-time discipline. "On" earns the accent instead of
+   the mic's green: sound is presentation state, not presence state, and two
+   controls sharing green would read as one voice feature. */
+#lt-sound-btn{transition:background .18s,border-color .18s,color .18s}
+#lt-sound-btn.is-on{background:var(--lt-accent,#818cf8);border-color:var(--lt-accent,#818cf8);color:#fff}
+#lt-sound-btn.is-off{color:#9ca3af}
+/* The room ordered ON but this browser needs a tap first — pulse politely. */
+#lt-sound-btn.is-blocked{border-color:#fbbf24;color:#fbbf24;animation:ltSoundNudge 1.6s ease-in-out infinite}
+@keyframes ltSoundNudge{0%,100%{opacity:1}50%{opacity:.55}}
 /* f3d:runtime-css END */
 </style>
 <!-- f3d:runtime-dep:peerjs BEGIN v=1 family=atlas -->
@@ -626,7 +637,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 </div>
 <audio id="lt-audio" autoplay playsinline></audio>
 <!-- f3d:runtime-markup:panel END -->
-<script>window.__ATLAS_LT_CONFIG={"accent":"#818cf8","matterportBaseUrl":"https://my.matterport.com/show/?m=QMcEVpDLoaR\u0026play=1\u0026brand=0\u0026hr=0","shareTitle":"Even Hotel Times Square S.","stops":[]};</script>
+<script>window.__ATLAS_LT_CONFIG={"accent":"#818cf8","matterportBaseUrl":"https://my.matterport.com/show/?m=QMcEVpDLoaR\u0026play=1\u0026brand=0\u0026hr=0","shareTitle":"Even Hotel Times Square S.","stops":[],"musicUrl":""};</script>
 <script>
 (function(){
 // f3d:runtime-js:kernel BEGIN v=1 family=atlas
@@ -3331,6 +3342,12 @@ function annoBindViewportEvents(win, cb) {
   var MP_BASE = typeof CONFIG.matterportBaseUrl === "string" ? CONFIG.matterportBaseUrl : "";
   var SHARE_TITLE = typeof CONFIG.shareTitle === "string" ? CONFIG.shareTitle : "Frontiers3D Showcase";
   var STOPS = Array.isArray(CONFIG.stops) ? CONFIG.stops : [];
+  // Ambient soundtrack (2.41.0) — admin-configured per curated showcase.
+  // https-only at every layer, restated here because this string becomes an
+  // <audio src> and the config object is embedder-controlled: a package is
+  // FROZEN at export, so this guard has to live in the package itself.
+  var MUSIC_URL = typeof CONFIG.musicUrl === "string" ? CONFIG.musicUrl.trim() : "";
+  if (MUSIC_URL.slice(0, 8).toLowerCase() !== "https://") MUSIC_URL = "";
 
   // ── Platform + assembly gates (early: the session factory below needs
   //    them; anno-input.mjs function declarations are hoisted across the
@@ -3405,6 +3422,15 @@ function annoBindViewportEvents(win, cb) {
   var GUEST_SYNC_CTL_OFF = "f3dctl:guestSync:0";
   var ANNOT_CTL_ON = "f3dctl:annot:1";
   var ANNOT_CTL_OFF = "f3dctl:annot:0";
+  // The host owns the soundtrack (2.41.0) — the SAME grammar the Builder
+  // runtime has spoken since 2.23.0, adopted verbatim so the marker stays one
+  // protocol across both families. The ON form carries the host's playback
+  // position and send time, so a guest lines up with the host instead of
+  // resuming wherever its own copy was paused.
+  // f3dctl:music:1:<positionSec>:<sentAtMs>  |  f3dctl:music:0
+  var MUSIC_CTL_ON = "f3dctl:music:1";
+  var MUSIC_CTL_OFF = "f3dctl:music:0";
+  var MUSIC_CTL_ON_PREFIX = "f3dctl:music:1:";
   // A guest's OWN view of what it may do. Both start true because this runtime
   // joins guests permissively (see newSession) — the host's roster revokes,
   // it does not hand out. The hub enforces the real answer regardless; these
@@ -3572,6 +3598,238 @@ function annoBindViewportEvents(win, cb) {
     }
   }
 
+  // ── Ambient soundtrack (2.41.0) — synced, host-authoritative ─────────
+  //
+  // The Builder runtime solved this in 2.23.0: every participant plays its
+  // OWN copy of the same file, and the host's position rides the ctl channel
+  // so the copies agree — nothing streams, everything seeks. This is that
+  // mechanism, adopted for the Atlas family, with one addition the Builder
+  // never needed: while a Live Mode room is attached, the marker crosses the
+  // frame boundary through the parent (f3d:room-music both ways) because the
+  // package's own peer session is parked.
+  //
+  // Two switches AND together into "audible":
+  //   soundEnabled     — THIS viewer's choice, OFF until their first tap.
+  //                      Browsers refuse un-gestured audio, so the tap is not
+  //                      just consent — it is the gesture that makes play()
+  //                      legal at all.
+  //   hostMusicAllowed — the room's choice, host-authoritative. Guests start
+  //                      true standalone (no host yet) and are silenced on
+  //                      attach until the host's state arrives.
+  var bgAudio = null;
+  var soundBtn = null;
+  var soundIconOn = null;
+  var soundIconOff = null;
+  var soundEnabled = false;
+  var hostMusicAllowed = true;
+  // An ON order arrived without a local gesture and play() was refused —
+  // surface it on the button instead of failing into silence.
+  var musicBlocked = false;
+  var musicKeepaliveTimer = null;
+  var MUSIC_KEEPALIVE_MS = 5000;
+  var MUSIC_DRIFT_TOLERANCE_SEC = 1.5;
+
+  function ensureBgAudio() {
+    if (!MUSIC_URL) return null;
+    if (bgAudio) return bgAudio;
+    try {
+      // Same element id the Builder exports use (#bg-audio), so any code —
+      // ours or a future span — that reaches for "the presentation's ambient
+      // audio, not the voice sink" finds it under one name in both families.
+      bgAudio = document.createElement("audio");
+      bgAudio.id = "bg-audio";
+      bgAudio.loop = true;
+      bgAudio.preload = "auto";
+      bgAudio.volume = 0.4;
+      bgAudio.src = MUSIC_URL;
+      bgAudio.style.display = "none";
+      (document.body || document.documentElement).appendChild(bgAudio);
+    } catch (_e) {
+      bgAudio = null;
+    }
+    return bgAudio;
+  }
+
+  function musicPlayable() {
+    return !!MUSIC_URL && soundEnabled && hostMusicAllowed;
+  }
+
+  function applyMusicState() {
+    var el = ensureBgAudio();
+    if (!el) return;
+    try {
+      if (musicPlayable()) {
+        var pp = el.play();
+        if (pp && typeof pp.catch === "function") {
+          pp.then(
+            function () {
+              if (musicBlocked) {
+                musicBlocked = false;
+                refreshSoundButton();
+              }
+            },
+            function () {
+              musicBlocked = true;
+              refreshSoundButton();
+            }
+          );
+        }
+      } else {
+        el.pause();
+      }
+    } catch (_e) {}
+    refreshSoundButton();
+  }
+
+  // Hooks named for parity with the Builder exports, so a bundle grep or a
+  // future shared span meets one vocabulary in both families.
+  window.__musicIsOn = function () {
+    return !!(MUSIC_URL && soundEnabled && bgAudio && !bgAudio.paused);
+  };
+  window.__musicPositionSec = function () {
+    try {
+      return bgAudio && typeof bgAudio.currentTime === "number" ? bgAudio.currentTime : 0;
+    } catch (_e) {
+      return 0;
+    }
+  };
+
+  // The host said play-from-here / stop. Seek math is the Builder's own:
+  // compensate the marker's transit time, wrap on duration, and only seek on
+  // a real divergence — re-seeking on every keepalive would stutter.
+  function applyHostMusicLocal(on, atSec, sentAtMs) {
+    hostMusicAllowed = on === true;
+    var el = ensureBgAudio();
+    if (el && hostMusicAllowed && typeof atSec === "number" && isFinite(atSec)) {
+      try {
+        var elapsed =
+          typeof sentAtMs === "number" && isFinite(sentAtMs)
+            ? Math.max(0, (Date.now() - sentAtMs) / 1000)
+            : 0;
+        var target = atSec + elapsed;
+        var dur = el.duration;
+        if (typeof dur === "number" && isFinite(dur) && dur > 0) target = target % dur;
+        if (Math.abs((el.currentTime || 0) - target) > MUSIC_DRIFT_TOLERANCE_SEC) {
+          el.currentTime = target;
+        }
+      } catch (_e) {}
+    }
+    applyMusicState();
+  }
+  window.__applyHostMusic = applyHostMusicLocal;
+
+  function releaseHostMusicLocal() {
+    hostMusicAllowed = true;
+    applyMusicState();
+  }
+  window.__releaseHostMusic = releaseHostMusicLocal;
+
+  // Is THIS participant the music authority right now? Standalone that is the
+  // connected agent; attached it is the room host — and the bridge session
+  // reports exactly those as role "agent" + connected, so one predicate
+  // covers both transports.
+  function isMusicAuthority() {
+    try {
+      var s = session.getState();
+      return s.role === "agent" && s.isConnected === true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function broadcastMusicState() {
+    if (!MUSIC_URL) return;
+    if (!isMusicAuthority()) return;
+    try {
+      if (typeof session.sendControl !== "function") return;
+      var on = window.__musicIsOn();
+      session.sendControl(
+        on ? MUSIC_CTL_ON_PREFIX + window.__musicPositionSec() + ":" + Date.now() : MUSIC_CTL_OFF
+      );
+    } catch (_e) {}
+  }
+
+  function toggleSound() {
+    // A blocked play (ON ordered, no gesture yet) makes THIS tap the gesture:
+    // resume rather than flipping the switch off underneath the room.
+    if (musicBlocked && musicPlayable()) {
+      musicBlocked = false;
+      applyMusicState();
+      return;
+    }
+    soundEnabled = !soundEnabled;
+    musicBlocked = false;
+    applyMusicState();
+    broadcastMusicState();
+  }
+
+  function refreshSoundButton() {
+    if (!soundBtn) return;
+    try {
+      var on = musicPlayable() && !musicBlocked;
+      soundBtn.classList.toggle("is-on", on);
+      soundBtn.classList.toggle("is-blocked", musicBlocked && musicPlayable());
+      soundBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      soundBtn.title =
+        musicBlocked && musicPlayable()
+          ? "Tap to hear sound in this space"
+          : on
+            ? "Turn ambient sound off"
+            : "Turn ambient sound on";
+      if (soundIconOn) soundIconOn.style.display = on ? "" : "none";
+      if (soundIconOff) soundIconOff.style.display = on ? "none" : "";
+    } catch (_e) {}
+  }
+
+  function ensureSoundButton() {
+    if (soundBtn || !MUSIC_URL) return soundBtn;
+    try {
+      var actions = document.querySelector(".f3d-actions");
+      if (!actions) return null;
+      soundBtn = document.createElement("button");
+      soundBtn.type = "button";
+      soundBtn.id = "lt-sound-btn";
+      soundBtn.className = "f3d-iconbtn lt-sound";
+      soundBtn.setAttribute("aria-label", "Toggle ambient sound");
+      soundBtn.setAttribute("aria-pressed", "false");
+      soundIconOn = buildSvgIcon([
+        "M11 5 6 9H2v6h4l5 4z",
+        "M15.54 8.46a5 5 0 0 1 0 7.07",
+        "M19.07 4.93a10 10 0 0 1 0 14.14",
+      ]);
+      soundIconOn.setAttribute("class", "lt-sound-ico lt-sound-ico-on");
+      soundIconOn.style.display = "none";
+      soundIconOff = buildSvgIcon(["M11 5 6 9H2v6h4l5 4z", "M22 9l-6 6", "M16 9l6 6"]);
+      soundIconOff.setAttribute("class", "lt-sound-ico lt-sound-ico-off");
+      soundBtn.appendChild(soundIconOn);
+      soundBtn.appendChild(soundIconOff);
+      soundBtn.addEventListener("click", toggleSound);
+      actions.insertBefore(soundBtn, actions.firstChild);
+      refreshSoundButton();
+    } catch (_e) {
+      soundBtn = null;
+      soundIconOn = null;
+      soundIconOff = null;
+    }
+    return soundBtn;
+  }
+
+  function initMusic() {
+    if (!MUSIC_URL) return;
+    ensureSoundButton();
+    // ONE keepalive covers tour start, late joiners and drift on both
+    // transports: while this participant is the authority, the current state
+    // — ON with position, or OFF — re-asserts every few seconds. The Builder
+    // relies on event-driven re-asserts (toggle / tour start / roster change)
+    // because its host SEES roster changes; an attached Atlas host does not
+    // (the bridge session never notifies), so the clock does the covering.
+    if (musicKeepaliveTimer === null) {
+      musicKeepaliveTimer = setInterval(function () {
+        broadcastMusicState();
+      }, MUSIC_KEEPALIVE_MS);
+    }
+  }
+
   try {
     window.addEventListener("message", function (e) {
       var d = e && e.data;
@@ -3626,6 +3884,16 @@ function annoBindViewportEvents(win, cb) {
         // Grants can flip mid-room (the host ticking the roster): the
         // affordances re-derive from the flags on every attach.
         myAnnotAllowed = roomMayAnnotate;
+        // Soundtrack handoff (2.41.0): a guest is silenced until the room's
+        // state arrives — its own copy resuming mid-attach would play out of
+        // sync with everyone. The host broadcasts immediately so a
+        // destination change re-establishes the room's state without waiting
+        // a keepalive period.
+        if (roomRole === "host") {
+          broadcastMusicState();
+        } else if (firstAttach) {
+          applyHostMusicLocal(false);
+        }
         applyRoomAttachment();
         // The handshake reply, dead contract until 2.40.0: answering the
         // attach is what lets the parent DISTINGUISH a Live-Mode-capable
@@ -3658,6 +3926,9 @@ function annoBindViewportEvents(win, cb) {
         myAnnotAllowed = true;
         // The room is gone, so its freeze must not outlive it.
         setRemoteFloor(false);
+        // …and neither must its silence: the soundtrack goes back to this
+        // viewer's own switch (2.41.0).
+        releaseHostMusicLocal();
         applyRoomAttachment();
         return;
       }
@@ -3696,6 +3967,22 @@ function annoBindViewportEvents(win, cb) {
           setPulseState(d.ok === true ? "success" : "idle");
           if (d.ok === true) scheduleSyncIdleReset();
         }
+        return;
+      }
+
+      // The room's soundtrack state, forwarded down by the parent (2.41.0).
+      // Structured fields rather than a raw marker: the parent already parsed
+      // and validated, and numbers can't smuggle a URL. The seek math is the
+      // same applyHostMusicLocal every transport uses.
+      if (d.type === "f3d:room-music") {
+        if (!roomAttached) return;
+        // The authority never obeys its own echo — its element IS the truth.
+        if (roomRole === "host") return;
+        applyHostMusicLocal(
+          d.on === true,
+          typeof d.atSec === "number" && isFinite(d.atSec) ? d.atSec : undefined,
+          typeof d.sentAtMs === "number" && isFinite(d.sentAtMs) ? d.sentAtMs : undefined
+        );
         return;
       }
 
@@ -4054,6 +4341,29 @@ function annoBindViewportEvents(win, cb) {
       sendStrokeDelete: relay("strokeDelete"),
       teleportVisitor: view,
       shareLocationWithAgent: view,
+      // The ONE ctl marker that crosses the frame boundary (2.41.0): music.
+      // Parsed here — the format is this file's own constant — and posted as
+      // structured fields, so the parent validates numbers rather than
+      // re-parsing a string. Every other marker family (grants) already
+      // travels via the attach message; refusing them keeps that single path.
+      sendControl: function (text) {
+        var s = String(text || "");
+        if (s === MUSIC_CTL_OFF) {
+          return postToParentRoom("f3d:room-music", { on: false });
+        }
+        if (s.indexOf(MUSIC_CTL_ON_PREFIX) === 0) {
+          var parts = s.slice(MUSIC_CTL_ON_PREFIX.length).split(":");
+          var atSec = parseFloat(parts[0]);
+          var sentAtMs = parseFloat(parts[1]);
+          if (!isFinite(atSec) || atSec < 0) return false;
+          return postToParentRoom("f3d:room-music", {
+            on: true,
+            atSec: atSec,
+            sentAtMs: isFinite(sentAtMs) ? sentAtMs : Date.now(),
+          });
+        }
+        return false;
+      },
       // Standalone-session concerns with no meaning here. The panel that
       // reaches them is hidden while attached; these make a stray call inert
       // rather than a crash.
@@ -4080,6 +4390,9 @@ function annoBindViewportEvents(win, cb) {
   }
 
   var session = COLLAB_ELIGIBLE ? newSession() : soloStubSession();
+  // Soundtrack init AFTER the session exists: the keepalive's authority
+  // predicate reads session.getState() on its first tick.
+  initMusic();
   // 2.31.1 — dedupe key for the teleport/share channels, NOT a timestamp.
   //
   // These were `.ts` alone, and Date.now() has millisecond resolution while
@@ -6907,6 +7220,12 @@ function annoBindViewportEvents(win, cb) {
         // the other half: the buttons behind this panel work again too.
         localPanel.hidden = false;
       }
+      // 2.41.0 — a mic button left over from a standalone session is dead
+      // while attached (the bridge has no local stream), and a dead control
+      // that LOOKS live is the defect class this project keeps paying for.
+      // Detach needs no restore here: the fresh session's own state patches
+      // rebuild the button through refreshMicButton.
+      if (roomAttached && micBtn) micBtn.hidden = true;
       if (COLLAB_ELIGIBLE) {
         // 2.40.0 — an attached destination IS a live collaborative stage, so
         // it gets the same stage treatment a connected session gets: the 16:9
@@ -8605,6 +8924,13 @@ function annoBindViewportEvents(win, cb) {
         } else if (ctl === ANNOT_CTL_ON || ctl === ANNOT_CTL_OFF) {
           myAnnotAllowed = ctl === ANNOT_CTL_ON;
           refreshAnnotAffordance();
+        } else if (ctl === MUSIC_CTL_OFF) {
+          // The host's soundtrack, standalone transport (2.41.0) — the same
+          // grammar the Builder has consumed since 2.23.0.
+          applyHostMusicLocal(false);
+        } else if (ctl === MUSIC_CTL_ON || ctl.indexOf(MUSIC_CTL_ON_PREFIX) === 0) {
+          var mp = ctl === MUSIC_CTL_ON ? [] : ctl.slice(MUSIC_CTL_ON_PREFIX.length).split(":");
+          applyHostMusicLocal(true, parseFloat(mp[0]), parseFloat(mp[1]));
         }
         // Unknown markers are ignored on purpose — a newer host must be able
         // to send one to an already-exported package without breaking it.
@@ -8707,7 +9033,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-08-03";
+    var RUNTIME_RELEASED="2026-08-04";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
