@@ -8,7 +8,7 @@
 <meta property="og:title" content="Opera Gallery New York — Frontiers|3D" />
 <meta property="og:description" content="A premier three-level gallery on Madison Avenue showcasing an exceptional collection of modern and contemporary art. Visitors can explore works by 20th-century masters like Picasso, Chagall, and Botero alongside contemporary pieces by Yayoi Kusama and Mel Bochner. The space features dramatic dark walls that make the vibrant artworks pop and is fully accessible via stairs or elevator. Offering free admission, it is a sophisticated and welcoming destination for art lovers visiting the Upper East Side, conveniently located near Central Park, The Metropolitan Museum of Art, and world-class luxury" />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.39.0" />
+<meta name="f3d-runtime" content="2.40.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -3425,6 +3425,19 @@ function annoBindViewportEvents(win, cb) {
   // every already-exported showcase working untouched.
   var roomAttached = false;
   var roomMaySend = false;
+  // 2.40.0 — Live Mode merge. The attach message now also carries the
+  // participant's role (drives who broadcasts vs who sends to the hub) and
+  // the host-granted annotate permission (the Atlas roster's pencil toggle).
+  var roomRole = "guest";
+  var roomMayAnnotate = false;
+  // The idle real session parked during an attach, so detach can hand the
+  // package back to itself with a working launcher (the audit's dead-button
+  // fix rides this swap: the panel is un-hidden AND the session behind the
+  // Host/Join buttons is real again).
+  var parkedRealSession = null;
+  // Ack bookkeeping for the view-sync pill: "Synced" is only claimed once the
+  // parent SAYS the view entered the room, never on postMessage not throwing.
+  var pendingViewAckTimer = null;
 
   // Location-sync pill refs.
   var syncBtn = document.getElementById("loc-sync");
@@ -3582,16 +3595,101 @@ function annoBindViewportEvents(win, cb) {
       // so this doubles as the permission channel — one message rather than a
       // second one that could arrive out of order with it.
       if (d.type === "f3d:room-attach") {
+        var firstAttach = !roomAttached;
         roomAttached = true;
         roomMaySend = d.maySend === true;
+        roomMayAnnotate = d.mayAnnotate === true;
+        roomRole = d.role === "host" ? "host" : "guest";
+        // Re-posted attaches carry grant changes; only the EDGE swaps the
+        // session. Ineligible devices keep their stub — they follow, and the
+        // pill says so, but no annotation transport exists to bridge.
+        if (firstAttach && COLLAB_ELIGIBLE) {
+          parkedRealSession = session;
+          try {
+            parkedRealSession.dispose();
+          } catch (_e) {}
+          session = makeParentBridgeSession(roomRole);
+          // Fresh transport, fresh dedupe space: the parent's forwarded seqs
+          // share nothing with whatever a previous local session counted.
+          lastPointerSeq = null;
+          lastStrokeSeq = null;
+          lastClearSeq = null;
+          lastNavLockSeq = null;
+          lastStrokeDeleteSeq = null;
+        }
+        // Grants can flip mid-room (the host ticking the roster): the
+        // affordances re-derive from the flags on every attach.
+        myAnnotAllowed = roomMayAnnotate;
         applyRoomAttachment();
+        // The handshake reply, dead contract until 2.40.0: answering the
+        // attach is what lets the parent DISTINGUISH a Live-Mode-capable
+        // destination from an old package that silently ignored everything.
+        // Absence within the timeout means "old showcase" — exactly what the
+        // contract said it would mean.
+        postToParentRoom("f3d:room-ready", {});
         return;
       }
 
       if (d.type === "f3d:room-detach") {
+        var wasAttached = roomAttached;
         roomAttached = false;
         roomMaySend = false;
+        roomMayAnnotate = false;
+        if (wasAttached && COLLAB_ELIGIBLE && parkedRealSession !== null) {
+          // Hand the package back to itself: a REAL idle session behind the
+          // restored launcher, not the bridge whose room just ended.
+          parkedRealSession = null;
+          session = newSession();
+          session.subscribe(onState);
+          lastPointerSeq = null;
+          lastStrokeSeq = null;
+          lastClearSeq = null;
+          lastNavLockSeq = null;
+          lastStrokeDeleteSeq = null;
+        }
+        // Standalone default is permissive annotation (2.26.0) — restore it,
+        // or a guest whose room ended would keep the room's revocation.
+        myAnnotAllowed = true;
+        // The room is gone, so its freeze must not outlive it.
+        setRemoteFloor(false);
         applyRoomAttachment();
+        return;
+      }
+
+      // The group's annotations, forwarded down by the parent. `slot` names
+      // one of the five incoming channels; the payload is injected through
+      // the SAME function onState feeds, so the two transports cannot drift.
+      if (d.type === "f3d:room-annotate" || d.type === "f3d:room-navlock") {
+        if (!roomAttached || !COLLAB_ELIGIBLE) return;
+        var slot = String(d.slot || "");
+        if (
+          slot !== "incomingPointerEvent" &&
+          slot !== "incomingStrokeEvent" &&
+          slot !== "incomingClearEvent" &&
+          slot !== "incomingNavLockEvent" &&
+          slot !== "incomingStrokeDeleteEvent"
+        )
+          return;
+        var ev = d.ev;
+        if (!ev || typeof ev !== "object" || typeof ev.seq !== "number") return;
+        var synth = { role: session.getState().role };
+        synth[slot] = ev;
+        applyIncomingAnnotationSlots(synth);
+        return;
+      }
+
+      // The parent's verdict on a view this side just sent up. Honesty for
+      // the pill: "Synced" only once the room actually took it.
+      if (d.type === "f3d:room-view-ack") {
+        if (!roomAttached) return;
+        if (pendingViewAckTimer) {
+          try {
+            clearTimeout(pendingViewAckTimer);
+          } catch (_e) {}
+          pendingViewAckTimer = null;
+          setPulseState(d.ok === true ? "success" : "idle");
+          if (d.ok === true) scheduleSyncIdleReset();
+        }
         return;
       }
 
@@ -3884,6 +3982,97 @@ function annoBindViewportEvents(win, cb) {
       dispose: function () {},
     };
   }
+  /**
+   * 2.40.0 — the third session variant: a PARENT-ROOM BRIDGE.
+   *
+   * Same interface as the real controller (that is the point — every one of
+   * the glue’s 17 send call-sites, the floor logic, and the freeze watchdogs
+   * work unchanged), but the transport is postMessage to the Atlas parent
+   * instead of a peer connection this package opened for itself. The parent
+   * relays through the ONE Atlas Live Mode session, whose hub enforces the
+   * per-guest annotate grant and reference-counts the freeze — so every
+   * security property of the standalone session is inherited, not rebuilt.
+   *
+   * Inbound events do NOT flow through subscribe(): the parent forwards the
+   * hub’s incoming slots as messages, and the message handler injects them
+   * straight into applyIncomingAnnotationSlots. subscribe() is therefore a
+   * no-op — nothing here notifies — which is also what keeps the standalone
+   * connection UI (status chip, voice panel, PIN) quiet while attached.
+   *
+   * `role` comes from the attach message: the Atlas host drives as "agent"
+   * (broadcasts), guests as "visitor" (send to the hub). getState() reports
+   * connected so the floor and send paths engage.
+   */
+  function makeParentBridgeSession(role) {
+    var st = {
+      role: role === "host" ? "agent" : "visitor",
+      status: "connected",
+      isConnected: true,
+      guests: [],
+      pin: null,
+      remoteStream: null,
+      remoteStreams: {},
+      voiceCallActive: false,
+    };
+    function relay(send) {
+      return function () {
+        var args = [];
+        for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
+        return postToParentRoom("f3d:room-annotate", { send: send, args: args });
+      };
+    }
+    function view(ss, sr) {
+      // The view channel already exists (2.37.0) and already carries the ack;
+      // ride it rather than inventing a second one.
+      return postToParentRoom("f3d:room-view", { ss: String(ss || ""), sr: String(sr || "") });
+    }
+    function no() {
+      return false;
+    }
+    return {
+      getState: function () {
+        return st;
+      },
+      subscribe: function () {
+        return function () {};
+      },
+      noteCurrentView: function () {
+        return true;
+      },
+      sendPointer: relay("pointer"),
+      sendStrokeBegin: relay("strokeBegin"),
+      sendStrokePatch: relay("strokePatch"),
+      sendStrokeCommit: relay("strokeCommit"),
+      sendClear: relay("clear"),
+      sendNavLock: relay("navLock"),
+      sendStrokeDelete: relay("strokeDelete"),
+      teleportVisitor: view,
+      shareLocationWithAgent: view,
+      // Standalone-session concerns with no meaning here. The panel that
+      // reaches them is hidden while attached; these make a stray call inert
+      // rather than a crash.
+      sendRoomEvent: no,
+      sendRoomEventTo: no,
+      sendControlTo: no,
+      setGuestPermission: function () {
+        return [];
+      },
+      startVoice: function () {
+        return Promise.resolve(false);
+      },
+      getLocalStream: function () {
+        return null;
+      },
+      initializeAsAgent: function () {
+        return Promise.reject(new Error("attached"));
+      },
+      joinAsVisitor: function () {
+        return Promise.reject(new Error("attached"));
+      },
+      dispose: function () {},
+    };
+  }
+
   var session = COLLAB_ELIGIBLE ? newSession() : soloStubSession();
   // 2.31.1 — dedupe key for the teleport/share channels, NOT a timestamp.
   //
@@ -5146,7 +5335,7 @@ function annoBindViewportEvents(win, cb) {
       // permissive here, sync is host-granted) — they simply cannot move the
       // group. The hub would drop the packet anyway; skipping it keeps the
       // freeze working for them without a pointless send.
-      if (st.role === "visitor" && mySyncAllowed) {
+      if (st.role === "visitor" && syncAllowedNow()) {
         return session.shareLocationWithAgent(ss, sr) === true;
       }
     } catch (_e) {}
@@ -5925,8 +6114,25 @@ function annoBindViewportEvents(win, cb) {
         // key — do it here, or outbound annotation packets keep carrying the
         // previous view and the receive filter drops them as stale.
         try { session.noteCurrentView(parsed.ss, parsed.sr); } catch (_e) {}
-        setPulseState("success");
-        scheduleSyncIdleReset();
+        // 2.40.0 — "Synced" is EARNED, not assumed. postMessage returning
+        // true proves the message left this frame and nothing more: no
+        // listener, no room, or a dead session all still returned true here,
+        // and the pill went green while nothing moved — the audit's
+        // false-success finding. The parent now answers with
+        // f3d:room-view-ack, and the pill pulses success only on ok:true.
+        // Silence settles back to idle rather than lying in either direction.
+        setPulseState("syncing");
+        if (pendingViewAckTimer) {
+          try {
+            clearTimeout(pendingViewAckTimer);
+          } catch (_e) {}
+        }
+        pendingViewAckTimer = unrefTimer(
+          setTimeout(function () {
+            pendingViewAckTimer = null;
+            setPulseState("idle");
+          }, 2500),
+        );
         return true;
       }
       setPulseState("idle");
@@ -6685,11 +6891,33 @@ function annoBindViewportEvents(win, cb) {
         document.body.classList.toggle("room-attached", roomAttached);
       }
       if (launchBtn) launchBtn.hidden = roomAttached;
+      var localPanel = document.getElementById("lt-panel");
       if (roomAttached) {
-        var localPanel = document.getElementById("lt-panel");
         if (localPanel) localPanel.hidden = true;
+      } else if (localPanel) {
+        // 2.40.0 — the un-hide half of the handoff. Attach hid the panel and
+        // nothing restored it, so the launcher came back as a dead button
+        // ([hidden] beats .open). The session swap in the detach handler is
+        // the other half: the buttons behind this panel work again too.
+        localPanel.hidden = false;
+      }
+      if (COLLAB_ELIGIBLE) {
+        // 2.40.0 — an attached destination IS a live collaborative stage, so
+        // it gets the same stage treatment a connected session gets: the 16:9
+        // letterbox (without it, normalized annotation coordinates land on
+        // different scene content per window shape — the misalignment the
+        // freeze exists to prevent), the nav-lock overlay CSS, and the
+        // annotation-bar toggle. All of that is what setBodyLetterboxClass
+        // already does for the standalone session; reusing it is the point.
+        setBodyLetterboxClass(roomAttached, roomAttached && roomRole === "host");
+      } else if (annotateBtn) {
+        // No annotation transport exists on this device. Solo marks nobody
+        // else can see would read as "I drew and nothing happened" inside a
+        // live room, so the solo affordance steps back until detach.
+        annotateBtn.hidden = roomAttached;
       }
       refreshSyncAffordance();
+      refreshAnnotAffordance();
     } catch (_e) {}
   }
 
@@ -6742,12 +6970,23 @@ function annoBindViewportEvents(win, cb) {
   }
 
   function refreshAnnotAffordance() {
-    if (!annotateBtn) return;
     try {
-      annotateBtn.disabled = !myAnnotAllowed;
-      annotateBtn.title = myAnnotAllowed
+      var reason = myAnnotAllowed
         ? ""
-        : "The host has turned off annotation for you.";
+        : roomAttached
+          ? "The host hasn\u2019t allowed drawing for you yet. Ask them to tick the pencil beside your name."
+          : "The host has turned off annotation for you.";
+      if (annotateBtn) {
+        annotateBtn.disabled = !myAnnotAllowed;
+        annotateBtn.title = reason;
+      }
+      // The bar toggle is the annotation entry point during a session
+      // (attached or standalone) — an ungranted guest is told there, not
+      // left opening a toolbar whose every stroke dies at the hub.
+      if (barToggleBtn) {
+        barToggleBtn.disabled = !myAnnotAllowed;
+        barToggleBtn.title = myAnnotAllowed ? "Show annotation tools" : reason;
+      }
     } catch (_e) {}
   }
 
@@ -8017,6 +8256,123 @@ function annoBindViewportEvents(win, cb) {
     if (changed) hudPublishRoster(true);
   }
 
+  /**
+   * The annotation receive paths — every incoming slot except teleport/share.
+   *
+   * EXTRACTED from onState in 2.40.0 so it has two callers with one body:
+   * onState feeds it real controller patches exactly as before, and the
+   * parent-room message handler feeds it synthetic patches carrying the slots
+   * the Atlas parent forwards down. One body means the freeze watchdogs, seq
+   * dedupe, lazy canvas allocation and eraser semantics cannot fork between
+   * the standalone and attached transports.
+   */
+  function applyIncomingAnnotationSlots(state) {
+    var canReceive = state.role === "agent" || state.role === "visitor";
+    var pev = state.incomingPointerEvent;
+    if (pev && pev.seq !== lastPointerSeq) {
+      lastPointerSeq = pev.seq;
+      if (canReceive && remotePointer && letterboxWrap) {
+        if (pev.x == null || pev.y == null) {
+          remotePointer.style.display = "none";
+          if (remotePointerHideTimer) {
+            try {
+              clearTimeout(remotePointerHideTimer);
+            } catch (_e) {}
+            remotePointerHideTimer = null;
+          }
+        } else {
+          var rect = letterboxWrap.getBoundingClientRect();
+          remotePointer.style.left = pev.x * rect.width + "px";
+          remotePointer.style.top = pev.y * rect.height + "px";
+          remotePointer.style.display = "block";
+          if (remotePointerHideTimer) {
+            try {
+              clearTimeout(remotePointerHideTimer);
+            } catch (_e) {}
+          }
+          remotePointerHideTimer = setTimeout(function () {
+            if (remotePointer) remotePointer.style.display = "none";
+          }, ANNO_REMOTE_POINTER_TIMEOUT_MS);
+        }
+      }
+    }
+
+    var sev = state.incomingStrokeEvent;
+    if (sev && sev.seq !== lastStrokeSeq) {
+      lastStrokeSeq = sev.seq;
+      if (canReceive) {
+        // A remote annotation is the other lazy-allocation trigger.
+        ensureAnnoCanvasAllocated();
+        if (sev.kind === "begin") {
+          var existingBegin = findLocalStroke(sev.strokeId);
+          if (existingBegin) {
+            if (sev.points) existingBegin.points = sev.points.slice();
+            if (typeof sev.color === "string") existingBegin.color = sev.color;
+            if (typeof sev.width === "number") existingBegin.width = sev.width;
+          } else {
+            localStrokes.push({
+              strokeId: sev.strokeId,
+              color: sev.color || ANNO_STROKE_COLOR,
+              width: typeof sev.width === "number" ? sev.width : ANNO_STROKE_WIDTH,
+              points: sev.points ? sev.points.slice() : [],
+            });
+          }
+          redrawAllStrokes();
+        } else if (sev.kind === "patch") {
+          var existing = findLocalStroke(sev.strokeId);
+          if (existing && sev.points) {
+            for (var pi = 0; pi < sev.points.length; pi++) existing.points.push(sev.points[pi]);
+            redrawAllStrokes();
+          }
+        } else if (sev.kind === "commit") {
+          // Commit seals the stroke: mark it erasable. Until now it was an
+          // in-flight remote stroke and the eraser deliberately skipped it.
+          var committedRemote = findLocalStroke(sev.strokeId);
+          if (committedRemote) committedRemote.committed = true;
+        }
+        // Ongoing remote stroke activity refreshes the floor safety timer so
+        // a long remote gesture keeps this side paused until it actually ends.
+        if (sev.kind === "begin" || sev.kind === "patch") refreshRemoteFloor();
+      }
+    }
+
+    var cev = state.incomingClearEvent;
+    if (cev && cev.seq !== lastClearSeq) {
+      lastClearSeq = cev.seq;
+      if (canReceive) {
+        wipeAnnotations();
+        setRemoteFloor(false);
+      }
+    }
+
+    var nlev = state.incomingNavLockEvent;
+    if (nlev && nlev.seq !== lastNavLockSeq) {
+      lastNavLockSeq = nlev.seq;
+      // nav_lock IS the shared annotation floor: freeze this side's Matterport
+      // AND block new local gesture starts for its duration. setRemoteFloor
+      // arms a bounded safety timeout so a crashed peer can't lock us out.
+      if (canReceive) setRemoteFloor(nlev.locked === true);
+    }
+
+    var dev = state.incomingStrokeDeleteEvent;
+    if (dev && dev.seq !== lastStrokeDeleteSeq) {
+      lastStrokeDeleteSeq = dev.seq;
+      // Defense in depth: a delete proves the peer's eraser is mid-gesture, so
+      // re-arm the remote watchdog too (the nav_lock heartbeat is the primary
+      // keepalive; this just hardens the delete-heavy path).
+      if (canReceive) refreshRemoteFloor();
+      // Idempotent erase: drop any matching ids; unknown / already-removed
+      // ids change nothing (no redraw), so duplicate/stale deletes are safe.
+      if (canReceive && dev.strokeIds && dev.strokeIds.length) {
+        var beforeLen = localStrokes.length;
+        localStrokes = localStrokes.filter(function (s) {
+          return dev.strokeIds.indexOf(s.strokeId) < 0;
+        });
+        if (localStrokes.length !== beforeLen) redrawAllStrokes();
+      }
+    }
+  }
+
   function onState(state) {
     if (pinValue && state.pin) pinValue.textContent = state.pin;
 
@@ -8309,111 +8665,7 @@ function annoBindViewportEvents(win, cb) {
       }
     }
 
-    // Annotation receive paths.
-    var canReceive = state.role === "agent" || state.role === "visitor";
-    var pev = state.incomingPointerEvent;
-    if (pev && pev.seq !== lastPointerSeq) {
-      lastPointerSeq = pev.seq;
-      if (canReceive && remotePointer && letterboxWrap) {
-        if (pev.x == null || pev.y == null) {
-          remotePointer.style.display = "none";
-          if (remotePointerHideTimer) {
-            try {
-              clearTimeout(remotePointerHideTimer);
-            } catch (_e) {}
-            remotePointerHideTimer = null;
-          }
-        } else {
-          var rect = letterboxWrap.getBoundingClientRect();
-          remotePointer.style.left = pev.x * rect.width + "px";
-          remotePointer.style.top = pev.y * rect.height + "px";
-          remotePointer.style.display = "block";
-          if (remotePointerHideTimer) {
-            try {
-              clearTimeout(remotePointerHideTimer);
-            } catch (_e) {}
-          }
-          remotePointerHideTimer = setTimeout(function () {
-            if (remotePointer) remotePointer.style.display = "none";
-          }, ANNO_REMOTE_POINTER_TIMEOUT_MS);
-        }
-      }
-    }
-
-    var sev = state.incomingStrokeEvent;
-    if (sev && sev.seq !== lastStrokeSeq) {
-      lastStrokeSeq = sev.seq;
-      if (canReceive) {
-        // A remote annotation is the other lazy-allocation trigger.
-        ensureAnnoCanvasAllocated();
-        if (sev.kind === "begin") {
-          var existingBegin = findLocalStroke(sev.strokeId);
-          if (existingBegin) {
-            if (sev.points) existingBegin.points = sev.points.slice();
-            if (typeof sev.color === "string") existingBegin.color = sev.color;
-            if (typeof sev.width === "number") existingBegin.width = sev.width;
-          } else {
-            localStrokes.push({
-              strokeId: sev.strokeId,
-              color: sev.color || ANNO_STROKE_COLOR,
-              width: typeof sev.width === "number" ? sev.width : ANNO_STROKE_WIDTH,
-              points: sev.points ? sev.points.slice() : [],
-            });
-          }
-          redrawAllStrokes();
-        } else if (sev.kind === "patch") {
-          var existing = findLocalStroke(sev.strokeId);
-          if (existing && sev.points) {
-            for (var pi = 0; pi < sev.points.length; pi++) existing.points.push(sev.points[pi]);
-            redrawAllStrokes();
-          }
-        } else if (sev.kind === "commit") {
-          // Commit seals the stroke: mark it erasable. Until now it was an
-          // in-flight remote stroke and the eraser deliberately skipped it.
-          var committedRemote = findLocalStroke(sev.strokeId);
-          if (committedRemote) committedRemote.committed = true;
-        }
-        // Ongoing remote stroke activity refreshes the floor safety timer so
-        // a long remote gesture keeps this side paused until it actually ends.
-        if (sev.kind === "begin" || sev.kind === "patch") refreshRemoteFloor();
-      }
-    }
-
-    var cev = state.incomingClearEvent;
-    if (cev && cev.seq !== lastClearSeq) {
-      lastClearSeq = cev.seq;
-      if (canReceive) {
-        wipeAnnotations();
-        setRemoteFloor(false);
-      }
-    }
-
-    var nlev = state.incomingNavLockEvent;
-    if (nlev && nlev.seq !== lastNavLockSeq) {
-      lastNavLockSeq = nlev.seq;
-      // nav_lock IS the shared annotation floor: freeze this side's Matterport
-      // AND block new local gesture starts for its duration. setRemoteFloor
-      // arms a bounded safety timeout so a crashed peer can't lock us out.
-      if (canReceive) setRemoteFloor(nlev.locked === true);
-    }
-
-    var dev = state.incomingStrokeDeleteEvent;
-    if (dev && dev.seq !== lastStrokeDeleteSeq) {
-      lastStrokeDeleteSeq = dev.seq;
-      // Defense in depth: a delete proves the peer's eraser is mid-gesture, so
-      // re-arm the remote watchdog too (the nav_lock heartbeat is the primary
-      // keepalive; this just hardens the delete-heavy path).
-      if (canReceive) refreshRemoteFloor();
-      // Idempotent erase: drop any matching ids; unknown / already-removed
-      // ids change nothing (no redraw), so duplicate/stale deletes are safe.
-      if (canReceive && dev.strokeIds && dev.strokeIds.length) {
-        var beforeLen = localStrokes.length;
-        localStrokes = localStrokes.filter(function (s) {
-          return dev.strokeIds.indexOf(s.strokeId) < 0;
-        });
-        if (localStrokes.length !== beforeLen) redrawAllStrokes();
-      }
-    }
+    applyIncomingAnnotationSlots(state);
   }
 
   // Tint the accent-driven affordances created at runtime.
