@@ -8,7 +8,7 @@
 <meta property="og:title" content="Daintree — Frontiers|3D" />
 <meta property="og:description" content="A stylish penthouse lounge and rooftop venue in Midtown Manhattan offering spectacular skyline views. A design-forward destination for cocktails and events, it pairs an elevated indoor lounge with an open-air terrace above the city." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.35.0" />
+<meta name="f3d-runtime" content="2.41.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -368,7 +368,11 @@ body.live-tour-active.live-tour-host #anno-letterbox-wrap.follow-pulse{box-shado
    #lt-panel (2000) and .about-backdrop (2200), so nothing that should
    cover the pill stops doing so. */
 #loc-sync{position:fixed;top:60px;left:12px;z-index:1320;display:none;align-items:center;gap:8px;padding:6px 14px 6px 10px;border-radius:999px;background:rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.18);color:#fff;font:600 12px/1 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);box-shadow:0 6px 20px rgba(0,0,0,0.32);cursor:pointer;user-select:none;max-width:min(280px,calc(100vw - 24px))}
-body.live-tour-active #loc-sync{display:inline-flex}
+/* The pill is the whole gesture for view sync, so it must be present in a
+   parent-owned Atlas room too — there is no local session to set
+   .live-tour-active there, and gating on that class alone left the one
+   control the feature depends on invisible. */
+body.live-tour-active #loc-sync,body.room-attached #loc-sync{display:inline-flex}
 #loc-sync:hover,#loc-sync:focus-visible{background:rgba(0,0,0,0.72)}
 #loc-sync:focus-visible{outline:2px solid var(--lt-accent);outline-offset:2px}
 .loc-sync-dot{position:relative;display:inline-flex;align-items:center;justify-content:center;width:10px;height:10px;border-radius:50%;background:var(--lt-accent);flex-shrink:0;animation:loc-sync-breath 2.2s ease-in-out infinite}
@@ -382,7 +386,7 @@ body.live-tour-active #loc-sync{display:inline-flex}
 #loc-sync[data-state="waiting"]{opacity:0.65}
 #loc-sync[data-state="waiting"] .loc-sync-dot{background:rgba(255,255,255,0.5)}
 #loc-sync-tips{position:fixed;top:96px;left:12px;z-index:1325;display:none;flex-direction:column;width:min(264px,calc(100vw - 24px));padding:10px 14px 12px;border-radius:12px;background:rgba(0,0,0,0.82);border:1px solid rgba(255,255,255,0.16);color:#fff;font:500 12px/1.45 system-ui,-apple-system,sans-serif;-webkit-backdrop-filter:blur(16px) saturate(170%);backdrop-filter:blur(16px) saturate(170%);box-shadow:0 12px 28px rgba(0,0,0,0.42);pointer-events:auto}
-body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
+body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-tips:not([hidden]){display:flex}
 #loc-sync-tips ol{margin:0;padding-left:20px}
 #loc-sync-tips li{margin-bottom:3px;color:rgba(255,255,255,0.94)}
 #loc-sync-tips kbd{display:inline-block;padding:1px 7px;border-radius:4px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.26);font:700 11px/1.4 ui-monospace,Menlo,monospace;color:#fff}
@@ -409,23 +413,38 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 .lt-sync-note-x:hover{background:rgba(255,107,107,0.3)}
 @media(pointer: coarse){.lt-sync-note-btn{min-height:32px}.lt-sync-note-x{width:32px;height:32px}}
 
-/* ── The microphone control (2.35.0) ──────────────────────────────────────
+/* ── The microphone control (2.36.0) ──────────────────────────────────────
    Live Tour is desktop-only and voice is NOT deferred there, so the mic goes
    live the moment a session connects. This is both the mute control and the
    indicator that it is happening — one element, so there is nothing to keep
-   in sync. State is carried by colour AND by which icon is shown, so it does
-   not depend on colour perception alone. The [hidden] rule is explicit for
-   the same reason .f3d-iconbtn needed one in PR #344: an author display rule
-   in an older package would otherwise defeat the attribute. */
+   in sync.
+
+   2.36.0 changes how that state READS (owner-directed). 2.35.0 asked the
+   viewer to decode two similar translucent tints plus a 7px corner dot, and
+   shipped a defect that made even that unreadable: the glue hid the spare
+   glyph with the "hidden" property, which does not exist on SVG elements, so
+   BOTH the mic and the slashed mic rendered at once. The state is now the
+   whole button, at a glance:
+
+     live → solid green fill, white mic outline
+     off  → indistinguishable from every other header button, gray slashed mic
+
+   The off state deliberately sets NO background or border. Inheriting
+   .f3d-iconbtn is what keeps "the same as the other buttons" TRUE — including
+   on hover, and including if the base is ever restyled. The [hidden] rule is
+   explicit for the same reason .f3d-iconbtn needed one in PR #344: an author
+   display rule in an older package would otherwise defeat the attribute. */
 #lt-mic-btn[hidden]{display:none}
+#lt-mic-btn{transition:background .18s,border-color .18s,color .18s}
 #lt-mic-btn:disabled{opacity:.45;cursor:not-allowed}
-/* Live: a green ring plus a steady green dot — "you are being heard". */
-#lt-mic-btn.is-live{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.55);color:#bbf7d0}
-#lt-mic-btn.is-live::after{content:"";position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(10,14,39,.9)}
-#lt-mic-btn.is-muted{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.55);color:#fecaca}
-#lt-mic-btn.is-off{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:rgba(255,255,255,.55)}
-#lt-mic-btn{position:relative}
-@media(prefers-reduced-motion:reduce){#lt-mic-btn.is-live::after{animation:none}}
+/* Live — "you are being heard". Green 600 rather than 500: white on #16a34a
+   is 3.3:1, over the 3:1 WCAG floor for a graphical object; the brighter
+   green misses it. */
+#lt-mic-btn.is-live{background:#16a34a;border-color:#16a34a;color:#fff}
+#lt-mic-btn.is-live:hover{background:#15803d;border-color:#15803d}
+/* Muted, and unavailable, are both simply "not being heard" — same treatment.
+   :disabled dims the unavailable one, and the tooltip says which it is. */
+#lt-mic-btn.is-muted,#lt-mic-btn.is-off{color:#9ca3af}
 
 /* The guest side of the same gap: the refusal is now readable on the pill
    itself, which is the only element on screen for the whole session. */
@@ -433,6 +452,17 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 #loc-sync[data-state="blocked"] .loc-sync-dot{background:#fbbf24;animation:none}
 
 #lt-audio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+/* Ambient-sound toggle (2.41.0) — same base treatment as the mic button, and
+   the same one-glyph-at-a-time discipline. "On" earns the accent instead of
+   the mic's green: sound is presentation state, not presence state, and two
+   controls sharing green would read as one voice feature. */
+#lt-sound-btn{transition:background .18s,border-color .18s,color .18s}
+#lt-sound-btn.is-on{background:var(--lt-accent,#818cf8);border-color:var(--lt-accent,#818cf8);color:#fff}
+#lt-sound-btn.is-off{color:#9ca3af}
+/* The room ordered ON but this browser needs a tap first — pulse politely. */
+#lt-sound-btn.is-blocked{border-color:#fbbf24;color:#fbbf24;animation:ltSoundNudge 1.6s ease-in-out infinite}
+@keyframes ltSoundNudge{0%,100%{opacity:1}50%{opacity:.55}}
 /* f3d:runtime-css END */
 </style>
 <!-- f3d:runtime-dep:peerjs BEGIN v=1 family=atlas -->
@@ -601,7 +631,7 @@ body.live-tour-active #loc-sync-tips:not([hidden]){display:flex}
 </div>
 <audio id="lt-audio" autoplay playsinline></audio>
 <!-- f3d:runtime-markup:panel END -->
-<script>window.__ATLAS_LT_CONFIG={"accent":"#818cf8","matterportBaseUrl":"https://my.matterport.com/show/?m=r9u16YwE3mw\u0026play=1","shareTitle":"Daintree","stops":[]};</script>
+<script>window.__ATLAS_LT_CONFIG={"accent":"#818cf8","matterportBaseUrl":"https://my.matterport.com/show/?m=r9u16YwE3mw\u0026play=1","shareTitle":"Daintree","stops":[],"musicUrl":"https://cdn.pixabay.com/audio/2024/11/22/audio_c2922bad02.mp3"};</script>
 <script>
 (function(){
 // f3d:runtime-js:kernel BEGIN v=1 family=atlas
@@ -1053,16 +1083,44 @@ function createLiveSession(options) {
   // millisecond, so a ts-based dedupe in the embedder would silently swallow
   // the second one. Chat cannot afford that.
   var _roomEvId = 0;
-  // Annotation-floor holder at the hub (multi-guest sessions only —
-  // maxGuests===1 keeps the exact pre-2.12 pass-through semantics).
-  // null | "host" | <guest peerId>. With 3+ parties a single boolean
-  // floor collapses: a release from one actor would unfreeze peers
-  // while ANOTHER actor is mid-gesture. The hub arbitrates instead:
-  // nav_lock(true) from a non-holder while held is dropped;
-  // nav_lock(false) is honored only from the current holder; a
-  // departing holder's slot removal synthesizes the release.
-  var _floorHolder = null;
+  // Who is annotating right now, at the hub (multi-guest sessions only —
+  // maxGuests===1 keeps the exact pre-2.12 pass-through semantics). A SET of
+  // "host" and/or guest peerIds, used as a reference count.
+  //
+  // ── Why a set and not a holder (owner-directed 2026-08-04) ────────────
+  // This was a single holder, and a single holder made the freeze a LOCK:
+  // whoever got there first owned annotation, and everyone else was refused
+  // until they let go. The owner's correction is that those are two different
+  // things — verbatim: "Freezing should not mean that annotations should not
+  // open or work if someone else has the annotation menu open. Freezing should
+  // only mean that the model view should not be movable since this would
+  // appear to shift from where in the view the annotations were drawn."
+  //
+  // So the freeze keeps its ONE job — hold the view still so marks stay where
+  // they were drawn — and stops being a turn-taking token. Any permitted
+  // participant may draw, together or in alternation.
+  //
+  // The reference count is what makes that safe. The original single-holder
+  // comment was right that "a release from one actor would unfreeze peers
+  // while ANOTHER actor is mid-gesture"; it just drew the wrong conclusion.
+  // Counting holders fixes that directly: a release is relayed only when the
+  // LAST annotator lets go, so the room stays frozen for exactly as long as
+  // somebody is still drawing, and no longer.
+  var _floorHolders = Object.create(null);
   var _floorManaged = maxGuests > 1;
+  function _floorCount() {
+    var n = 0;
+    for (var k in _floorHolders) if (_floorHolders[k]) n++;
+    return n;
+  }
+  /** Add/remove an annotator. Returns true when the ROOM's frozen state
+   *  actually flipped — the only moments peers need to hear about. */
+  function _floorSet(id, active) {
+    var before = _floorCount() > 0;
+    if (active) _floorHolders[id] = true;
+    else delete _floorHolders[id];
+    return before !== (_floorCount() > 0);
+  }
 
   // Pointer coalescer. The runtime can call sendPointer many times
   // per frame (mousemove fires at the input device's poll rate); we
@@ -1224,13 +1282,14 @@ function createLiveSession(options) {
     // connected), so a holder left set would silently drop every future
     // guest's nav_lock forever.
     if (_floorManaged && _openGuestIds().length === 0) {
-      _floorHolder = null;
+      _floorHolders = Object.create(null);
     }
-    // A departing floor holder can no longer send its own release —
-    // synthesize it so the remaining parties aren't frozen for the
-    // full client-side safety timeout.
-    if (_floorManaged && _floorHolder === remoteId) {
-      _floorHolder = null;
+    // A departing annotator can no longer send its own release — synthesize it
+    // so the remaining parties aren't frozen for the full client-side safety
+    // timeout. Only when they were the LAST one still drawing: with the floor
+    // reference-counted, someone leaving mid-session must not unfreeze a room
+    // that other people are still annotating in.
+    if (_floorManaged && _floorHolders[remoteId] && _floorSet(remoteId, false)) {
       var releasePacket = {
         type: "nav_lock",
         viewKey: _currentViewKey,
@@ -1958,13 +2017,14 @@ function createLiveSession(options) {
       // tracks the holder: a non-holder's lock while held is dropped,
       // and only the current holder's release is honored/relayed.
       if (_floorManaged && ev.kind === "nav_lock") {
-        if (ev.locked === true) {
-          if (_floorHolder && _floorHolder !== remoteId) return;
-          _floorHolder = remoteId;
-        } else {
-          if (_floorHolder !== remoteId) return;
-          _floorHolder = null;
-        }
+        // Bookkeeping ALWAYS runs; only the relay is conditional. A lock from a
+        // second annotator is no longer dropped — that drop is what made the
+        // freeze a turn-taking lock — but a release is passed on only when it
+        // empties the room, so nobody is unfrozen out from under someone still
+        // drawing. A repeated true (the keepalive heartbeat) still relays, so
+        // receivers keep refreshing their safety watchdog.
+        var flipped = _floorSet(remoteId, ev.locked === true);
+        if (ev.locked !== true && !flipped) return;
       }
       // Track the slot's in-flight stroke so a mid-gesture Annotation
       // revoke can synthesize the seal (see setGuestPermission).
@@ -2471,8 +2531,7 @@ function createLiveSession(options) {
         }
       }
     }
-    if (_floorManaged && _floorHolder === remoteId) {
-      _floorHolder = null;
+    if (_floorManaged && _floorHolders[remoteId] && _floorSet(remoteId, false)) {
       var releaseEv = {
         kind: "nav_lock",
         viewKey: _currentViewKey,
@@ -2679,13 +2738,11 @@ function createLiveSession(options) {
     // this); a host release must never clear a GUEST's active hold on
     // the other receivers.
     if (_floorManaged && state.role === "agent") {
-      if (locked === true) {
-        if (_floorHolder && _floorHolder !== "host") return false;
-        _floorHolder = "host";
-      } else {
-        if (_floorHolder && _floorHolder !== "host") return false;
-        if (_floorHolder === "host") _floorHolder = null;
-      }
+      // Same rule as the guest path: the host may always join an in-progress
+      // annotation, and the host letting go only unfreezes the room if nobody
+      // else is still drawing.
+      var hostFlipped = _floorSet("host", locked === true);
+      if (locked !== true && !hostFlipped) return false;
     }
     var seq = ++_sendSeq;
     var packet = {
@@ -2810,7 +2867,7 @@ function createLiveSession(options) {
     _ingestSeq = 0;
     _teleportEvId = 0;
     _roomEvId = 0;
-    _floorHolder = null;
+    _floorHolders = Object.create(null);
     _currentViewKey = "";
     _pendingPointer = null;
     _flushScheduled = false;
@@ -3222,7 +3279,24 @@ function annoBindViewportEvents(win, cb) {
   // run — fail fully closed: also remove the annotation surfaces + Annotate button
   // and bail.
   if (!COLLAB_ELIGIBLE) {
-    var collabIds = ["lt-launch-btn", "lt-panel", "lt-navlock", "loc-sync", "loc-sync-tips", "lt-audio"];
+    // 2.38.0 — `loc-sync` / `loc-sync-tips` are NO LONGER removed here.
+    //
+    // This list predates parent-owned rooms, when the only way to sync a view
+    // was a session THIS package opened for itself — so on a device that cannot
+    // run one, the pill was dead weight and deleting it was right. An Atlas
+    // Live Room changed that: the parent owns the session, has no device gate
+    // of its own, and happily admits a phone. Deleting the pill at init meant
+    // f3d:room-attach later arrived at a document with nothing left to reveal,
+    // so those participants could receive a teleport but had no feedback, no
+    // "press U, then Copy" instructions, and no way to tell whether anything
+    // was working.
+    //
+    // Keeping the elements changes NOTHING for a standalone showcase: `#loc-sync`
+    // is `display:none` until `body.live-tour-active` or `body.room-attached`,
+    // and neither can be set here — the launcher and panel are still removed
+    // below, so no local session can start. It only means an attached room has
+    // something to show.
+    var collabIds = ["lt-launch-btn", "lt-panel", "lt-navlock", "lt-audio"];
     if (!KERNEL_OK) {
       collabIds = collabIds.concat(["lt-annotate-btn", "anno-toolbar", "anno-canvas", "remote-pointer"]);
     }
@@ -3262,6 +3336,12 @@ function annoBindViewportEvents(win, cb) {
   var MP_BASE = typeof CONFIG.matterportBaseUrl === "string" ? CONFIG.matterportBaseUrl : "";
   var SHARE_TITLE = typeof CONFIG.shareTitle === "string" ? CONFIG.shareTitle : "Frontiers3D Showcase";
   var STOPS = Array.isArray(CONFIG.stops) ? CONFIG.stops : [];
+  // Ambient soundtrack (2.41.0) — admin-configured per curated showcase.
+  // https-only at every layer, restated here because this string becomes an
+  // <audio src> and the config object is embedder-controlled: a package is
+  // FROZEN at export, so this guard has to live in the package itself.
+  var MUSIC_URL = typeof CONFIG.musicUrl === "string" ? CONFIG.musicUrl.trim() : "";
+  if (MUSIC_URL.slice(0, 8).toLowerCase() !== "https://") MUSIC_URL = "";
 
   // ── Platform + assembly gates (early: the session factory below needs
   //    them; anno-input.mjs function declarations are hoisted across the
@@ -3336,6 +3416,15 @@ function annoBindViewportEvents(win, cb) {
   var GUEST_SYNC_CTL_OFF = "f3dctl:guestSync:0";
   var ANNOT_CTL_ON = "f3dctl:annot:1";
   var ANNOT_CTL_OFF = "f3dctl:annot:0";
+  // The host owns the soundtrack (2.41.0) — the SAME grammar the Builder
+  // runtime has spoken since 2.23.0, adopted verbatim so the marker stays one
+  // protocol across both families. The ON form carries the host's playback
+  // position and send time, so a guest lines up with the host instead of
+  // resuming wherever its own copy was paused.
+  // f3dctl:music:1:<positionSec>:<sentAtMs>  |  f3dctl:music:0
+  var MUSIC_CTL_ON = "f3dctl:music:1";
+  var MUSIC_CTL_OFF = "f3dctl:music:0";
+  var MUSIC_CTL_ON_PREFIX = "f3dctl:music:1:";
   // A guest's OWN view of what it may do. Both start true because this runtime
   // joins guests permissively (see newSession) — the host's roster revokes,
   // it does not hand out. The hub enforces the real answer regardless; these
@@ -3343,6 +3432,38 @@ function annoBindViewportEvents(win, cb) {
   // than left clicking a control whose packets are being dropped.
   var mySyncAllowed = true;
   var myAnnotAllowed = true;
+
+  // ── Parent-room attach (an Atlas Live Room owns this group) ──────────
+  // When this package is embedded in Atlas and the visitor is already in a
+  // Live Room, that room — not this runtime — is the session. The parent says
+  // so with f3d:room-attach, and from that moment view sync travels UP through
+  // postMessage instead of over a peer connection this package would otherwise
+  // have had to open for itself.
+  //
+  // Why not simply have every guest join this package's own Explore Together?
+  // Because that is two rooms: two rosters that can disagree, two voice
+  // channels, two microphones, and TWO Sync View grants for one intent. The
+  // whole reason the Atlas room exists in the parent is that it is the only
+  // place a Passport — and therefore a real name and picture — is reachable.
+  //
+  // Both default false, and the attach is additive: a package that never
+  // receives the message behaves exactly as it always has, which is what keeps
+  // every already-exported showcase working untouched.
+  var roomAttached = false;
+  var roomMaySend = false;
+  // 2.40.0 — Live Mode merge. The attach message now also carries the
+  // participant's role (drives who broadcasts vs who sends to the hub) and
+  // the host-granted annotate permission (the Atlas roster's pencil toggle).
+  var roomRole = "guest";
+  var roomMayAnnotate = false;
+  // The idle real session parked during an attach, so detach can hand the
+  // package back to itself with a working launcher (the audit's dead-button
+  // fix rides this swap: the panel is un-hidden AND the session behind the
+  // Host/Join buttons is real again).
+  var parkedRealSession = null;
+  // Ack bookkeeping for the view-sync pill: "Synced" is only claimed once the
+  // parent SAYS the view entered the room, never on postMessage not throwing.
+  var pendingViewAckTimer = null;
 
   // Location-sync pill refs.
   var syncBtn = document.getElementById("loc-sync");
@@ -3439,18 +3560,442 @@ function annoBindViewportEvents(win, cb) {
     } catch (_e) {}
   }
 
+  /** Matterport’s own position token: digits only, exactly as the tour URL
+   *  writes it. Anything else is not a view and must never reach a URL. */
+  function sanitizeViewSs(v) {
+    var s = typeof v === "string" ? v.trim() : "";
+    return /^\d+$/.test(s) ? s : null;
+  }
+
+  /** The rotation pair, optional. Same grammar the clipboard parser accepts,
+   *  restated here because this value arrives from another frame. */
+  function sanitizeViewSr(v) {
+    var s = typeof v === "string" ? v.trim() : "";
+    if (!s) return "";
+    return /^-?\d*\.?\d+,-?\d*\.?\d+$/.test(s) ? s : "";
+  }
+
+  function postToParentRoom(type, payload) {
+    try {
+      if (typeof window === "undefined") return false;
+      if (!window.parent || window.parent === window) return false;
+      var msg = { type: type, v: 1 };
+      if (payload) {
+        for (var k in payload) {
+          if (Object.prototype.hasOwnProperty.call(payload, k)) msg[k] = payload[k];
+        }
+      }
+      window.parent.postMessage(msg, "*");
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  // ── Ambient soundtrack (2.41.0) — synced, host-authoritative ─────────
+  //
+  // The Builder runtime solved this in 2.23.0: every participant plays its
+  // OWN copy of the same file, and the host's position rides the ctl channel
+  // so the copies agree — nothing streams, everything seeks. This is that
+  // mechanism, adopted for the Atlas family, with one addition the Builder
+  // never needed: while a Live Mode room is attached, the marker crosses the
+  // frame boundary through the parent (f3d:room-music both ways) because the
+  // package's own peer session is parked.
+  //
+  // Two switches AND together into "audible":
+  //   soundEnabled     — THIS viewer's choice, OFF until their first tap.
+  //                      Browsers refuse un-gestured audio, so the tap is not
+  //                      just consent — it is the gesture that makes play()
+  //                      legal at all.
+  //   hostMusicAllowed — the room's choice, host-authoritative. Guests start
+  //                      true standalone (no host yet) and are silenced on
+  //                      attach until the host's state arrives.
+  var bgAudio = null;
+  var soundBtn = null;
+  var soundIconOn = null;
+  var soundIconOff = null;
+  var soundEnabled = false;
+  var hostMusicAllowed = true;
+  // An ON order arrived without a local gesture and play() was refused —
+  // surface it on the button instead of failing into silence.
+  var musicBlocked = false;
+  var musicKeepaliveTimer = null;
+  var MUSIC_KEEPALIVE_MS = 5000;
+  var MUSIC_DRIFT_TOLERANCE_SEC = 1.5;
+
+  function ensureBgAudio() {
+    if (!MUSIC_URL) return null;
+    if (bgAudio) return bgAudio;
+    try {
+      // Same element id the Builder exports use (#bg-audio), so any code —
+      // ours or a future span — that reaches for "the presentation's ambient
+      // audio, not the voice sink" finds it under one name in both families.
+      bgAudio = document.createElement("audio");
+      bgAudio.id = "bg-audio";
+      bgAudio.loop = true;
+      bgAudio.preload = "auto";
+      bgAudio.volume = 0.4;
+      bgAudio.src = MUSIC_URL;
+      bgAudio.style.display = "none";
+      (document.body || document.documentElement).appendChild(bgAudio);
+    } catch (_e) {
+      bgAudio = null;
+    }
+    return bgAudio;
+  }
+
+  function musicPlayable() {
+    return !!MUSIC_URL && soundEnabled && hostMusicAllowed;
+  }
+
+  function applyMusicState() {
+    var el = ensureBgAudio();
+    if (!el) return;
+    try {
+      if (musicPlayable()) {
+        var pp = el.play();
+        if (pp && typeof pp.catch === "function") {
+          pp.then(
+            function () {
+              if (musicBlocked) {
+                musicBlocked = false;
+                refreshSoundButton();
+              }
+            },
+            function () {
+              musicBlocked = true;
+              refreshSoundButton();
+            }
+          );
+        }
+      } else {
+        el.pause();
+      }
+    } catch (_e) {}
+    refreshSoundButton();
+  }
+
+  // Hooks named for parity with the Builder exports, so a bundle grep or a
+  // future shared span meets one vocabulary in both families.
+  window.__musicIsOn = function () {
+    return !!(MUSIC_URL && soundEnabled && bgAudio && !bgAudio.paused);
+  };
+  window.__musicPositionSec = function () {
+    try {
+      return bgAudio && typeof bgAudio.currentTime === "number" ? bgAudio.currentTime : 0;
+    } catch (_e) {
+      return 0;
+    }
+  };
+
+  // The host said play-from-here / stop. Seek math is the Builder's own:
+  // compensate the marker's transit time, wrap on duration, and only seek on
+  // a real divergence — re-seeking on every keepalive would stutter.
+  function applyHostMusicLocal(on, atSec, sentAtMs) {
+    hostMusicAllowed = on === true;
+    var el = ensureBgAudio();
+    if (el && hostMusicAllowed && typeof atSec === "number" && isFinite(atSec)) {
+      try {
+        var elapsed =
+          typeof sentAtMs === "number" && isFinite(sentAtMs)
+            ? Math.max(0, (Date.now() - sentAtMs) / 1000)
+            : 0;
+        var target = atSec + elapsed;
+        var dur = el.duration;
+        if (typeof dur === "number" && isFinite(dur) && dur > 0) target = target % dur;
+        if (Math.abs((el.currentTime || 0) - target) > MUSIC_DRIFT_TOLERANCE_SEC) {
+          el.currentTime = target;
+        }
+      } catch (_e) {}
+    }
+    applyMusicState();
+  }
+  window.__applyHostMusic = applyHostMusicLocal;
+
+  function releaseHostMusicLocal() {
+    hostMusicAllowed = true;
+    applyMusicState();
+  }
+  window.__releaseHostMusic = releaseHostMusicLocal;
+
+  // Is THIS participant the music authority right now? Standalone that is the
+  // connected agent; attached it is the room host — and the bridge session
+  // reports exactly those as role "agent" + connected, so one predicate
+  // covers both transports.
+  function isMusicAuthority() {
+    try {
+      var s = session.getState();
+      return s.role === "agent" && s.isConnected === true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function broadcastMusicState() {
+    if (!MUSIC_URL) return;
+    if (!isMusicAuthority()) return;
+    try {
+      if (typeof session.sendControl !== "function") return;
+      var on = window.__musicIsOn();
+      session.sendControl(
+        on ? MUSIC_CTL_ON_PREFIX + window.__musicPositionSec() + ":" + Date.now() : MUSIC_CTL_OFF
+      );
+    } catch (_e) {}
+  }
+
+  function toggleSound() {
+    // A blocked play (ON ordered, no gesture yet) makes THIS tap the gesture:
+    // resume rather than flipping the switch off underneath the room.
+    if (musicBlocked && musicPlayable()) {
+      musicBlocked = false;
+      applyMusicState();
+      return;
+    }
+    soundEnabled = !soundEnabled;
+    musicBlocked = false;
+    applyMusicState();
+    broadcastMusicState();
+  }
+
+  function refreshSoundButton() {
+    if (!soundBtn) return;
+    try {
+      var on = musicPlayable() && !musicBlocked;
+      soundBtn.classList.toggle("is-on", on);
+      soundBtn.classList.toggle("is-blocked", musicBlocked && musicPlayable());
+      soundBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      soundBtn.title =
+        musicBlocked && musicPlayable()
+          ? "Tap to hear sound in this space"
+          : on
+            ? "Turn ambient sound off"
+            : "Turn ambient sound on";
+      if (soundIconOn) soundIconOn.style.display = on ? "" : "none";
+      if (soundIconOff) soundIconOff.style.display = on ? "none" : "";
+    } catch (_e) {}
+  }
+
+  function ensureSoundButton() {
+    if (soundBtn || !MUSIC_URL) return soundBtn;
+    try {
+      var actions = document.querySelector(".f3d-actions");
+      if (!actions) return null;
+      soundBtn = document.createElement("button");
+      soundBtn.type = "button";
+      soundBtn.id = "lt-sound-btn";
+      soundBtn.className = "f3d-iconbtn lt-sound";
+      soundBtn.setAttribute("aria-label", "Toggle ambient sound");
+      soundBtn.setAttribute("aria-pressed", "false");
+      soundIconOn = buildSvgIcon([
+        "M11 5 6 9H2v6h4l5 4z",
+        "M15.54 8.46a5 5 0 0 1 0 7.07",
+        "M19.07 4.93a10 10 0 0 1 0 14.14",
+      ]);
+      soundIconOn.setAttribute("class", "lt-sound-ico lt-sound-ico-on");
+      soundIconOn.style.display = "none";
+      soundIconOff = buildSvgIcon(["M11 5 6 9H2v6h4l5 4z", "M22 9l-6 6", "M16 9l6 6"]);
+      soundIconOff.setAttribute("class", "lt-sound-ico lt-sound-ico-off");
+      soundBtn.appendChild(soundIconOn);
+      soundBtn.appendChild(soundIconOff);
+      soundBtn.addEventListener("click", toggleSound);
+      actions.insertBefore(soundBtn, actions.firstChild);
+      refreshSoundButton();
+    } catch (_e) {
+      soundBtn = null;
+      soundIconOn = null;
+      soundIconOff = null;
+    }
+    return soundBtn;
+  }
+
+  function initMusic() {
+    if (!MUSIC_URL) return;
+    ensureSoundButton();
+    // ONE keepalive covers tour start, late joiners and drift on both
+    // transports: while this participant is the authority, the current state
+    // — ON with position, or OFF — re-asserts every few seconds. The Builder
+    // relies on event-driven re-asserts (toggle / tour start / roster change)
+    // because its host SEES roster changes; an attached Atlas host does not
+    // (the bridge session never notifies), so the clock does the covering.
+    if (musicKeepaliveTimer === null) {
+      musicKeepaliveTimer = setInterval(function () {
+        broadcastMusicState();
+      }, MUSIC_KEEPALIVE_MS);
+    }
+  }
+
   try {
     window.addEventListener("message", function (e) {
       var d = e && e.data;
-      if (!d || d.type !== "f3d:room-identity") return;
+      if (!d || typeof d.type !== "string") return;
       // Only accept from the actual parent frame.
       if (e.source !== window.parent) return;
-      selfName = sanitizeIdentityName(d.name);
-      selfAvatarUrl = sanitizeIdentityAvatar(d.avatarUrl);
-      // A host already in a session republishes so its own row updates.
-      try {
-        renderGuestRoster(session.getState().guests);
-      } catch (_e) {}
+      // …and only a version this package actually speaks. Dispatching on `type`
+      // alone would let a future v2 payload be applied with v1 semantics, which
+      // is precisely what the version field exists to prevent — and this
+      // package is FROZEN at export, so it will still be running years after
+      // the parent has moved on. Refusing is the safe half of that asymmetry:
+      // an unrecognized version is silently ignored, exactly as an unrecognized
+      // type already is, and the tour keeps working.
+      if (d.v !== 1) return;
+
+      if (d.type === "f3d:room-identity") {
+        selfName = sanitizeIdentityName(d.name);
+        selfAvatarUrl = sanitizeIdentityAvatar(d.avatarUrl);
+        // A host already in a session republishes so its own row updates.
+        try {
+          renderGuestRoster(session.getState().guests);
+        } catch (_e) {}
+        return;
+      }
+
+      // The parent room takes ownership. Re-sent whenever the grant changes,
+      // so this doubles as the permission channel — one message rather than a
+      // second one that could arrive out of order with it.
+      if (d.type === "f3d:room-attach") {
+        var firstAttach = !roomAttached;
+        roomAttached = true;
+        roomMaySend = d.maySend === true;
+        roomMayAnnotate = d.mayAnnotate === true;
+        roomRole = d.role === "host" ? "host" : "guest";
+        // Re-posted attaches carry grant changes; only the EDGE swaps the
+        // session. Ineligible devices keep their stub — they follow, and the
+        // pill says so, but no annotation transport exists to bridge.
+        if (firstAttach && COLLAB_ELIGIBLE) {
+          parkedRealSession = session;
+          try {
+            parkedRealSession.dispose();
+          } catch (_e) {}
+          session = makeParentBridgeSession(roomRole);
+          // Fresh transport, fresh dedupe space: the parent's forwarded seqs
+          // share nothing with whatever a previous local session counted.
+          lastPointerSeq = null;
+          lastStrokeSeq = null;
+          lastClearSeq = null;
+          lastNavLockSeq = null;
+          lastStrokeDeleteSeq = null;
+        }
+        // Grants can flip mid-room (the host ticking the roster): the
+        // affordances re-derive from the flags on every attach.
+        myAnnotAllowed = roomMayAnnotate;
+        // Soundtrack handoff (2.41.0): a guest is silenced until the room's
+        // state arrives — its own copy resuming mid-attach would play out of
+        // sync with everyone. The host broadcasts immediately so a
+        // destination change re-establishes the room's state without waiting
+        // a keepalive period.
+        if (roomRole === "host") {
+          broadcastMusicState();
+        } else if (firstAttach) {
+          applyHostMusicLocal(false);
+        }
+        applyRoomAttachment();
+        // The handshake reply, dead contract until 2.40.0: answering the
+        // attach is what lets the parent DISTINGUISH a Live-Mode-capable
+        // destination from an old package that silently ignored everything.
+        // Absence within the timeout means "old showcase" — exactly what the
+        // contract said it would mean.
+        postToParentRoom("f3d:room-ready", {});
+        return;
+      }
+
+      if (d.type === "f3d:room-detach") {
+        var wasAttached = roomAttached;
+        roomAttached = false;
+        roomMaySend = false;
+        roomMayAnnotate = false;
+        if (wasAttached && COLLAB_ELIGIBLE && parkedRealSession !== null) {
+          // Hand the package back to itself: a REAL idle session behind the
+          // restored launcher, not the bridge whose room just ended.
+          parkedRealSession = null;
+          session = newSession();
+          session.subscribe(onState);
+          lastPointerSeq = null;
+          lastStrokeSeq = null;
+          lastClearSeq = null;
+          lastNavLockSeq = null;
+          lastStrokeDeleteSeq = null;
+        }
+        // Standalone default is permissive annotation (2.26.0) — restore it,
+        // or a guest whose room ended would keep the room's revocation.
+        myAnnotAllowed = true;
+        // The room is gone, so its freeze must not outlive it.
+        setRemoteFloor(false);
+        // …and neither must its silence: the soundtrack goes back to this
+        // viewer's own switch (2.41.0).
+        releaseHostMusicLocal();
+        applyRoomAttachment();
+        return;
+      }
+
+      // The group's annotations, forwarded down by the parent. `slot` names
+      // one of the five incoming channels; the payload is injected through
+      // the SAME function onState feeds, so the two transports cannot drift.
+      if (d.type === "f3d:room-annotate" || d.type === "f3d:room-navlock") {
+        if (!roomAttached || !COLLAB_ELIGIBLE) return;
+        var slot = String(d.slot || "");
+        if (
+          slot !== "incomingPointerEvent" &&
+          slot !== "incomingStrokeEvent" &&
+          slot !== "incomingClearEvent" &&
+          slot !== "incomingNavLockEvent" &&
+          slot !== "incomingStrokeDeleteEvent"
+        )
+          return;
+        var ev = d.ev;
+        if (!ev || typeof ev !== "object" || typeof ev.seq !== "number") return;
+        var synth = { role: session.getState().role };
+        synth[slot] = ev;
+        applyIncomingAnnotationSlots(synth);
+        return;
+      }
+
+      // The parent's verdict on a view this side just sent up. Honesty for
+      // the pill: "Synced" only once the room actually took it.
+      if (d.type === "f3d:room-view-ack") {
+        if (!roomAttached) return;
+        if (pendingViewAckTimer) {
+          try {
+            clearTimeout(pendingViewAckTimer);
+          } catch (_e) {}
+          pendingViewAckTimer = null;
+          setPulseState(d.ok === true ? "success" : "idle");
+          if (d.ok === true) scheduleSyncIdleReset();
+        }
+        return;
+      }
+
+      // The room's soundtrack state, forwarded down by the parent (2.41.0).
+      // Structured fields rather than a raw marker: the parent already parsed
+      // and validated, and numbers can't smuggle a URL. The seek math is the
+      // same applyHostMusicLocal every transport uses.
+      if (d.type === "f3d:room-music") {
+        if (!roomAttached) return;
+        // The authority never obeys its own echo — its element IS the truth.
+        if (roomRole === "host") return;
+        applyHostMusicLocal(
+          d.on === true,
+          typeof d.atSec === "number" && isFinite(d.atSec) ? d.atSec : undefined,
+          typeof d.sentAtMs === "number" && isFinite(d.sentAtMs) ? d.sentAtMs : undefined
+        );
+        return;
+      }
+
+      // The group moved. Sanitized before it can reach a URL: `ss` is
+      // digits-only and `sr` is a numeric pair, so a malformed or hostile
+      // message cannot inject anything into the Matterport src.
+      if (d.type === "f3d:room-teleport") {
+        if (!roomAttached) return;
+        var ss = sanitizeViewSs(d.ss);
+        if (!ss) return;
+        var sr = sanitizeViewSr(d.sr);
+        applyTeleport(ss, sr);
+        // Same provenance record the peer path keeps: stops the ambient
+        // clipboard poll re-broadcasting the view we were just moved to,
+        // without blocking a deliberate re-share of it later.
+        lastAppliedRemoteKey = ss + "|" + sr;
+        lastAppliedRemoteTs = Date.now();
+        return;
+      }
     });
     // Ask, rather than only waiting to be told: the parent may have posted
     // before this listener existed, and a fire-and-forget push cannot recover
@@ -3724,7 +4269,124 @@ function annoBindViewportEvents(win, cb) {
       dispose: function () {},
     };
   }
+  /**
+   * 2.40.0 — the third session variant: a PARENT-ROOM BRIDGE.
+   *
+   * Same interface as the real controller (that is the point — every one of
+   * the glue’s 17 send call-sites, the floor logic, and the freeze watchdogs
+   * work unchanged), but the transport is postMessage to the Atlas parent
+   * instead of a peer connection this package opened for itself. The parent
+   * relays through the ONE Atlas Live Mode session, whose hub enforces the
+   * per-guest annotate grant and reference-counts the freeze — so every
+   * security property of the standalone session is inherited, not rebuilt.
+   *
+   * Inbound events do NOT flow through subscribe(): the parent forwards the
+   * hub’s incoming slots as messages, and the message handler injects them
+   * straight into applyIncomingAnnotationSlots. subscribe() is therefore a
+   * no-op — nothing here notifies — which is also what keeps the standalone
+   * connection UI (status chip, voice panel, PIN) quiet while attached.
+   *
+   * `role` comes from the attach message: the Atlas host drives as "agent"
+   * (broadcasts), guests as "visitor" (send to the hub). getState() reports
+   * connected so the floor and send paths engage.
+   */
+  function makeParentBridgeSession(role) {
+    var st = {
+      role: role === "host" ? "agent" : "visitor",
+      status: "connected",
+      isConnected: true,
+      guests: [],
+      pin: null,
+      remoteStream: null,
+      remoteStreams: {},
+      voiceCallActive: false,
+    };
+    function relay(send) {
+      return function () {
+        var args = [];
+        for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
+        return postToParentRoom("f3d:room-annotate", { send: send, args: args });
+      };
+    }
+    function view(ss, sr) {
+      // The view channel already exists (2.37.0) and already carries the ack;
+      // ride it rather than inventing a second one.
+      return postToParentRoom("f3d:room-view", { ss: String(ss || ""), sr: String(sr || "") });
+    }
+    function no() {
+      return false;
+    }
+    return {
+      getState: function () {
+        return st;
+      },
+      subscribe: function () {
+        return function () {};
+      },
+      noteCurrentView: function () {
+        return true;
+      },
+      sendPointer: relay("pointer"),
+      sendStrokeBegin: relay("strokeBegin"),
+      sendStrokePatch: relay("strokePatch"),
+      sendStrokeCommit: relay("strokeCommit"),
+      sendClear: relay("clear"),
+      sendNavLock: relay("navLock"),
+      sendStrokeDelete: relay("strokeDelete"),
+      teleportVisitor: view,
+      shareLocationWithAgent: view,
+      // The ONE ctl marker that crosses the frame boundary (2.41.0): music.
+      // Parsed here — the format is this file's own constant — and posted as
+      // structured fields, so the parent validates numbers rather than
+      // re-parsing a string. Every other marker family (grants) already
+      // travels via the attach message; refusing them keeps that single path.
+      sendControl: function (text) {
+        var s = String(text || "");
+        if (s === MUSIC_CTL_OFF) {
+          return postToParentRoom("f3d:room-music", { on: false });
+        }
+        if (s.indexOf(MUSIC_CTL_ON_PREFIX) === 0) {
+          var parts = s.slice(MUSIC_CTL_ON_PREFIX.length).split(":");
+          var atSec = parseFloat(parts[0]);
+          var sentAtMs = parseFloat(parts[1]);
+          if (!isFinite(atSec) || atSec < 0) return false;
+          return postToParentRoom("f3d:room-music", {
+            on: true,
+            atSec: atSec,
+            sentAtMs: isFinite(sentAtMs) ? sentAtMs : Date.now(),
+          });
+        }
+        return false;
+      },
+      // Standalone-session concerns with no meaning here. The panel that
+      // reaches them is hidden while attached; these make a stray call inert
+      // rather than a crash.
+      sendRoomEvent: no,
+      sendRoomEventTo: no,
+      sendControlTo: no,
+      setGuestPermission: function () {
+        return [];
+      },
+      startVoice: function () {
+        return Promise.resolve(false);
+      },
+      getLocalStream: function () {
+        return null;
+      },
+      initializeAsAgent: function () {
+        return Promise.reject(new Error("attached"));
+      },
+      joinAsVisitor: function () {
+        return Promise.reject(new Error("attached"));
+      },
+      dispose: function () {},
+    };
+  }
+
   var session = COLLAB_ELIGIBLE ? newSession() : soloStubSession();
+  // Soundtrack init AFTER the session exists: the keepalive's authority
+  // predicate reads session.getState() on its first tick.
+  initMusic();
   // 2.31.1 — dedupe key for the teleport/share channels, NOT a timestamp.
   //
   // These were `.ts` alone, and Date.now() has millisecond resolution while
@@ -4459,7 +5121,6 @@ function annoBindViewportEvents(win, cb) {
   }
 
   function acquireLocalFloor() {
-    if (remoteGestureActive) return false;
     if (!localFloorHeld) {
       localFloorHeld = true;
       lastFloorHeartbeatTs = Date.now(); // the initial lock is the first beat
@@ -4469,7 +5130,14 @@ function annoBindViewportEvents(win, cb) {
         // branch runs once per turn, not once per stroke). Reversing them would
         // freeze the room at whatever each participant was looking at and then
         // move it, which is the misalignment the freeze exists to prevent.
-        pushMyViewToRoom();
+        //
+        // 2.39.0 — but ONLY when nobody is already annotating. Joining someone
+        // else's in-progress annotation must not drag the room to MY view: the
+        // room is already frozen on a shared one, and moving it now would
+        // scatter the marks they are in the middle of drawing. That is the
+        // exact misalignment this sync exists to prevent, so the second
+        // annotator inherits the view instead of imposing one.
+        if (!remoteGestureActive) pushMyViewToRoom();
         session.sendNavLock(currentViewKey, true);
       }
     }
@@ -4726,13 +5394,23 @@ function annoBindViewportEvents(win, cb) {
     micBtn.hidden = !live;
     if (!live) return;
     var usable = micUsable();
+    var isLive = usable && !micMuted;
     micBtn.disabled = !usable;
     micBtn.setAttribute("aria-pressed", usable && micMuted ? "true" : "false");
-    micBtn.classList.toggle("is-live", usable && !micMuted);
+    micBtn.classList.toggle("is-live", isLive);
     micBtn.classList.toggle("is-muted", usable && micMuted);
     micBtn.classList.toggle("is-off", !usable);
-    if (micIconOn) micIconOn.hidden = !(usable && !micMuted);
-    if (micIconOff) micIconOff.hidden = usable && !micMuted;
+    // display, NOT the `hidden` property. `hidden` is an HTMLElement IDL
+    // attribute; SVGElement does not have it, so `svg.hidden = true` wrote a
+    // plain JS expando and set no attribute at all — and the attribute would
+    // not have helped either, because the UA stylesheet's [hidden] rule is
+    // namespaced to HTML and never matches an SVG element. Both glyphs
+    // therefore rendered side by side for the whole of 2.35.0, which is the
+    // "ambiguous icon" the owner reported. Verified in Chromium: setting the
+    // property leaves hasAttribute("hidden") false, and even setAttribute
+    // leaves computed display at "inline".
+    if (micIconOn) micIconOn.style.display = isLive ? "" : "none";
+    if (micIconOff) micIconOff.style.display = isLive ? "none" : "";
     micBtn.title = !usable
       ? micGranted === false
         ? "Microphone blocked by the browser — others cannot hear you. Allow mic access and rejoin."
@@ -4775,13 +5453,17 @@ function annoBindViewportEvents(win, cb) {
       micBtn.className = "f3d-iconbtn lt-mic";
       micBtn.hidden = true;
       micBtn.setAttribute("aria-pressed", "false");
-      // Two icons, one shown at a time, so the muted state is legible without
-      // relying on colour alone.
+      // Two icons, EXACTLY ONE SHOWN AT A TIME, so the muted state survives
+      // being read in grayscale or by someone who cannot pick green out of a
+      // row of dark pills. setAttribute("class"), not .className: on an SVG
+      // element className is a read-only SVGAnimatedString, so assigning to it
+      // would be another silent no-op of precisely the kind fixed above.
       micIconOn = buildSvgIcon([
         "M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z",
         "M19 10v2a7 7 0 0 1-14 0v-2",
         "M12 19v4",
       ]);
+      micIconOn.setAttribute("class", "lt-mic-ico lt-mic-ico-on");
       micIconOff = buildSvgIcon([
         "M1 1l22 22",
         "M9 9v3a3 3 0 0 0 5.12 2.12",
@@ -4789,7 +5471,8 @@ function annoBindViewportEvents(win, cb) {
         "M19 10v2a7 7 0 0 1-11.79 5.07",
         "M12 19v4",
       ]);
-      micIconOff.hidden = true;
+      micIconOff.setAttribute("class", "lt-mic-ico lt-mic-ico-off");
+      micIconOff.style.display = "none";
       micBtn.appendChild(micIconOn);
       micBtn.appendChild(micIconOff);
       micBtn.addEventListener("click", function () {
@@ -4965,7 +5648,7 @@ function annoBindViewportEvents(win, cb) {
       // permissive here, sync is host-granted) — they simply cannot move the
       // group. The hub would drop the packet anyway; skipping it keeps the
       // freeze working for them without a pointless send.
-      if (st.role === "visitor" && mySyncAllowed) {
+      if (st.role === "visitor" && syncAllowedNow()) {
         return session.shareLocationWithAgent(ss, sr) === true;
       }
     } catch (_e) {}
@@ -5101,9 +5784,13 @@ function annoBindViewportEvents(win, cb) {
     annoCanvas.addEventListener("pointerdown", function (e) {
       if (!canAnnotateLocal()) return;
       if (toolMode !== "draw" && toolMode !== "rope" && toolMode !== "eraser") return;
-      // Sequential annotation: bail if the PEER currently holds the shared
-      // floor; the instant their gesture ends we're free to start.
-      if (remoteGestureActive) return;
+      // 2.39.0 — NO LONGER REFUSED WHILE A PEER IS DRAWING. Owner-directed:
+      // "we need any participant that has annotation permission to draw
+      // simultaneously or one after the other in alternation without locking
+      // the annotation tool." The freeze keeps its one job (hold the view
+      // still so marks stay where they were drawn); it is not a turn token.
+      // The hub reference-counts annotators, so the room stays frozen until
+      // the LAST of them lets go.
       // Single-owner guard: rejects secondary touches outright; a Pencil
       // arriving mid-touch fires finalizeActiveGesture() first (clean
       // commit of the in-flight stroke) and then claims the gesture.
@@ -5528,6 +6215,17 @@ function annoBindViewportEvents(win, cb) {
     // The pill is the ONLY element that is always on screen during a session
     // (body.live-tour-active #loc-sync), so it is where the answer belongs.
     blocked: "Ask host to enable sync",
+    // 2.38.0 — the pill now survives on phones and tablets so an attached room
+    // has something to show them (see the COLLAB_ELIGIBLE note at the top). On
+    // iOS/iPadOS the ambient clipboard read is permanently refused — reading it
+    // raises the native Paste callout, which is the interruption that block
+    // exists to prevent — so sharing a view from there cannot work at all.
+    //
+    // Saying so is the entire point. A pill reading "Sync ready" on a device
+    // that can never send is the same defect as the roster's arrow button that
+    // granted a permission for a capability nobody had built: a control that
+    // promises something it cannot do. Following the view still works here.
+    unsupported: "Following only on this device",
   };
 
   // Whether ANY ambient (non-manual) clipboard read may run right now.
@@ -5700,6 +6398,60 @@ function annoBindViewportEvents(win, cb) {
       return true;
     }
     var ok = false;
+
+    // Parent-owned room: the view goes UP, not out. Everything below this —
+    // the dedupe above, the bookkeeping after — is shared with the peer path
+    // on purpose, because the failure modes it encodes (echo ping-pong,
+    // re-sharing a followed view, stale annotation stamping) are properties of
+    // the SYNC, not of the transport that happens to carry it.
+    if (roomAttached) {
+      if (!roomMaySend) {
+        // Same refusal the peer path gives, for the same reason: silence here
+        // is what made a guest read the screen as "I clicked COPY and nothing
+        // happened."
+        setPulseState("blocked");
+        setVoiceStatus(
+          "View sync isn’t enabled for you yet — ask the host to allow it beside your name.",
+          "warn",
+        );
+        return false;
+      }
+      ok = postToParentRoom("f3d:room-view", { ss: parsed.ss, sr: parsed.sr });
+      if (ok) {
+        currentViewKey = key;
+        viewDivergedLocally = false;
+        lastSentLocationKey = key;
+        lastSentLocationTs = now;
+        lastOwnSendTs = now;
+        // No controller send happened, so nothing stamped the session's view
+        // key — do it here, or outbound annotation packets keep carrying the
+        // previous view and the receive filter drops them as stale.
+        try { session.noteCurrentView(parsed.ss, parsed.sr); } catch (_e) {}
+        // 2.40.0 — "Synced" is EARNED, not assumed. postMessage returning
+        // true proves the message left this frame and nothing more: no
+        // listener, no room, or a dead session all still returned true here,
+        // and the pill went green while nothing moved — the audit's
+        // false-success finding. The parent now answers with
+        // f3d:room-view-ack, and the pill pulses success only on ok:true.
+        // Silence settles back to idle rather than lying in either direction.
+        setPulseState("syncing");
+        if (pendingViewAckTimer) {
+          try {
+            clearTimeout(pendingViewAckTimer);
+          } catch (_e) {}
+        }
+        pendingViewAckTimer = unrefTimer(
+          setTimeout(function () {
+            pendingViewAckTimer = null;
+            setPulseState("idle");
+          }, 2500),
+        );
+        return true;
+      }
+      setPulseState("idle");
+      return false;
+    }
+
     var role = session.getState().role;
     // A revoked guest is TOLD, not silently dropped. Without this the hub
     // discards the packet and the pill still pulses "success" — the failure
@@ -5846,7 +6598,12 @@ function annoBindViewportEvents(win, cb) {
   function readClipboardAndSend() {
     if (!ambientClipboardAllowed()) return;
     var s = session.getState();
-    if ((s.role !== "visitor" && s.role !== "agent") || !s.isConnected) return;
+    // "Is anyone listening?" — NOT "is the local controller connected?". Those
+    // were the same question until 2.37.0, and conflating them made the whole
+    // parent-room path dead on arrival: attached, there is no local session at
+    // all, so this returned before ever reading the clipboard and the Copy
+    // gesture silently did nothing.
+    if (!roomAttached && ((s.role !== "visitor" && s.role !== "agent") || !s.isConnected)) return;
     if (!navigator || !navigator.clipboard || typeof navigator.clipboard.readText !== "function") return;
     var p;
     try {
@@ -5877,7 +6634,7 @@ function annoBindViewportEvents(win, cb) {
     if (!ambientClipboardAllowed()) return;
     if (document.hidden) return;
     var s = session.getState();
-    if ((s.role !== "visitor" && s.role !== "agent") || !s.isConnected) return;
+    if (!roomAttached && ((s.role !== "visitor" && s.role !== "agent") || !s.isConnected)) return;
     var now = Date.now();
     if (now - locSyncLastPollTs < LOC_SYNC_POLL_THROTTLE_MS) return;
     locSyncLastPollTs = now;
@@ -6413,31 +7170,142 @@ function annoBindViewportEvents(win, cb) {
   // Builder does it, so an older exported package that lacks the container
   // simply renders no roster instead of failing.
 
+  /** May this viewer move the group RIGHT NOW, whichever room owns it? Kept as
+   *  a function rather than folded into `mySyncAllowed` so detaching restores
+   *  the local session’s own grant instead of inheriting the parent’s. */
+  function syncAllowedNow() {
+    return roomAttached ? roomMaySend : mySyncAllowed;
+  }
+
+  /**
+   * Can this DEVICE ever send a view, permission aside?
+   *
+   * Deliberately the PERMANENT half of ambientClipboardAllowed() and not the
+   * whole predicate: `annotationToolActive()` is transient — a tool is up right
+   * now — and folding it in here would make the pill announce "this device
+   * can’t sync" every time someone picked up the pen.
+   */
+  function viewSyncSupported() {
+    return ANNO_INPUT_OK && !IS_IOS_WEBKIT;
+  }
+
+  /**
+   * Reflect attach/detach in the UI.
+   *
+   * The launcher is the important half: with a parent room already running,
+   * offering "Explore Together" here invites a visitor to start a SECOND room
+   * inside the first — different PIN, different roster, different microphone.
+   * Hiding it is how "one room" stays true on screen and not just in the
+   * protocol.
+   */
+  function applyRoomAttachment() {
+    try {
+      if (document && document.body) {
+        document.body.classList.toggle("room-attached", roomAttached);
+      }
+      if (launchBtn) launchBtn.hidden = roomAttached;
+      var localPanel = document.getElementById("lt-panel");
+      if (roomAttached) {
+        if (localPanel) localPanel.hidden = true;
+      } else if (localPanel) {
+        // 2.40.0 — the un-hide half of the handoff. Attach hid the panel and
+        // nothing restored it, so the launcher came back as a dead button
+        // ([hidden] beats .open). The session swap in the detach handler is
+        // the other half: the buttons behind this panel work again too.
+        localPanel.hidden = false;
+      }
+      // 2.41.0 — a mic button left over from a standalone session is dead
+      // while attached (the bridge has no local stream), and a dead control
+      // that LOOKS live is the defect class this project keeps paying for.
+      // Detach needs no restore here: the fresh session's own state patches
+      // rebuild the button through refreshMicButton.
+      if (roomAttached && micBtn) micBtn.hidden = true;
+      if (COLLAB_ELIGIBLE) {
+        // 2.40.0 — an attached destination IS a live collaborative stage, so
+        // it gets the same stage treatment a connected session gets: the 16:9
+        // letterbox (without it, normalized annotation coordinates land on
+        // different scene content per window shape — the misalignment the
+        // freeze exists to prevent), the nav-lock overlay CSS, and the
+        // annotation-bar toggle. All of that is what setBodyLetterboxClass
+        // already does for the standalone session; reusing it is the point.
+        setBodyLetterboxClass(roomAttached, roomAttached && roomRole === "host");
+      } else if (annotateBtn) {
+        // No annotation transport exists on this device. Solo marks nobody
+        // else can see would read as "I drew and nothing happened" inside a
+        // live room, so the solo affordance steps back until detach.
+        annotateBtn.hidden = roomAttached;
+      }
+      refreshSyncAffordance();
+      refreshAnnotAffordance();
+    } catch (_e) {}
+  }
+
   function refreshSyncAffordance() {
     if (!syncBtn) return;
     try {
-      syncBtn.setAttribute("aria-disabled", mySyncAllowed ? "false" : "true");
-      syncBtn.classList.toggle("is-revoked", !mySyncAllowed);
-      syncBtn.title = mySyncAllowed
+      // A device that can never send outranks a permission it will never use:
+      // telling an iPad guest to "ask the host to enable sync" would send them
+      // to ask for something that still would not work.
+      var supported = !roomAttached || viewSyncSupported();
+      var allowed = supported && syncAllowedNow();
+      syncBtn.setAttribute("aria-disabled", allowed ? "false" : "true");
+      syncBtn.classList.toggle("is-revoked", !allowed);
+      syncBtn.title = allowed
         ? ""
-        : "The host hasn’t enabled view sync for you yet. Ask them to tick “Sync” beside your name in their Explore Together panel.";
-      // A grant that arrives while the pill is still showing the refusal must
-      // clear it — otherwise the one guest who tried early keeps reading
-      // "Ask host to enable sync" for the rest of the tour, after the host
-      // has already done exactly that.
-      if (mySyncAllowed && syncBtn.getAttribute("data-state") === "blocked") {
+        : !supported
+          ? "Sharing a view needs a computer — this device can still follow the group."
+          : roomAttached
+            ? "The host hasn’t enabled view sync for you yet. Ask them to allow it beside your name."
+            : "The host hasn’t enabled view sync for you yet. Ask them to tick “Sync” beside your name in their Explore Together panel.";
+
+      // Settle the pill's resting label.
+      //
+      // Attached, there is no local controller, so the subscribe callback that
+      // normally moves it off the baked "Connecting…" never runs — #386 made
+      // the pill VISIBLE in a parent room without ever giving it an attached
+      // resting state, leaving the one always-on-screen piece of feedback
+      // saying "still trying" for the whole session. Only ever settles a state
+      // that is itself resting: `syncing` and `success` are mid-flight and
+      // must not be stomped.
+      var resting = syncBtn.getAttribute("data-state");
+      var midFlight = resting === "syncing" || resting === "success";
+      if (!supported) {
+        if (resting !== "unsupported") setPulseState("unsupported");
+      } else if (roomAttached && !midFlight) {
+        // Attached, THIS is the only thing that settles the pill, so it settles
+        // unconditionally rather than only out of "waiting" — a state the fake
+        // DOM never bakes and a future markup change could rename. The two
+        // mid-flight states are the exception because they are transient by
+        // design and stomping them would swallow the user's own feedback.
+        setPulseState(allowed ? "idle" : "blocked");
+      } else if (allowed && (resting === "blocked" || resting === "unsupported")) {
+        // A grant that arrives while the pill is still showing the refusal must
+        // clear it — otherwise the one guest who tried early keeps reading
+        // "Ask host to enable sync" for the rest of the tour, after the host
+        // has already done exactly that.
         setPulseState("idle");
       }
     } catch (_e) {}
   }
 
   function refreshAnnotAffordance() {
-    if (!annotateBtn) return;
     try {
-      annotateBtn.disabled = !myAnnotAllowed;
-      annotateBtn.title = myAnnotAllowed
+      var reason = myAnnotAllowed
         ? ""
-        : "The host has turned off annotation for you.";
+        : roomAttached
+          ? "The host hasn\u2019t allowed drawing for you yet. Ask them to tick the pencil beside your name."
+          : "The host has turned off annotation for you.";
+      if (annotateBtn) {
+        annotateBtn.disabled = !myAnnotAllowed;
+        annotateBtn.title = reason;
+      }
+      // The bar toggle is the annotation entry point during a session
+      // (attached or standalone) — an ungranted guest is told there, not
+      // left opening a toolbar whose every stroke dies at the hub.
+      if (barToggleBtn) {
+        barToggleBtn.disabled = !myAnnotAllowed;
+        barToggleBtn.title = myAnnotAllowed ? "Show annotation tools" : reason;
+      }
     } catch (_e) {}
   }
 
@@ -7707,6 +8575,123 @@ function annoBindViewportEvents(win, cb) {
     if (changed) hudPublishRoster(true);
   }
 
+  /**
+   * The annotation receive paths — every incoming slot except teleport/share.
+   *
+   * EXTRACTED from onState in 2.40.0 so it has two callers with one body:
+   * onState feeds it real controller patches exactly as before, and the
+   * parent-room message handler feeds it synthetic patches carrying the slots
+   * the Atlas parent forwards down. One body means the freeze watchdogs, seq
+   * dedupe, lazy canvas allocation and eraser semantics cannot fork between
+   * the standalone and attached transports.
+   */
+  function applyIncomingAnnotationSlots(state) {
+    var canReceive = state.role === "agent" || state.role === "visitor";
+    var pev = state.incomingPointerEvent;
+    if (pev && pev.seq !== lastPointerSeq) {
+      lastPointerSeq = pev.seq;
+      if (canReceive && remotePointer && letterboxWrap) {
+        if (pev.x == null || pev.y == null) {
+          remotePointer.style.display = "none";
+          if (remotePointerHideTimer) {
+            try {
+              clearTimeout(remotePointerHideTimer);
+            } catch (_e) {}
+            remotePointerHideTimer = null;
+          }
+        } else {
+          var rect = letterboxWrap.getBoundingClientRect();
+          remotePointer.style.left = pev.x * rect.width + "px";
+          remotePointer.style.top = pev.y * rect.height + "px";
+          remotePointer.style.display = "block";
+          if (remotePointerHideTimer) {
+            try {
+              clearTimeout(remotePointerHideTimer);
+            } catch (_e) {}
+          }
+          remotePointerHideTimer = setTimeout(function () {
+            if (remotePointer) remotePointer.style.display = "none";
+          }, ANNO_REMOTE_POINTER_TIMEOUT_MS);
+        }
+      }
+    }
+
+    var sev = state.incomingStrokeEvent;
+    if (sev && sev.seq !== lastStrokeSeq) {
+      lastStrokeSeq = sev.seq;
+      if (canReceive) {
+        // A remote annotation is the other lazy-allocation trigger.
+        ensureAnnoCanvasAllocated();
+        if (sev.kind === "begin") {
+          var existingBegin = findLocalStroke(sev.strokeId);
+          if (existingBegin) {
+            if (sev.points) existingBegin.points = sev.points.slice();
+            if (typeof sev.color === "string") existingBegin.color = sev.color;
+            if (typeof sev.width === "number") existingBegin.width = sev.width;
+          } else {
+            localStrokes.push({
+              strokeId: sev.strokeId,
+              color: sev.color || ANNO_STROKE_COLOR,
+              width: typeof sev.width === "number" ? sev.width : ANNO_STROKE_WIDTH,
+              points: sev.points ? sev.points.slice() : [],
+            });
+          }
+          redrawAllStrokes();
+        } else if (sev.kind === "patch") {
+          var existing = findLocalStroke(sev.strokeId);
+          if (existing && sev.points) {
+            for (var pi = 0; pi < sev.points.length; pi++) existing.points.push(sev.points[pi]);
+            redrawAllStrokes();
+          }
+        } else if (sev.kind === "commit") {
+          // Commit seals the stroke: mark it erasable. Until now it was an
+          // in-flight remote stroke and the eraser deliberately skipped it.
+          var committedRemote = findLocalStroke(sev.strokeId);
+          if (committedRemote) committedRemote.committed = true;
+        }
+        // Ongoing remote stroke activity refreshes the floor safety timer so
+        // a long remote gesture keeps this side paused until it actually ends.
+        if (sev.kind === "begin" || sev.kind === "patch") refreshRemoteFloor();
+      }
+    }
+
+    var cev = state.incomingClearEvent;
+    if (cev && cev.seq !== lastClearSeq) {
+      lastClearSeq = cev.seq;
+      if (canReceive) {
+        wipeAnnotations();
+        setRemoteFloor(false);
+      }
+    }
+
+    var nlev = state.incomingNavLockEvent;
+    if (nlev && nlev.seq !== lastNavLockSeq) {
+      lastNavLockSeq = nlev.seq;
+      // nav_lock IS the shared annotation floor: freeze this side's Matterport
+      // AND block new local gesture starts for its duration. setRemoteFloor
+      // arms a bounded safety timeout so a crashed peer can't lock us out.
+      if (canReceive) setRemoteFloor(nlev.locked === true);
+    }
+
+    var dev = state.incomingStrokeDeleteEvent;
+    if (dev && dev.seq !== lastStrokeDeleteSeq) {
+      lastStrokeDeleteSeq = dev.seq;
+      // Defense in depth: a delete proves the peer's eraser is mid-gesture, so
+      // re-arm the remote watchdog too (the nav_lock heartbeat is the primary
+      // keepalive; this just hardens the delete-heavy path).
+      if (canReceive) refreshRemoteFloor();
+      // Idempotent erase: drop any matching ids; unknown / already-removed
+      // ids change nothing (no redraw), so duplicate/stale deletes are safe.
+      if (canReceive && dev.strokeIds && dev.strokeIds.length) {
+        var beforeLen = localStrokes.length;
+        localStrokes = localStrokes.filter(function (s) {
+          return dev.strokeIds.indexOf(s.strokeId) < 0;
+        });
+        if (localStrokes.length !== beforeLen) redrawAllStrokes();
+      }
+    }
+  }
+
   function onState(state) {
     if (pinValue && state.pin) pinValue.textContent = state.pin;
 
@@ -7933,6 +8918,13 @@ function annoBindViewportEvents(win, cb) {
         } else if (ctl === ANNOT_CTL_ON || ctl === ANNOT_CTL_OFF) {
           myAnnotAllowed = ctl === ANNOT_CTL_ON;
           refreshAnnotAffordance();
+        } else if (ctl === MUSIC_CTL_OFF) {
+          // The host's soundtrack, standalone transport (2.41.0) — the same
+          // grammar the Builder has consumed since 2.23.0.
+          applyHostMusicLocal(false);
+        } else if (ctl === MUSIC_CTL_ON || ctl.indexOf(MUSIC_CTL_ON_PREFIX) === 0) {
+          var mp = ctl === MUSIC_CTL_ON ? [] : ctl.slice(MUSIC_CTL_ON_PREFIX.length).split(":");
+          applyHostMusicLocal(true, parseFloat(mp[0]), parseFloat(mp[1]));
         }
         // Unknown markers are ignored on purpose — a newer host must be able
         // to send one to an already-exported package without breaking it.
@@ -7999,111 +8991,7 @@ function annoBindViewportEvents(win, cb) {
       }
     }
 
-    // Annotation receive paths.
-    var canReceive = state.role === "agent" || state.role === "visitor";
-    var pev = state.incomingPointerEvent;
-    if (pev && pev.seq !== lastPointerSeq) {
-      lastPointerSeq = pev.seq;
-      if (canReceive && remotePointer && letterboxWrap) {
-        if (pev.x == null || pev.y == null) {
-          remotePointer.style.display = "none";
-          if (remotePointerHideTimer) {
-            try {
-              clearTimeout(remotePointerHideTimer);
-            } catch (_e) {}
-            remotePointerHideTimer = null;
-          }
-        } else {
-          var rect = letterboxWrap.getBoundingClientRect();
-          remotePointer.style.left = pev.x * rect.width + "px";
-          remotePointer.style.top = pev.y * rect.height + "px";
-          remotePointer.style.display = "block";
-          if (remotePointerHideTimer) {
-            try {
-              clearTimeout(remotePointerHideTimer);
-            } catch (_e) {}
-          }
-          remotePointerHideTimer = setTimeout(function () {
-            if (remotePointer) remotePointer.style.display = "none";
-          }, ANNO_REMOTE_POINTER_TIMEOUT_MS);
-        }
-      }
-    }
-
-    var sev = state.incomingStrokeEvent;
-    if (sev && sev.seq !== lastStrokeSeq) {
-      lastStrokeSeq = sev.seq;
-      if (canReceive) {
-        // A remote annotation is the other lazy-allocation trigger.
-        ensureAnnoCanvasAllocated();
-        if (sev.kind === "begin") {
-          var existingBegin = findLocalStroke(sev.strokeId);
-          if (existingBegin) {
-            if (sev.points) existingBegin.points = sev.points.slice();
-            if (typeof sev.color === "string") existingBegin.color = sev.color;
-            if (typeof sev.width === "number") existingBegin.width = sev.width;
-          } else {
-            localStrokes.push({
-              strokeId: sev.strokeId,
-              color: sev.color || ANNO_STROKE_COLOR,
-              width: typeof sev.width === "number" ? sev.width : ANNO_STROKE_WIDTH,
-              points: sev.points ? sev.points.slice() : [],
-            });
-          }
-          redrawAllStrokes();
-        } else if (sev.kind === "patch") {
-          var existing = findLocalStroke(sev.strokeId);
-          if (existing && sev.points) {
-            for (var pi = 0; pi < sev.points.length; pi++) existing.points.push(sev.points[pi]);
-            redrawAllStrokes();
-          }
-        } else if (sev.kind === "commit") {
-          // Commit seals the stroke: mark it erasable. Until now it was an
-          // in-flight remote stroke and the eraser deliberately skipped it.
-          var committedRemote = findLocalStroke(sev.strokeId);
-          if (committedRemote) committedRemote.committed = true;
-        }
-        // Ongoing remote stroke activity refreshes the floor safety timer so
-        // a long remote gesture keeps this side paused until it actually ends.
-        if (sev.kind === "begin" || sev.kind === "patch") refreshRemoteFloor();
-      }
-    }
-
-    var cev = state.incomingClearEvent;
-    if (cev && cev.seq !== lastClearSeq) {
-      lastClearSeq = cev.seq;
-      if (canReceive) {
-        wipeAnnotations();
-        setRemoteFloor(false);
-      }
-    }
-
-    var nlev = state.incomingNavLockEvent;
-    if (nlev && nlev.seq !== lastNavLockSeq) {
-      lastNavLockSeq = nlev.seq;
-      // nav_lock IS the shared annotation floor: freeze this side's Matterport
-      // AND block new local gesture starts for its duration. setRemoteFloor
-      // arms a bounded safety timeout so a crashed peer can't lock us out.
-      if (canReceive) setRemoteFloor(nlev.locked === true);
-    }
-
-    var dev = state.incomingStrokeDeleteEvent;
-    if (dev && dev.seq !== lastStrokeDeleteSeq) {
-      lastStrokeDeleteSeq = dev.seq;
-      // Defense in depth: a delete proves the peer's eraser is mid-gesture, so
-      // re-arm the remote watchdog too (the nav_lock heartbeat is the primary
-      // keepalive; this just hardens the delete-heavy path).
-      if (canReceive) refreshRemoteFloor();
-      // Idempotent erase: drop any matching ids; unknown / already-removed
-      // ids change nothing (no redraw), so duplicate/stale deletes are safe.
-      if (canReceive && dev.strokeIds && dev.strokeIds.length) {
-        var beforeLen = localStrokes.length;
-        localStrokes = localStrokes.filter(function (s) {
-          return dev.strokeIds.indexOf(s.strokeId) < 0;
-        });
-        if (localStrokes.length !== beforeLen) redrawAllStrokes();
-      }
-    }
+    applyIncomingAnnotationSlots(state);
   }
 
   // Tint the accent-driven affordances created at runtime.
@@ -8139,7 +9027,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-08-03";
+    var RUNTIME_RELEASED="2026-08-04";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
