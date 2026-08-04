@@ -8,7 +8,7 @@
 <meta property="og:title" content="Indigo Hotel — Frontiers|3D" />
 <meta property="og:description" content="Hotel Indigo offers stylish, neighborhood-inspired boutique accommodations across prime Manhattan locations like the Lower East Side and Wall Street. Each property blends contemporary design with local culture, featuring unique amenities like vibrant rooftop lounges and modern fitness centers." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.38.0" />
+<meta name="f3d-runtime" content="2.39.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -1072,16 +1072,44 @@ function createLiveSession(options) {
   // millisecond, so a ts-based dedupe in the embedder would silently swallow
   // the second one. Chat cannot afford that.
   var _roomEvId = 0;
-  // Annotation-floor holder at the hub (multi-guest sessions only —
-  // maxGuests===1 keeps the exact pre-2.12 pass-through semantics).
-  // null | "host" | <guest peerId>. With 3+ parties a single boolean
-  // floor collapses: a release from one actor would unfreeze peers
-  // while ANOTHER actor is mid-gesture. The hub arbitrates instead:
-  // nav_lock(true) from a non-holder while held is dropped;
-  // nav_lock(false) is honored only from the current holder; a
-  // departing holder's slot removal synthesizes the release.
-  var _floorHolder = null;
+  // Who is annotating right now, at the hub (multi-guest sessions only —
+  // maxGuests===1 keeps the exact pre-2.12 pass-through semantics). A SET of
+  // "host" and/or guest peerIds, used as a reference count.
+  //
+  // ── Why a set and not a holder (owner-directed 2026-08-04) ────────────
+  // This was a single holder, and a single holder made the freeze a LOCK:
+  // whoever got there first owned annotation, and everyone else was refused
+  // until they let go. The owner's correction is that those are two different
+  // things — verbatim: "Freezing should not mean that annotations should not
+  // open or work if someone else has the annotation menu open. Freezing should
+  // only mean that the model view should not be movable since this would
+  // appear to shift from where in the view the annotations were drawn."
+  //
+  // So the freeze keeps its ONE job — hold the view still so marks stay where
+  // they were drawn — and stops being a turn-taking token. Any permitted
+  // participant may draw, together or in alternation.
+  //
+  // The reference count is what makes that safe. The original single-holder
+  // comment was right that "a release from one actor would unfreeze peers
+  // while ANOTHER actor is mid-gesture"; it just drew the wrong conclusion.
+  // Counting holders fixes that directly: a release is relayed only when the
+  // LAST annotator lets go, so the room stays frozen for exactly as long as
+  // somebody is still drawing, and no longer.
+  var _floorHolders = Object.create(null);
   var _floorManaged = maxGuests > 1;
+  function _floorCount() {
+    var n = 0;
+    for (var k in _floorHolders) if (_floorHolders[k]) n++;
+    return n;
+  }
+  /** Add/remove an annotator. Returns true when the ROOM's frozen state
+   *  actually flipped — the only moments peers need to hear about. */
+  function _floorSet(id, active) {
+    var before = _floorCount() > 0;
+    if (active) _floorHolders[id] = true;
+    else delete _floorHolders[id];
+    return before !== (_floorCount() > 0);
+  }
 
   // Pointer coalescer. The runtime can call sendPointer many times
   // per frame (mousemove fires at the input device's poll rate); we
@@ -1243,13 +1271,14 @@ function createLiveSession(options) {
     // connected), so a holder left set would silently drop every future
     // guest's nav_lock forever.
     if (_floorManaged && _openGuestIds().length === 0) {
-      _floorHolder = null;
+      _floorHolders = Object.create(null);
     }
-    // A departing floor holder can no longer send its own release —
-    // synthesize it so the remaining parties aren't frozen for the
-    // full client-side safety timeout.
-    if (_floorManaged && _floorHolder === remoteId) {
-      _floorHolder = null;
+    // A departing annotator can no longer send its own release — synthesize it
+    // so the remaining parties aren't frozen for the full client-side safety
+    // timeout. Only when they were the LAST one still drawing: with the floor
+    // reference-counted, someone leaving mid-session must not unfreeze a room
+    // that other people are still annotating in.
+    if (_floorManaged && _floorHolders[remoteId] && _floorSet(remoteId, false)) {
       var releasePacket = {
         type: "nav_lock",
         viewKey: _currentViewKey,
@@ -1977,13 +2006,14 @@ function createLiveSession(options) {
       // tracks the holder: a non-holder's lock while held is dropped,
       // and only the current holder's release is honored/relayed.
       if (_floorManaged && ev.kind === "nav_lock") {
-        if (ev.locked === true) {
-          if (_floorHolder && _floorHolder !== remoteId) return;
-          _floorHolder = remoteId;
-        } else {
-          if (_floorHolder !== remoteId) return;
-          _floorHolder = null;
-        }
+        // Bookkeeping ALWAYS runs; only the relay is conditional. A lock from a
+        // second annotator is no longer dropped — that drop is what made the
+        // freeze a turn-taking lock — but a release is passed on only when it
+        // empties the room, so nobody is unfrozen out from under someone still
+        // drawing. A repeated true (the keepalive heartbeat) still relays, so
+        // receivers keep refreshing their safety watchdog.
+        var flipped = _floorSet(remoteId, ev.locked === true);
+        if (ev.locked !== true && !flipped) return;
       }
       // Track the slot's in-flight stroke so a mid-gesture Annotation
       // revoke can synthesize the seal (see setGuestPermission).
@@ -2490,8 +2520,7 @@ function createLiveSession(options) {
         }
       }
     }
-    if (_floorManaged && _floorHolder === remoteId) {
-      _floorHolder = null;
+    if (_floorManaged && _floorHolders[remoteId] && _floorSet(remoteId, false)) {
       var releaseEv = {
         kind: "nav_lock",
         viewKey: _currentViewKey,
@@ -2698,13 +2727,11 @@ function createLiveSession(options) {
     // this); a host release must never clear a GUEST's active hold on
     // the other receivers.
     if (_floorManaged && state.role === "agent") {
-      if (locked === true) {
-        if (_floorHolder && _floorHolder !== "host") return false;
-        _floorHolder = "host";
-      } else {
-        if (_floorHolder && _floorHolder !== "host") return false;
-        if (_floorHolder === "host") _floorHolder = null;
-      }
+      // Same rule as the guest path: the host may always join an in-progress
+      // annotation, and the host letting go only unfreezes the room if nobody
+      // else is still drawing.
+      var hostFlipped = _floorSet("host", locked === true);
+      if (locked !== true && !hostFlipped) return false;
     }
     var seq = ++_sendSeq;
     var packet = {
@@ -2829,7 +2856,7 @@ function createLiveSession(options) {
     _ingestSeq = 0;
     _teleportEvId = 0;
     _roomEvId = 0;
-    _floorHolder = null;
+    _floorHolders = Object.create(null);
     _currentViewKey = "";
     _pendingPointer = null;
     _flushScheduled = false;
@@ -4592,7 +4619,6 @@ function annoBindViewportEvents(win, cb) {
   }
 
   function acquireLocalFloor() {
-    if (remoteGestureActive) return false;
     if (!localFloorHeld) {
       localFloorHeld = true;
       lastFloorHeartbeatTs = Date.now(); // the initial lock is the first beat
@@ -4602,7 +4628,14 @@ function annoBindViewportEvents(win, cb) {
         // branch runs once per turn, not once per stroke). Reversing them would
         // freeze the room at whatever each participant was looking at and then
         // move it, which is the misalignment the freeze exists to prevent.
-        pushMyViewToRoom();
+        //
+        // 2.39.0 — but ONLY when nobody is already annotating. Joining someone
+        // else's in-progress annotation must not drag the room to MY view: the
+        // room is already frozen on a shared one, and moving it now would
+        // scatter the marks they are in the middle of drawing. That is the
+        // exact misalignment this sync exists to prevent, so the second
+        // annotator inherits the view instead of imposing one.
+        if (!remoteGestureActive) pushMyViewToRoom();
         session.sendNavLock(currentViewKey, true);
       }
     }
@@ -5249,9 +5282,13 @@ function annoBindViewportEvents(win, cb) {
     annoCanvas.addEventListener("pointerdown", function (e) {
       if (!canAnnotateLocal()) return;
       if (toolMode !== "draw" && toolMode !== "rope" && toolMode !== "eraser") return;
-      // Sequential annotation: bail if the PEER currently holds the shared
-      // floor; the instant their gesture ends we're free to start.
-      if (remoteGestureActive) return;
+      // 2.39.0 — NO LONGER REFUSED WHILE A PEER IS DRAWING. Owner-directed:
+      // "we need any participant that has annotation permission to draw
+      // simultaneously or one after the other in alternation without locking
+      // the annotation tool." The freeze keeps its one job (hold the view
+      // still so marks stay where they were drawn); it is not a turn token.
+      // The hub reference-counts annotators, so the room stays frozen until
+      // the LAST of them lets go.
       // Single-owner guard: rejects secondary touches outright; a Pencil
       // arriving mid-touch fires finalizeActiveGesture() first (clean
       // commit of the in-flight stroke) and then claims the gesture.
