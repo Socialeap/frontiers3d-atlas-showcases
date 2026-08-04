@@ -8,7 +8,7 @@
 <meta property="og:title" content="Indigo Hotel — Frontiers|3D" />
 <meta property="og:description" content="Hotel Indigo offers stylish, neighborhood-inspired boutique accommodations across prime Manhattan locations like the Lower East Side and Wall Street. Each property blends contemporary design with local culture, featuring unique amenities like vibrant rooftop lounges and modern fitness centers." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.41.0" />
+<meta name="f3d-runtime" content="2.42.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -462,6 +462,11 @@ body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-
 #lt-sound-btn.is-off{color:#9ca3af}
 /* The room ordered ON but this browser needs a tap first — pulse politely. */
 #lt-sound-btn.is-blocked{border-color:#fbbf24;color:#fbbf24;animation:ltSoundNudge 1.6s ease-in-out infinite}
+/* Volume 0-10 (2.42.0). The slider sits with the icon so a host can pull the
+   music under a participant's voice without leaving the tour. */
+.lt-sound-wrap{display:inline-flex;align-items:center;gap:6px}
+.lt-sound-range{width:74px;height:18px;accent-color:var(--lt-accent,#818cf8);cursor:pointer;flex:0 0 auto}
+@media (max-width:640px){.lt-sound-range{width:56px}}
 @keyframes ltSoundNudge{0%,100%{opacity:1}50%{opacity:.55}}
 /* f3d:runtime-css END */
 </style>
@@ -3614,14 +3619,87 @@ function annoBindViewportEvents(win, cb) {
   var soundBtn = null;
   var soundIconOn = null;
   var soundIconOff = null;
-  var soundEnabled = false;
+  var soundEnabled = false; // set from the stored level once it is read
   var hostMusicAllowed = true;
   // An ON order arrived without a local gesture and play() was refused —
   // surface it on the button instead of failing into silence.
   var musicBlocked = false;
   var musicKeepaliveTimer = null;
   var MUSIC_KEEPALIVE_MS = 5000;
-  var MUSIC_DRIFT_TOLERANCE_SEC = 1.5;
+  // Servo constants (2.42.0). MUSIC_DRIFT_TOLERANCE_SEC is retained as the
+  // SEEK threshold under its new name; the tolerance is no longer a dead zone
+  // because everything below it is now corrected by rate rather than ignored.
+  var MUSIC_SEEK_TOLERANCE_SEC = 0.4;
+  /** Below this, streams count as aligned and the rate returns to exactly 1. */
+  var MUSIC_SYNC_DEADBAND_SEC = 0.04;
+  /** Dissolve the remaining error over roughly this long (seconds). */
+  var MUSIC_SERVO_WINDOW_SEC = 10;
+  /** Hard clamp on the tempo trim. Browsers preserve pitch across
+   *  playbackRate, so 1.5% is a tempo nudge with NO pitch shift: inaudible
+   *  on ambient music, and fast enough to close 0.4s in under half a minute. */
+  var MUSIC_RATE_TRIM_MAX = 0.015;
+  /** Running minimum of (localNow - sentAtMs): the wall-clock skew estimate.
+   *  Null until the first marker; reset when the room authority changes. */
+  var musicClockBaselineMs = null;
+  // ── Per-participant volume (2.42.0, owner-directed) ────────────────
+  // A slider from 0 (off) to 10, because a fixed level meant ambient sound
+  // competed with the voices of the people you are touring WITH. Deliberately
+  // LOCAL and never broadcast: the servo synchronises the play POSITION so
+  // everyone hears the same moment of the track, while how loud that is
+  // belongs to each listener and their room. Level 4 reproduces the previous
+  // fixed 0.4 exactly, so nobody's existing experience changes on upgrade.
+  var MUSIC_LEVEL_MAX = 10;
+  var MUSIC_LEVEL_DEFAULT = 4;
+  var MUSIC_LEVEL_KEY = "f3d:music-level";
+  var musicLevel = MUSIC_LEVEL_DEFAULT;
+  var soundSlider = null;
+  var musicLevelBeforeMute = MUSIC_LEVEL_DEFAULT;
+  try {
+    var storedLevel = window.localStorage ? window.localStorage.getItem(MUSIC_LEVEL_KEY) : null;
+    if (storedLevel !== null) {
+      var parsedLevel = parseInt(storedLevel, 10);
+      if (isFinite(parsedLevel) && parsedLevel >= 0 && parsedLevel <= MUSIC_LEVEL_MAX) {
+        musicLevel = parsedLevel;
+      }
+    }
+  } catch (_e) {}
+  // Level 0 IS off, so the slider subsumes the old toggle rather than sitting
+  // beside it as a second source of truth. Playback still starts silent
+  // regardless: browsers refuse un-gestured autoplay, so the stored level
+  // decides how loud the first tap will be, not whether one is needed.
+
+  function musicVolumeFromLevel(level) {
+    if (!(level > 0)) return 0;
+    return Math.min(1, level / MUSIC_LEVEL_MAX);
+  }
+
+  function applyMusicVolume() {
+    try {
+      var el = bgAudio;
+      if (el) el.volume = musicVolumeFromLevel(musicLevel);
+    } catch (_e) {}
+  }
+
+  function setMusicLevel(level, fromSlider) {
+    var next = parseInt(level, 10);
+    if (!isFinite(next)) return;
+    if (next < 0) next = 0;
+    if (next > MUSIC_LEVEL_MAX) next = MUSIC_LEVEL_MAX;
+    musicLevel = next;
+    try {
+      if (window.localStorage) window.localStorage.setItem(MUSIC_LEVEL_KEY, String(musicLevel));
+    } catch (_e) {}
+    soundEnabled = musicLevel > 0;
+    // Dragging the slider up IS the user gesture a blocked autoplay was
+    // waiting for, so it resumes rather than needing a second tap.
+    if (soundEnabled && musicBlocked) musicBlocked = false;
+    applyMusicVolume();
+    applyMusicState();
+    // The AUTHORITY's own level must not move the room: only on/off is shared
+    // state, and 0 genuinely means this participant stopped playback.
+    if (!fromSlider || musicLevel === 0 || next === 0) broadcastMusicState();
+    refreshSoundButton();
+  }
 
   function ensureBgAudio() {
     if (!MUSIC_URL) return null;
@@ -3634,7 +3712,7 @@ function annoBindViewportEvents(win, cb) {
       bgAudio.id = "bg-audio";
       bgAudio.loop = true;
       bgAudio.preload = "auto";
-      bgAudio.volume = 0.4;
+      bgAudio.volume = musicVolumeFromLevel(musicLevel);
       bgAudio.src = MUSIC_URL;
       bgAudio.style.display = "none";
       (document.body || document.documentElement).appendChild(bgAudio);
@@ -3688,23 +3766,72 @@ function annoBindViewportEvents(win, cb) {
     }
   };
 
-  // The host said play-from-here / stop. Seek math is the Builder's own:
-  // compensate the marker's transit time, wrap on duration, and only seek on
-  // a real divergence — re-seeking on every keepalive would stutter.
+  // The host said play-from-here / stop — and this is the servo that keeps
+  // every participant on the host clock (2.42.0).
+  //
+  // ── The two defects this replaces ────────────────────────────────────
+  // Owner, after a live room: the music "eventually drifts into misaligned
+  // play timing by a quarter second, then within a few minutes half a
+  // second, then a bit later by 1 second." Two independent causes, and the
+  // old math had both.
+  //
+  // 1. WALL-CLOCK SKEW, constant from the first note. sentAtMs is the HOST
+  //    Date.now(); we subtracted the GUEST one. Two devices routinely
+  //    disagree by hundreds of milliseconds, and that error was inherited by
+  //    every correction forever. Fixed WITHOUT any new message — and so
+  //    against existing hosts too — by a minimum filter: localNow - sentAtMs
+  //    equals (transit - skew), so its running MINIMUM over the session is
+  //    the best estimate of -skew (the sample with least queuing delay).
+  //    Subtracting that baseline cancels the skew and leaves only jitter.
+  //
+  // 2. A 1.5s DEAD ZONE, which is where the growing error lived. Corrections
+  //    fired only ABOVE 1.5s, so audio-hardware clock differences piled up
+  //    underneath it — 0.25s, 0.5s, 1s — until a hard seek jumped audibly
+  //    and the cycle restarted. Replaced by a two-tier servo: a big gap
+  //    still seeks (a jump IS right when you are far out), but everything
+  //    smaller is dissolved by trimming playbackRate a fraction of a
+  //    percent. Browsers preserve pitch across playbackRate, so that is a
+  //    tempo nudge with no pitch shift — inaudible, and continuous rather
+  //    than letting the streams separate. Inside the deadband the rate
+  //    returns to exactly 1 so it never hunts.
   function applyHostMusicLocal(on, atSec, sentAtMs) {
     hostMusicAllowed = on === true;
     var el = ensureBgAudio();
     if (el && hostMusicAllowed && typeof atSec === "number" && isFinite(atSec)) {
       try {
-        var elapsed =
-          typeof sentAtMs === "number" && isFinite(sentAtMs)
-            ? Math.max(0, (Date.now() - sentAtMs) / 1000)
-            : 0;
+        var elapsed = 0;
+        if (typeof sentAtMs === "number" && isFinite(sentAtMs)) {
+          var apparent = Date.now() - sentAtMs;
+          if (musicClockBaselineMs === null || apparent < musicClockBaselineMs) {
+            musicClockBaselineMs = apparent;
+          }
+          elapsed = Math.max(0, (apparent - musicClockBaselineMs) / 1000);
+        }
         var target = atSec + elapsed;
         var dur = el.duration;
-        if (typeof dur === "number" && isFinite(dur) && dur > 0) target = target % dur;
-        if (Math.abs((el.currentTime || 0) - target) > MUSIC_DRIFT_TOLERANCE_SEC) {
-          el.currentTime = target;
+        if (typeof dur === "number" && isFinite(dur) && dur > 0) {
+          target = target % dur;
+          // Nearest image across the loop seam: 0.2s into a track is 0.3s
+          // from 59.9s of a 60s loop, not 59.7s away from it.
+          var here = el.currentTime || 0;
+          if (target - here > dur / 2) target -= dur;
+          else if (here - target > dur / 2) target += dur;
+        }
+        var errSec = target - (el.currentTime || 0);
+        var absErr = Math.abs(errSec);
+        if (absErr > MUSIC_SEEK_TOLERANCE_SEC) {
+          // Too far out to glide back — jump, and restart the servo clean.
+          el.currentTime = ((target % dur) + dur) % dur || Math.max(0, target);
+          el.playbackRate = 1;
+        } else if (absErr > MUSIC_SYNC_DEADBAND_SEC) {
+          // Glide: rate proportional to the error, hard-clamped so the pitch
+          // shift stays under a cent or two and nobody can hear the fix.
+          var adj = errSec / MUSIC_SERVO_WINDOW_SEC;
+          if (adj > MUSIC_RATE_TRIM_MAX) adj = MUSIC_RATE_TRIM_MAX;
+          else if (adj < -MUSIC_RATE_TRIM_MAX) adj = -MUSIC_RATE_TRIM_MAX;
+          el.playbackRate = 1 + adj;
+        } else if (el.playbackRate !== 1) {
+          el.playbackRate = 1;
         }
       } catch (_e) {}
     }
@@ -3714,6 +3841,10 @@ function annoBindViewportEvents(win, cb) {
 
   function releaseHostMusicLocal() {
     hostMusicAllowed = true;
+    // A new room means a new authority and a new clock to estimate against;
+    // a baseline carried over from the last host would bias every correction.
+    musicClockBaselineMs = null;
+    try { var el = ensureBgAudio(); if (el) el.playbackRate = 1; } catch (_e) {}
     applyMusicState();
   }
   window.__releaseHostMusic = releaseHostMusicLocal;
@@ -3751,10 +3882,14 @@ function annoBindViewportEvents(win, cb) {
       applyMusicState();
       return;
     }
-    soundEnabled = !soundEnabled;
-    musicBlocked = false;
-    applyMusicState();
-    broadcastMusicState();
+    // One source of truth: muting drops the level to 0 and un-muting restores
+    // the last audible one, so the icon and the slider can never disagree.
+    if (musicLevel > 0) {
+      musicLevelBeforeMute = musicLevel;
+      setMusicLevel(0);
+    } else {
+      setMusicLevel(musicLevelBeforeMute > 0 ? musicLevelBeforeMute : MUSIC_LEVEL_DEFAULT);
+    }
   }
 
   function refreshSoundButton() {
@@ -3768,8 +3903,16 @@ function annoBindViewportEvents(win, cb) {
         musicBlocked && musicPlayable()
           ? "Tap to hear sound in this space"
           : on
-            ? "Turn ambient sound off"
+            ? "Ambient sound " + musicLevel + " of " + MUSIC_LEVEL_MAX + " — click to mute"
             : "Turn ambient sound on";
+      if (soundSlider) {
+        if (soundSlider.value !== String(musicLevel)) soundSlider.value = String(musicLevel);
+        soundSlider.setAttribute("aria-valuenow", String(musicLevel));
+        soundSlider.setAttribute(
+          "aria-valuetext",
+          musicLevel === 0 ? "Off" : musicLevel + " of " + MUSIC_LEVEL_MAX,
+        );
+      }
       if (soundIconOn) soundIconOn.style.display = on ? "" : "none";
       if (soundIconOff) soundIconOff.style.display = on ? "none" : "";
     } catch (_e) {}
@@ -3798,7 +3941,36 @@ function annoBindViewportEvents(win, cb) {
       soundBtn.appendChild(soundIconOn);
       soundBtn.appendChild(soundIconOff);
       soundBtn.addEventListener("click", toggleSound);
-      actions.insertBefore(soundBtn, actions.firstChild);
+      // The slider the owner asked for: 0 (off) to 10, reachable without
+      // leaving the tour, so ambient sound can be pulled under the voices of
+      // the people you are touring with instead of being an all-or-nothing
+      // choice. The icon stays as the one-tap mute and the state readout.
+      var wrap = document.createElement("div");
+      wrap.className = "lt-sound-wrap";
+      soundSlider = document.createElement("input");
+      soundSlider.type = "range";
+      soundSlider.className = "lt-sound-range";
+      soundSlider.id = "lt-sound-level";
+      soundSlider.min = "0";
+      soundSlider.max = String(MUSIC_LEVEL_MAX);
+      soundSlider.step = "1";
+      soundSlider.value = String(musicLevel);
+      soundSlider.setAttribute("aria-label", "Ambient sound volume");
+      soundSlider.setAttribute("aria-valuemin", "0");
+      soundSlider.setAttribute("aria-valuemax", String(MUSIC_LEVEL_MAX));
+      // `input` rather than `change`: the level must follow the thumb, or a
+      // host lowering the music mid-sentence hears it a drag-end too late.
+      soundSlider.addEventListener("input", function () {
+        setMusicLevel(soundSlider.value, true);
+      });
+      // The slider lives inside the tour chrome, where a stray key would
+      // otherwise reach the viewer's own shortcuts.
+      soundSlider.addEventListener("keydown", function (ev) {
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+      });
+      wrap.appendChild(soundBtn);
+      wrap.appendChild(soundSlider);
+      actions.insertBefore(wrap, actions.firstChild);
       refreshSoundButton();
     } catch (_e) {
       soundBtn = null;
