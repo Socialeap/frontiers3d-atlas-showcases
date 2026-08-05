@@ -1,0 +1,18 @@
+{
+  "service": "frontiers3d-atlas",
+  "version": 1,
+  "kind": "curated_showcase",
+  "package_schema": 2,
+  "runtime_version": "2.45.0",
+  "runtime_released": "2026-08-05",
+  "capabilities": [],
+  "package_family": "atlas",
+  "curation_job_id": "4570501e-ffee-4c2f-814c-4b9b34c98145",
+  "matterport_id": "",
+  "viewer": {
+    "kind": "kuula",
+    "tour_id": "7lKhl",
+    "post_id": ""
+  },
+  "issued_at": "2026-08-05T23:04:10.505Z"
+}
