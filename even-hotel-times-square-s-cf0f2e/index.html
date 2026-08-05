@@ -12,7 +12,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
 Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.43.0" />
+<meta name="f3d-runtime" content="2.43.1" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -101,12 +101,15 @@ body.anno-tool-active #anno-letterbox-wrap{touch-action:none;-webkit-touch-callo
    collides with the p/d/r/e/t/c hotkeys. */
 #anno-text-layer{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
 body.anno-text-mode #anno-text-layer{pointer-events:auto;cursor:copy}
-.anno-text-item{position:absolute;color:#fff;font-family:inherit;font-weight:600;line-height:1.3;white-space:pre-wrap;overflow-wrap:break-word;pointer-events:none;-webkit-user-select:none;user-select:none}
+.anno-text-item{position:absolute;min-width:1.2em;color:#fff;font-family:inherit;font-weight:600;line-height:1.3;white-space:pre-wrap;overflow-wrap:break-word;pointer-events:none;-webkit-user-select:none;user-select:none}
+.anno-text-measure{position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;pointer-events:none;font-family:inherit;font-weight:600;line-height:1.3}
 body.anno-text-mode .anno-text-item{pointer-events:auto;cursor:move}
 .anno-text-item.has-bg{background:rgba(10,12,20,0.62);border-radius:6px;padding:0.25em 0.45em;box-shadow:0 1px 6px rgba(0,0,0,0.35)}
 .anno-text-item.selected{outline:2px solid var(--lt-accent);outline-offset:2px}
 .anno-text-x{position:absolute;top:-11px;right:-11px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(255,107,107,0.9);color:#fff;font-size:13px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;font-family:inherit;padding:0}
 .anno-text-item.selected .anno-text-x{display:flex}
+.anno-text-grip{position:absolute;left:-11px;bottom:-11px;width:20px;height:20px;border-radius:50%;border:1px solid rgba(255,255,255,0.7);background:var(--lt-accent);cursor:move;display:none;padding:0;touch-action:none}
+.anno-text-item.selected .anno-text-grip{display:block}
 .anno-text-resize{position:absolute;right:-9px;bottom:-9px;width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,0.7);background:var(--lt-accent);cursor:nwse-resize;display:none;padding:0}
 .anno-text-item.selected .anno-text-resize{display:block}
 .anno-text-editor{position:absolute;z-index:9;background:rgba(10,12,20,0.85);color:#fff;border:1px solid var(--lt-accent);border-radius:6px;resize:none;outline:none;font-family:inherit;font-weight:600;line-height:1.3;overflow:hidden;padding:0.25em 0.45em;touch-action:auto}
@@ -526,6 +529,10 @@ body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-
     <button id="lt-annotate-btn" type="button" class="f3d-iconbtn lt-annotate" hidden aria-pressed="false" title="Annotate — draw on your own screen">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
   <span class="f3d-btn-label">Annotate</span>
+</button>
+    <button id="lt-save-view-btn" type="button" class="f3d-iconbtn lt-save-view" hidden title="Save this view and its annotations to a file">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+  <span class="f3d-btn-label">Save View</span>
 </button>
     <button id="about-btn" type="button" class="f3d-iconbtn" title="About this showcase">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -3549,6 +3556,22 @@ function annoBindViewportEvents(win, cb) {
     });
   }
 
+  // ── Save View (2.43.1, owner-requested) ─────────────────────────────
+  // "We need to have a button to serve that function that sits next to the
+  // annotation button." Downloads the current viewpoint plus the complete
+  // annotation scene as ONE portable JSON file — the Review Segments export
+  // envelope, delivered ahead of its slice. Purely local: a Blob and an
+  // anchor click. No storage, no network, no account.
+  var saveViewBtn = document.getElementById("lt-save-view-btn");
+  if (saveViewBtn) {
+    saveViewBtn.hidden = false;
+    saveViewBtn.addEventListener("click", function () {
+      try {
+        downloadCurrentViewSegment();
+      } catch (_e) {}
+    });
+  }
+
   // Annotation overlay refs.
   var letterboxWrap = document.getElementById("anno-letterbox-wrap");
   var frame = document.getElementById("matterport-frame");
@@ -4842,6 +4865,7 @@ function annoBindViewportEvents(win, cb) {
   var lastTextSeq = 0;
   var selectedTextId = null;
   var textEditorEl = null;
+  var textMeasureEl = null;
   var textEditorFor = null;
   var textEditorOpen = false;
   var textDragState = null;
@@ -5472,13 +5496,13 @@ function annoBindViewportEvents(win, cb) {
   function renderTextLayer() {
     var layer = getTextLayer();
     if (!layer || !letterboxWrap) return;
-    while (layer.firstChild && layer.firstChild !== textEditorEl) {
-      layer.removeChild(layer.firstChild);
+    // Remove only the rendered items — the open editor and its width
+    // measurer survive a re-render.
+    var stale = [];
+    for (var c = layer.firstChild; c; c = c.nextSibling) {
+      if (c.getAttribute && c.getAttribute("data-text-id")) stale.push(c);
     }
-    // The editor (when open) is kept; remove any stragglers after it.
-    if (textEditorEl) {
-      while (textEditorEl.nextSibling) layer.removeChild(textEditorEl.nextSibling);
-    }
+    for (var s = 0; s < stale.length; s++) layer.removeChild(stale[s]);
     var rect = letterboxWrap.getBoundingClientRect();
     for (var i = 0; i < localTexts.length; i++) {
       var t = localTexts[i];
@@ -5488,11 +5512,23 @@ function annoBindViewportEvents(win, cb) {
       el.setAttribute("data-text-id", t.id);
       el.style.left = t.x * 100 + "%";
       el.style.top = t.y * 100 + "%";
-      el.style.width = t.w * 100 + "%";
+      // Shrink-to-fit (owner-reported, 2.43.1): an absolutely positioned box
+      // with auto width sizes to its content, so `w` is the MAX where
+      // wrapping begins — one character renders one character wide (the CSS
+      // min-width floor), a paragraph wraps at w.
+      el.style.maxWidth = t.w * 100 + "%";
       el.style.fontSize = Math.max(10, Math.round(t.fontScale * rect.width)) + "px";
       el.style.color = t.color;
       el.textContent = t.text;
       if (t.id === selectedTextId) {
+        // Explicit drag grip (2.43.1, owner-reported): pressing the label
+        // itself opens the editor, so moving needed a target of its own.
+        var grip = document.createElement("button");
+        grip.type = "button";
+        grip.className = "anno-text-grip";
+        grip.setAttribute("data-text-grip", t.id);
+        grip.setAttribute("aria-label", "Move text");
+        el.appendChild(grip);
         var xBtn = document.createElement("button");
         xBtn.type = "button";
         xBtn.className = "anno-text-x";
@@ -5507,7 +5543,7 @@ function annoBindViewportEvents(win, cb) {
         rsBtn.setAttribute("aria-label", "Resize text");
         el.appendChild(rsBtn);
       }
-      layer.insertBefore(el, textEditorEl);
+      layer.insertBefore(el, textMeasureEl || textEditorEl);
     }
   }
 
@@ -5532,10 +5568,19 @@ function annoBindViewportEvents(win, cb) {
     renderTextLayer();
   }
 
+  // Text is deliberately sent with an EMPTY viewKey (2.43.1). Owner report:
+  // a label placed in a live room appeared only on the author's screen.
+  // Strokes are pinned to a sweep, so the controller's stale-frame filter
+  // (drop when both sides hold a key and they differ) is right for ink — but
+  // a text label is placed while the group is FROZEN on one view, and the two
+  // parent controllers can legitimately hold different keys because the
+  // bridge session's noteCurrentView is a no-op while attached. An empty key
+  // is the controller's documented "no teleport yet — accept" case, so the
+  // label can never be dropped by that filter. Ink is untouched.
   function broadcastTextSet(t) {
     var s = session.getState();
     if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
-      session.sendTextSet(currentViewKey, t);
+      session.sendTextSet("", t);
     }
   }
 
@@ -5554,7 +5599,7 @@ function annoBindViewportEvents(win, cb) {
     if (selectedTextId && byId[selectedTextId]) selectedTextId = null;
     var s = session.getState();
     if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
-      session.sendTextDelete(currentViewKey, ids);
+      session.sendTextDelete("", ids);
     }
     renderTextLayer();
   }
@@ -5564,12 +5609,19 @@ function annoBindViewportEvents(win, cb) {
   // re-enter commit.
   function discardTextEditor() {
     var el = textEditorEl;
+    var meas = textMeasureEl;
     textEditorEl = null;
+    textMeasureEl = null;
     textEditorFor = null;
     textEditorOpen = false;
     if (el) {
       try {
         if (el.parentNode) el.parentNode.removeChild(el);
+      } catch (_e) {}
+    }
+    if (meas) {
+      try {
+        if (meas.parentNode) meas.parentNode.removeChild(meas);
       } catch (_e) {}
     }
   }
@@ -5623,6 +5675,7 @@ function annoBindViewportEvents(win, cb) {
     if (!layer || !letterboxWrap) return;
     var rect = letterboxWrap.getBoundingClientRect();
     if (rect.width < 1) return;
+    var fontPx = Math.max(10, Math.round(base.fontScale * rect.width));
     var ta = document.createElement("textarea");
     ta.className = "anno-text-editor";
     ta.setAttribute("aria-label", "Text annotation");
@@ -5630,14 +5683,38 @@ function annoBindViewportEvents(win, cb) {
     ta.value = base.text || "";
     ta.style.left = base.x * 100 + "%";
     ta.style.top = base.y * 100 + "%";
-    ta.style.width = base.w * 100 + "%";
-    ta.style.fontSize = Math.max(10, Math.round(base.fontScale * rect.width)) + "px";
+    ta.style.fontSize = fontPx + "px";
     ta.rows = 1;
+    // Hidden mirror for width measurement (2.43.1): white-space:pre keeps
+    // line breaks, so offsetWidth is the widest line at the editor's font.
+    var meas = document.createElement("span");
+    meas.className = "anno-text-measure";
+    meas.style.fontSize = fontPx + "px";
+    layer.appendChild(meas);
     layer.appendChild(ta);
     textEditorEl = ta;
+    textMeasureEl = meas;
     textEditorFor = { isNew: !!isNew, base: base };
     textEditorOpen = true;
     var autosize = function () {
+      // Width: grow from one character wide with the content, capped at the
+      // object's w (which is where committed text wraps too). Fail-soft to
+      // the old fixed width when measurement is unavailable (headless DOM).
+      try {
+        var maxPx = Math.max(fontPx * 2, base.w * rect.width);
+        var minPx = Math.ceil(fontPx * 1.6);
+        meas.textContent = ta.value || " ";
+        var measured = meas.offsetWidth;
+        if (typeof measured === "number" && isFinite(measured) && measured > 0) {
+          ta.style.width = Math.min(maxPx, Math.max(minPx, measured + fontPx)) + "px";
+        } else {
+          ta.style.width = base.w * 100 + "%";
+        }
+      } catch (_e) {
+        try {
+          ta.style.width = base.w * 100 + "%";
+        } catch (_e2) {}
+      }
       try {
         ta.style.height = "auto";
         ta.style.height = Math.min(rect.height * 0.6, ta.scrollHeight) + "px";
@@ -5766,6 +5843,112 @@ function annoBindViewportEvents(win, cb) {
     localTexts = texts;
     redrawAllStrokes();
     renderTextLayer();
+    return true;
+  }
+
+  // The generator stamps the runtime version as an f3d-runtime meta marker;
+  // the glue has no version constant of its own, so read it back rather than
+  // invent a second source of truth that could drift. NOTE: never write that
+  // marker out literally in a comment — the Upgrade Center counts marker tags
+  // by pattern, and a fifth "tag" in a comment breaks region re-derivation.
+  function readRuntimeMetaVersion() {
+    try {
+      var m = document.querySelector("meta[name=\"f3d-runtime\"]");
+      var v = m && m.getAttribute ? m.getAttribute("content") : "";
+      return typeof v === "string" && v ? v : "";
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  // Slug a title for a filename: lowercase, [a-z0-9-] only, bounded.
+  function segmentSlug(raw) {
+    var t = String(raw == null ? "" : raw).toLowerCase();
+    var out = "";
+    for (var i = 0; i < t.length && out.length < 48; i++) {
+      var c = t.charAt(i);
+      if (c >= "a" && c <= "z") out += c;
+      else if (c >= "0" && c <= "9") out += c;
+      else if (out.length && out.charAt(out.length - 1) !== "-") out += "-";
+    }
+    while (out.length && out.charAt(out.length - 1) === "-") out = out.slice(0, -1);
+    return out || "presentation";
+  }
+
+  // The current viewpoint as the discriminated provider state the Review
+  // Segments schema specifies. Matterport only here — Atlas destinations
+  // carry no Kuula track.
+  function currentViewState() {
+    var parts = String(currentViewKey || "").split("|");
+    var ss = parts[0] || "";
+    var sr = parts.length > 1 ? parts[1] : "";
+    if (!ss || !/^\d+$/.test(ss)) return null;
+    return { provider: "matterport", ss: ss, sr: sr };
+  }
+
+  // Build the portable envelope. One segment, schema 1, no URLs, no
+  // credentials, no participant identity — the same shape the spec pins.
+  function buildCurrentViewSegment() {
+    var view = currentViewState();
+    var stamp = new Date().toISOString();
+    var title = CONFIG && CONFIG.shareTitle ? String(CONFIG.shareTitle) : "Presentation";
+    return {
+      format: "f3d-review-segments",
+      schema: 1,
+      exportedAt: stamp,
+      exportedBy: { runtime: readRuntimeMetaVersion(), surface: "atlas" },
+      presentation: { kind: "atlas", title: title },
+      segments: [
+        {
+          id: makeTextId().replace("t_", "seg_"),
+          schema: 1,
+          rev: 1,
+          title: title + " \u2014 " + stamp.slice(0, 16).replace("T", " "),
+          presentation: { kind: "atlas", title: title },
+          view: view,
+          viewMeta: {
+            capturedAt: Date.now(),
+            source: view ? "room-agreed" : "none",
+            possiblyStale: !!viewDivergedLocally,
+          },
+          scene: serializeAnnoScene(),
+          stage: { aspect: roomAttached || soloAnnotate === false ? "16:9" : "native" },
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      ],
+    };
+  }
+
+  function downloadCurrentViewSegment() {
+    var payload = buildCurrentViewSegment();
+    var json = JSON.stringify(payload, null, 2);
+    var name =
+      segmentSlug(payload.presentation.title) +
+      "-review-segments-" +
+      payload.exportedAt.slice(0, 19).replace(/[:]/g, "-") +
+      ".f3d-segments.json";
+    var url = null;
+    try {
+      var blob = new Blob([json], { type: "application/json" });
+      url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      if (document.body && document.body.appendChild) document.body.appendChild(a);
+      a.click();
+      if (a.parentNode) a.parentNode.removeChild(a);
+    } catch (_e) {
+      return false;
+    } finally {
+      if (url) {
+        try {
+          setTimeout(function () {
+            URL.revokeObjectURL(url);
+          }, 0);
+        } catch (_e2) {}
+      }
+    }
     return true;
   }
 
@@ -6865,6 +7048,26 @@ function annoBindViewportEvents(win, cb) {
         deleteTextsLocal([xid]);
         return;
       }
+      var gid = tgt && tgt.getAttribute ? tgt.getAttribute("data-text-grip") : null;
+      if (gid) {
+        var gi = findLocalTextIndex(gid);
+        if (gi < 0) return;
+        e.preventDefault();
+        acquireLocalFloor();
+        textDragState = {
+          id: gid,
+          mode: "move",
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: localTexts[gi].x,
+          origY: localTexts[gi].y,
+          moved: false,
+        };
+        try {
+          annoTextLayer.setPointerCapture(e.pointerId);
+        } catch (_e) {}
+        return;
+      }
       var rid = tgt && tgt.getAttribute ? tgt.getAttribute("data-text-resize") : null;
       if (rid) {
         var ri = findLocalTextIndex(rid);
@@ -6898,18 +7101,6 @@ function annoBindViewportEvents(win, cb) {
         if (textEditorOpen) commitTextEditor();
         setSelectedText(tid);
         acquireLocalFloor();
-        textDragState = {
-          id: tid,
-          mode: "move",
-          startX: e.clientX,
-          startY: e.clientY,
-          origX: localTexts[idx].x,
-          origY: localTexts[idx].y,
-          moved: false,
-        };
-        try {
-          annoTextLayer.setPointerCapture(e.pointerId);
-        } catch (_e) {}
         return;
       }
       // Empty stage. An open editor commits first (that click was "I'm
