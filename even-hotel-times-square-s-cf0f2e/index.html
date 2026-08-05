@@ -12,7 +12,7 @@ Amenities include a casual bar/restaurant with light bites and to-go fare, along
 Polished rooms offer free Wi-Fi and flat-screen TVs, plus minifridges and coffeemakers. They also include exercise balls, yoga mats and fitness training videos.
 Amenities include a casual bar/restaurant with light bites and to-go fare, along with a 24-hour gym." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.43.1" />
+<meta name="f3d-runtime" content="2.43.2" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -90,6 +90,24 @@ body.anno-tool-active #anno-letterbox-wrap{touch-action:none;-webkit-touch-callo
 #anno-canvas.pointer-mode,#anno-canvas.draw-mode,#anno-canvas.rope-mode,#anno-canvas.eraser-mode{pointer-events:auto;cursor:crosshair}
 #anno-canvas.eraser-mode{cursor:cell}
 #remote-pointer{position:absolute;left:0;top:0;width:18px;height:18px;border-radius:50%;background:var(--lt-accent);border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,0.45);pointer-events:none;transform:translate(-50%,-50%);z-index:6;display:none}
+
+/* ── Exit confirmation (2.43.2) ────────────────────────────────────────
+   Closing the annotation bar wipes everyone's work, so it asks first — and
+   points at Save View, which is the way to keep it. A DOM dialog rather than
+   window.confirm: the Atlas modal's iframe sandbox omits allow-modals, so a
+   native confirm never appears there. Sits above the toolbar and the text
+   layer; the stage below stays visible so people can see what is at stake. */
+.anno-exit-confirm[hidden]{display:none}
+.anno-exit-confirm{position:absolute;inset:0;z-index:1500;display:flex;align-items:center;justify-content:center;background:rgba(6,8,14,0.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.anno-exit-card{max-width:min(92%,420px);padding:18px 18px 14px;border-radius:12px;background:rgba(12,15,24,0.97);border:1px solid rgba(255,255,255,0.16);box-shadow:0 18px 48px rgba(0,0,0,0.5);color:#fff;font-family:inherit}
+.anno-exit-title{font:700 15px/1.3 inherit;margin-bottom:8px}
+.anno-exit-body{font:500 13px/1.5 inherit;color:rgba(255,255,255,0.82);margin-bottom:14px}
+.anno-exit-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.anno-exit-act{appearance:none;border-radius:8px;padding:8px 12px;font:600 12px/1 inherit;font-family:inherit;cursor:pointer;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.08);color:#fff;transition:background .15s,border-color .15s}
+.anno-exit-act:hover{background:rgba(255,255,255,0.16)}
+.anno-exit-save{border-color:var(--lt-accent,#818cf8);background:rgba(129,140,248,0.22)}
+.anno-exit-go{border-color:rgba(255,107,107,0.5);background:rgba(255,107,107,0.18);color:#ffd9d9}
+.anno-exit-go:hover{background:rgba(255,107,107,0.32)}
 
 /* ── Text annotations (2.43.0) ─────────────────────────────────────────
    A transparent DOM layer above the ink canvas (5) and remote pointer (6).
@@ -494,9 +512,13 @@ body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-
 #lt-sound-btn.is-blocked{border-color:#fbbf24;color:#fbbf24;animation:ltSoundNudge 1.6s ease-in-out infinite}
 /* Volume 0-10 (2.42.0). The slider sits with the icon so a host can pull the
    music under a participant's voice without leaving the tour. */
-.lt-sound-wrap{display:inline-flex;align-items:center;gap:6px}
-.lt-sound-range{width:74px;height:18px;accent-color:var(--lt-accent,#818cf8);cursor:pointer;flex:0 0 auto}
-@media (max-width:640px){.lt-sound-range{width:56px}}
+.lt-sound-wrap{position:relative;display:inline-flex;align-items:center}
+/* 2.43.2 — the volume control drops from the Sound button as a VERTICAL
+   slider instead of occupying a permanent horizontal strip beside it. */
+.lt-sound-pop[hidden]{display:none}
+.lt-sound-pop{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);z-index:1400;display:flex;align-items:center;justify-content:center;padding:10px 8px;border-radius:10px;background:rgba(10,12,20,0.92);border:1px solid rgba(255,255,255,0.14);box-shadow:0 8px 24px rgba(0,0,0,0.4);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.lt-sound-range{accent-color:var(--lt-accent,#818cf8);cursor:pointer;writing-mode:vertical-lr;direction:rtl;width:18px;height:96px}
+@media (max-width:640px){.lt-sound-range{height:80px}}
 @keyframes ltSoundNudge{0%,100%{opacity:1}50%{opacity:.55}}
 /* f3d:runtime-css END */
 </style>
@@ -3823,6 +3845,7 @@ function annoBindViewportEvents(win, cb) {
   var MUSIC_LEVEL_KEY = "f3d:music-level";
   var musicLevel = MUSIC_LEVEL_DEFAULT;
   var soundSlider = null;
+  var soundPop = null;
   var musicLevelBeforeMute = MUSIC_LEVEL_DEFAULT;
   try {
     var storedLevel = window.localStorage ? window.localStorage.getItem(MUSIC_LEVEL_KEY) : null;
@@ -4091,6 +4114,113 @@ function annoBindViewportEvents(win, cb) {
     } catch (_e) {}
   }
 
+  // ── Exit confirmation (2.43.2, owner-directed) ───────────────────────
+  // "the x (exit) button ... can instantly wipe out any annotation work that
+  // participants may be developing. Closing should not be as easy as one
+  // click." A DOM dialog, NOT window.confirm: the Atlas modal's iframe
+  // sandbox omits allow-modals, so a native confirm is silently suppressed
+  // there — the same class of failure as the blocked download. Built lazily
+  // and reused; textContent only.
+  var exitConfirmEl = null;
+  var exitConfirmProceed = null;
+  // Save View hand-off (2.43.2): how long to wait for the parent to confirm
+  // it saved the file before falling back to a local download.
+  var SAVE_VIEW_ACK_MS = 700;
+  var saveViewFallbackTimer = null;
+
+  function closeExitConfirm() {
+    exitConfirmProceed = null;
+    if (exitConfirmEl) exitConfirmEl.hidden = true;
+  }
+
+  function ensureExitConfirm() {
+    if (exitConfirmEl) return exitConfirmEl;
+    var host = letterboxWrap || document.body;
+    if (!host) return null;
+    var el = document.createElement("div");
+    el.className = "anno-exit-confirm";
+    el.hidden = true;
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "false");
+    el.setAttribute("aria-label", "Close annotations?");
+    var card = document.createElement("div");
+    card.className = "anno-exit-card";
+    var h = document.createElement("div");
+    h.className = "anno-exit-title";
+    h.textContent = "Close annotations and clear the board?";
+    var p = document.createElement("div");
+    p.className = "anno-exit-body";
+    p.textContent =
+      "This erases the drawings and text everyone is working on. You can save this view and its annotations to a file first \u2014 use Save View.";
+    var row = document.createElement("div");
+    row.className = "anno-exit-row";
+    var saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "anno-exit-act anno-exit-save";
+    saveBtn.textContent = "Save View";
+    saveBtn.addEventListener("click", function () {
+      try {
+        downloadCurrentViewSegment();
+      } catch (_e) {}
+    });
+    var cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "anno-exit-act anno-exit-cancel";
+    cancelBtn.textContent = "Keep working";
+    cancelBtn.addEventListener("click", closeExitConfirm);
+    var goBtn = document.createElement("button");
+    goBtn.type = "button";
+    goBtn.className = "anno-exit-act anno-exit-go";
+    goBtn.textContent = "Clear and close";
+    goBtn.addEventListener("click", function () {
+      var fn = exitConfirmProceed;
+      closeExitConfirm();
+      if (typeof fn === "function") fn();
+    });
+    row.appendChild(saveBtn);
+    row.appendChild(cancelBtn);
+    row.appendChild(goBtn);
+    card.appendChild(h);
+    card.appendChild(p);
+    card.appendChild(row);
+    el.appendChild(card);
+    host.appendChild(el);
+    exitConfirmEl = el;
+    return el;
+  }
+
+  // Ask before destroying work — but only when there IS work. An empty board
+  // closes on one click, as it always did.
+  function confirmExitThen(proceed) {
+    var hasWork = localStrokes.length > 0 || localTexts.length > 0;
+    if (!hasWork) {
+      proceed();
+      return;
+    }
+    var el = ensureExitConfirm();
+    if (!el) {
+      proceed();
+      return;
+    }
+    exitConfirmProceed = proceed;
+    el.hidden = false;
+  }
+
+  // Volume popover (2.43.2). Open/close is local chrome only — nothing about
+  // it crosses the wire, exactly like the level itself.
+  function setSoundPopOpen(open) {
+    if (!soundPop) return;
+    soundPop.hidden = !open;
+    try {
+      if (soundBtn) soundBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    } catch (_e) {}
+    if (open) {
+      try {
+        soundSlider.focus();
+      } catch (_e) {}
+    }
+  }
+
   function ensureSoundButton() {
     if (soundBtn || !MUSIC_URL) return soundBtn;
     try {
@@ -4113,7 +4243,15 @@ function annoBindViewportEvents(win, cb) {
       soundIconOff.setAttribute("class", "lt-sound-ico lt-sound-ico-off");
       soundBtn.appendChild(soundIconOn);
       soundBtn.appendChild(soundIconOff);
-      soundBtn.addEventListener("click", toggleSound);
+      soundBtn.addEventListener("click", function () {
+        // A blocked play makes THIS tap the gesture the browser was waiting
+        // for, so it runs FIRST (Codex P2 on #405): the pulsing button reads
+        // "Tap to hear sound in this space", and opening a slider instead of
+        // resuming would leave that promise unkept. Only the blocked branch
+        // of toggleSound is reachable here — muting stays the slider's job.
+        if (musicBlocked && musicPlayable()) toggleSound();
+        setSoundPopOpen(soundPop ? soundPop.hidden : false);
+      });
       // The slider the owner asked for: 0 (off) to 10, reachable without
       // leaving the tour, so ambient sound can be pulled under the voices of
       // the people you are touring with instead of being an all-or-nothing
@@ -4141,8 +4279,17 @@ function annoBindViewportEvents(win, cb) {
       soundSlider.addEventListener("keydown", function (ev) {
         if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
       });
+      // Owner-directed (2.43.2): the slider is no longer a permanent strip of
+      // chrome beside the icon. It lives in a popover that drops from the
+      // button and stands VERTICAL, so the control reads the way volume does
+      // and costs nothing until asked for.
+      soundPop = document.createElement("div");
+      soundPop.className = "lt-sound-pop";
+      soundPop.hidden = true;
+      soundSlider.setAttribute("orient", "vertical");
+      soundPop.appendChild(soundSlider);
       wrap.appendChild(soundBtn);
-      wrap.appendChild(soundSlider);
+      wrap.appendChild(soundPop);
       actions.insertBefore(wrap, actions.firstChild);
       refreshSoundButton();
     } catch (_e) {
@@ -4152,6 +4299,27 @@ function annoBindViewportEvents(win, cb) {
     }
     return soundBtn;
   }
+
+  // Dismissal for the volume popover: a click anywhere else, or Escape.
+  // Registered once; harmless when the popover never exists (no soundtrack).
+  try {
+    document.addEventListener("click", function (e) {
+      if (!soundPop || soundPop.hidden) return;
+      var n = e && e.target;
+      while (n) {
+        if (n === soundPop || n === soundBtn) return;
+        n = n.parentNode;
+      }
+      setSoundPopOpen(false);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (!soundPop || soundPop.hidden) return;
+      if (e && e.key === "Escape") {
+        setSoundPopOpen(false);
+        if (e.stopPropagation) e.stopPropagation();
+      }
+    });
+  } catch (_e) {}
 
   function initMusic() {
     if (!MUSIC_URL) return;
@@ -4299,6 +4467,17 @@ function annoBindViewportEvents(win, cb) {
 
       // The parent's verdict on a view this side just sent up. Honesty for
       // the pill: "Synced" only once the room actually took it.
+      // The parent confirming it saved the file: cancel the local fallback.
+      if (d.type === "f3d:save-view-ack") {
+        if (saveViewFallbackTimer) {
+          try {
+            clearTimeout(saveViewFallbackTimer);
+          } catch (_ea) {}
+          saveViewFallbackTimer = null;
+        }
+        return;
+      }
+
       if (d.type === "f3d:room-view-ack") {
         if (!roomAttached) return;
         if (pendingViewAckTimer) {
@@ -5928,6 +6107,46 @@ function annoBindViewportEvents(win, cb) {
       "-review-segments-" +
       payload.exportedAt.slice(0, 19).replace(/[:]/g, "-") +
       ".f3d-segments.json";
+    // EMBEDDED (the Atlas modal): hand the file to the parent instead of
+    // downloading here. The modal's iframe sandbox deliberately omits
+    // allow-downloads — a test fails on purpose if it is ever added — so an
+    // anchor click inside this frame is silently swallowed by the browser,
+    // which is exactly the "Save button does nothing" the owner reported.
+    // The same-origin Atlas app has no such restriction, so it performs the
+    // download: the same trigger-here / save-there split the deferred
+    // viewpoint-snapshot design settled on for this identical constraint.
+    // Standalone (no distinct parent) keeps the direct path below.
+    // postMessage SUCCEEDS whether or not anyone is listening, so a bare
+    // "posted, therefore done" would silently drop the file in every embed
+    // that isn't the Atlas modal — BusinessSpotlight iframes a presentation
+    // with no bridge and no sandbox, where the local download works fine
+    // (Codex P2 on #405). So: post, then wait briefly for the parent's ack.
+    // No ack ⇒ nobody saved it ⇒ do it here after all. In the Atlas modal the
+    // ack arrives and this never runs; if it somehow doesn't, the local
+    // attempt is merely swallowed, which is no worse than before.
+    try {
+      if (window.parent && window.parent !== window) {
+        var posted = postToParentRoom("f3d:save-view", { filename: name, json: json });
+        if (posted) {
+          if (saveViewFallbackTimer) {
+            try {
+              clearTimeout(saveViewFallbackTimer);
+            } catch (_ec) {}
+          }
+          saveViewFallbackTimer = setTimeout(function () {
+            saveViewFallbackTimer = null;
+            saveSegmentLocally(name, json);
+          }, SAVE_VIEW_ACK_MS);
+          return true;
+        }
+      }
+    } catch (_e0) {}
+    return saveSegmentLocally(name, json);
+  }
+
+  // The local half, split out so both the standalone path and the no-ack
+  // fallback share one implementation.
+  function saveSegmentLocally(name, json) {
     var url = null;
     try {
       var blob = new Blob([json], { type: "application/json" });
@@ -6987,7 +7206,9 @@ function annoBindViewportEvents(win, cb) {
       if (btn.id === "anno-exit-btn") {
         // Solo: exit closes the solo toolbar (clears the local strokes too).
         if (soloAnnotate) {
-          setSoloAnnotate(false);
+          confirmExitThen(function () {
+            setSoloAnnotate(false);
+          });
           return;
         }
         // 2.30.0 — SOMEONE ELSE HOLDS THE FLOOR. × then means "give me my view
@@ -6997,6 +7218,7 @@ function annoBindViewportEvents(win, cb) {
         // floor (until the holder's next heartbeat re-froze everyone ~2.6s
         // later — a global flicker masquerading as a local control).
         if (remoteGestureActive && !localFloorHeld) {
+          // Local unfreeze only — destroys nothing, so it stays one click.
           releaseMyFreeze();
           setAnnoBarOpen(false);
           return;
@@ -7006,9 +7228,11 @@ function annoBindViewportEvents(win, cb) {
         // broadcast could only ever fire when it held NOTHING — and then it was
         // an unlock sent on someone else's behalf. That case now has its own
         // branch above, which keeps it local.
-        handleClearLocallyAndBroadcast();
-        setToolMode("none");
-        setAnnoBarOpen(false);
+        confirmExitThen(function () {
+          handleClearLocallyAndBroadcast();
+          setToolMode("none");
+          setAnnoBarOpen(false);
+        });
         return;
       }
     });
