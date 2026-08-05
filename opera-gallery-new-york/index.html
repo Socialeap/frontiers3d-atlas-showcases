@@ -8,7 +8,7 @@
 <meta property="og:title" content="Opera Gallery New York — Frontiers|3D" />
 <meta property="og:description" content="A premier three-level gallery on Madison Avenue showcasing an exceptional collection of modern and contemporary art. Visitors can explore works by 20th-century masters like Picasso, Chagall, and Botero alongside contemporary pieces by Yayoi Kusama and Mel Bochner. The space features dramatic dark walls that make the vibrant artworks pop and is fully accessible via stairs or elevator. Offering free admission, it is a sophisticated and welcoming destination for art lovers visiting the Upper East Side, conveniently located near Central Park, The Metropolitan Museum of Art, and world-class luxury" />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.41.0" />
+<meta name="f3d-runtime" content="2.43.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -86,6 +86,29 @@ body.anno-tool-active #anno-letterbox-wrap{touch-action:none;-webkit-touch-callo
 #anno-canvas.pointer-mode,#anno-canvas.draw-mode,#anno-canvas.rope-mode,#anno-canvas.eraser-mode{pointer-events:auto;cursor:crosshair}
 #anno-canvas.eraser-mode{cursor:cell}
 #remote-pointer{position:absolute;left:0;top:0;width:18px;height:18px;border-radius:50%;background:var(--lt-accent);border:2px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,0.45);pointer-events:none;transform:translate(-50%,-50%);z-index:6;display:none}
+
+/* ── Text annotations (2.43.0) ─────────────────────────────────────────
+   A transparent DOM layer above the ink canvas (5) and remote pointer (6).
+   Inert unless the Text tool is armed — pointer-events stays none so
+   Matterport navigation and the ink tools are untouched — and the items
+   themselves become interactive only in text mode. The editor is a
+   <textarea> on purpose: it is the one primitive both keydown handlers
+   already exempt (INPUT/TEXTAREA/isContentEditable bail), so typing never
+   collides with the p/d/r/e/t/c hotkeys. */
+#anno-text-layer{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
+body.anno-text-mode #anno-text-layer{pointer-events:auto;cursor:copy}
+.anno-text-item{position:absolute;color:#fff;font-family:inherit;font-weight:600;line-height:1.3;white-space:pre-wrap;overflow-wrap:break-word;pointer-events:none;-webkit-user-select:none;user-select:none}
+body.anno-text-mode .anno-text-item{pointer-events:auto;cursor:move}
+.anno-text-item.has-bg{background:rgba(10,12,20,0.62);border-radius:6px;padding:0.25em 0.45em;box-shadow:0 1px 6px rgba(0,0,0,0.35)}
+.anno-text-item.selected{outline:2px solid var(--lt-accent);outline-offset:2px}
+.anno-text-x{position:absolute;top:-11px;right:-11px;width:20px;height:20px;border-radius:50%;border:none;background:rgba(255,107,107,0.9);color:#fff;font-size:13px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;font-family:inherit;padding:0}
+.anno-text-item.selected .anno-text-x{display:flex}
+.anno-text-resize{position:absolute;right:-9px;bottom:-9px;width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,0.7);background:var(--lt-accent);cursor:nwse-resize;display:none;padding:0}
+.anno-text-item.selected .anno-text-resize{display:block}
+.anno-text-editor{position:absolute;z-index:9;background:rgba(10,12,20,0.85);color:#fff;border:1px solid var(--lt-accent);border-radius:6px;resize:none;outline:none;font-family:inherit;font-weight:600;line-height:1.3;overflow:hidden;padding:0.25em 0.45em;touch-action:auto}
+/* The stage-wide user-select:none (body.anno-tool-active) must not reach the
+   editor — selection, caret, and clipboard live here. */
+body.anno-tool-active #anno-letterbox-wrap .anno-text-editor{-webkit-user-select:text;user-select:text}
 #lt-navlock{position:absolute;inset:0;z-index:4;background:transparent;cursor:not-allowed;display:none;touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 body.live-tour-active #lt-navlock.locked{display:block}
 body.live-tour-active #anno-letterbox-wrap:has(#lt-navlock.locked) #matterport-frame{pointer-events:none}
@@ -462,6 +485,11 @@ body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-
 #lt-sound-btn.is-off{color:#9ca3af}
 /* The room ordered ON but this browser needs a tap first — pulse politely. */
 #lt-sound-btn.is-blocked{border-color:#fbbf24;color:#fbbf24;animation:ltSoundNudge 1.6s ease-in-out infinite}
+/* Volume 0-10 (2.42.0). The slider sits with the icon so a host can pull the
+   music under a participant's voice without leaving the tour. */
+.lt-sound-wrap{display:inline-flex;align-items:center;gap:6px}
+.lt-sound-range{width:74px;height:18px;accent-color:var(--lt-accent,#818cf8);cursor:pointer;flex:0 0 auto}
+@media (max-width:640px){.lt-sound-range{width:56px}}
 @keyframes ltSoundNudge{0%,100%{opacity:1}50%{opacity:.55}}
 /* f3d:runtime-css END */
 </style>
@@ -541,6 +569,7 @@ body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-
       </select>
     </label>
   </span>
+  <button type="button" class="anno-tool-btn" data-tool="text" id="anno-text-btn" title="Text (T)" aria-keyshortcuts="T">Text</button>
   <button type="button" class="anno-tool-btn" data-tool="eraser" id="anno-eraser-btn" title="Eraser (E)" aria-keyshortcuts="E">Eraser</button>
   <button type="button" class="anno-tool-btn" id="anno-clear-btn" title="Clear annotations (C)" aria-keyshortcuts="C">Clear</button>
   <button type="button" class="anno-tool-btn anno-exit-btn" id="anno-exit-btn" title="Exit annotation mode" aria-label="Exit annotation mode">&times;</button>
@@ -554,6 +583,7 @@ body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-
     <!-- f3d:runtime-markup:stage BEGIN v=1 family=atlas -->
 <div id="lt-navlock" aria-hidden="true"></div>
     <canvas id="anno-canvas"></canvas>
+    <div id="anno-text-layer"></div>
     <div id="remote-pointer" aria-hidden="true"></div>
 <!-- f3d:runtime-markup:stage END -->
   </div>
@@ -1782,6 +1812,30 @@ function createLiveSession(options) {
     });
   }
 
+  // Allowlist copy of a text-annotation object off the wire (2.43.0).
+  // Transport-shaped like the stroke fields: presence/type coercion only —
+  // the glue's apply side owns strict validation (clamps, color whitelist,
+  // length caps). Never passes the raw object through, so unexpected keys
+  // die here.
+  function _coerceTextObj(raw) {
+    if (!_isPlainObject(raw)) return null;
+    var id = _coerceString(raw.id);
+    if (!id) return null;
+    return {
+      id: id,
+      rev: +raw.rev > 0 ? Math.floor(+raw.rev) : 1,
+      text: _coerceString(raw.text),
+      x: typeof raw.x === "number" ? raw.x : 0,
+      y: typeof raw.y === "number" ? raw.y : 0,
+      w: typeof raw.w === "number" ? raw.w : 0.25,
+      fontScale: typeof raw.fontScale === "number" ? raw.fontScale : 0.022,
+      color: typeof raw.color === "string" ? raw.color : "",
+      bg: raw.bg !== false,
+      createdAt: +raw.createdAt || 0,
+      updatedAt: +raw.updatedAt || 0,
+    };
+  }
+
   // ── Inbound packet normalization (shared by both roles) ───────────
   // Returns a normalized annotation event object for a valid packet of
   // the given type, or null. Does NOT touch watermarks — callers own
@@ -1828,6 +1882,21 @@ function createLiveSession(options) {
         seq: seq,
         ts: ts,
       };
+    }
+    if (type === "text_set") {
+      var tObj = _coerceTextObj(payload.text);
+      if (!tObj) return null;
+      return { kind: "text_set", viewKey: vk, seq: seq, text: tObj, ts: ts };
+    }
+    if (type === "text_delete") {
+      var tDelIds = [];
+      if (Array.isArray(payload.textIds)) {
+        for (var ti = 0; ti < payload.textIds.length; ti++) {
+          var tid = _coerceString(payload.textIds[ti]);
+          if (tid) tDelIds.push(tid);
+        }
+      }
+      return { kind: "text_delete", viewKey: vk, textIds: tDelIds, seq: seq, ts: ts };
     }
     if (type === "stroke_begin" || type === "stroke_patch" || type === "stroke_commit") {
       var ev = {
@@ -1891,6 +1960,30 @@ function createLiveSession(options) {
       });
       return;
     }
+    if (ev.kind === "text_set") {
+      _patch({
+        incomingTextEvent: {
+          kind: "set",
+          viewKey: ev.viewKey,
+          text: ev.text,
+          seq: stampSeq,
+          ts: ev.ts,
+        },
+      });
+      return;
+    }
+    if (ev.kind === "text_delete") {
+      _patch({
+        incomingTextEvent: {
+          kind: "delete",
+          viewKey: ev.viewKey,
+          textIds: ev.textIds,
+          seq: stampSeq,
+          ts: ev.ts,
+        },
+      });
+      return;
+    }
     var sev = {
       kind: ev.kind,
       viewKey: ev.viewKey,
@@ -1919,6 +2012,12 @@ function createLiveSession(options) {
     if (ev.kind === "stroke_delete") {
       return { type: "stroke_delete", viewKey: ev.viewKey, strokeIds: ev.strokeIds, seq: seq, ts: ev.ts };
     }
+    if (ev.kind === "text_set") {
+      return { type: "text_set", viewKey: ev.viewKey, seq: seq, text: ev.text, ts: ev.ts };
+    }
+    if (ev.kind === "text_delete") {
+      return { type: "text_delete", viewKey: ev.viewKey, textIds: ev.textIds, seq: seq, ts: ev.ts };
+    }
     var type =
       ev.kind === "begin"
         ? "stroke_begin"
@@ -1938,6 +2037,8 @@ function createLiveSession(options) {
     stroke_patch: 1,
     stroke_commit: 1,
     stroke_delete: 1,
+    text_set: 1,
+    text_delete: 1,
     clear: 1,
     nav_lock: 1,
   };
@@ -2778,6 +2879,49 @@ function createLiveSession(options) {
     return _sendAnnotationPacket(packet, false);
   }
 
+  // Full-object upsert of one text annotation (2.43.0). Create, edit,
+  // move, resize, and restyle all travel as the same packet; receivers
+  // upsert by id with last-writer-wins on rev — the same replace-wholesale
+  // semantics rope resize already relies on for stroke_begin.
+  function sendTextSet(viewKey, textObj) {
+    if (!_canSendAnnotation()) return false;
+    var t = _coerceTextObj(textObj);
+    if (!t) return false;
+    var seq = ++_sendSeq;
+    var packet = {
+      type: "text_set",
+      viewKey: _coerceString(viewKey),
+      seq: seq,
+      text: t,
+      ts: Date.now(),
+    };
+    return _sendAnnotationPacket(packet, false);
+  }
+
+  // Idempotent removal of one or more text annotations. Terminal per id:
+  // receivers remember deleted ids for the session so a stale text_set
+  // cannot resurrect one (delete wins regardless of rev).
+  function sendTextDelete(viewKey, textIds) {
+    if (!_canSendAnnotation()) return false;
+    var ids = [];
+    if (Array.isArray(textIds)) {
+      for (var i = 0; i < textIds.length; i++) {
+        var tid = _coerceString(textIds[i]);
+        if (tid) ids.push(tid);
+      }
+    }
+    if (ids.length === 0) return false;
+    var seq = ++_sendSeq;
+    var packet = {
+      type: "text_delete",
+      viewKey: _coerceString(viewKey),
+      textIds: ids,
+      seq: seq,
+      ts: Date.now(),
+    };
+    return _sendAnnotationPacket(packet, false);
+  }
+
   function dispose() {
     if (disposed) return;
     disposed = true;
@@ -2916,6 +3060,8 @@ function createLiveSession(options) {
     sendClear: sendClear,
     sendNavLock: sendNavLock,
     sendStrokeDelete: sendStrokeDelete,
+    sendTextSet: sendTextSet,
+    sendTextDelete: sendTextDelete,
     dispose: dispose,
   };
 }
@@ -3614,14 +3760,90 @@ function annoBindViewportEvents(win, cb) {
   var soundBtn = null;
   var soundIconOn = null;
   var soundIconOff = null;
-  var soundEnabled = false;
+  var soundEnabled = false; // set from the stored level once it is read
   var hostMusicAllowed = true;
   // An ON order arrived without a local gesture and play() was refused —
   // surface it on the button instead of failing into silence.
   var musicBlocked = false;
   var musicKeepaliveTimer = null;
   var MUSIC_KEEPALIVE_MS = 5000;
-  var MUSIC_DRIFT_TOLERANCE_SEC = 1.5;
+  // Servo constants (2.42.0). MUSIC_DRIFT_TOLERANCE_SEC is retained as the
+  // SEEK threshold under its new name; the tolerance is no longer a dead zone
+  // because everything below it is now corrected by rate rather than ignored.
+  var MUSIC_SEEK_TOLERANCE_SEC = 0.4;
+  /** Below this, streams count as aligned and the rate returns to exactly 1. */
+  var MUSIC_SYNC_DEADBAND_SEC = 0.04;
+  /** Dissolve the remaining error over roughly this long (seconds). */
+  var MUSIC_SERVO_WINDOW_SEC = 10;
+  /** Hard clamp on the tempo trim. Browsers preserve pitch across
+   *  playbackRate, so 1.5% is a tempo nudge with NO pitch shift: inaudible
+   *  on ambient music, and fast enough to close 0.4s in under half a minute. */
+  var MUSIC_RATE_TRIM_MAX = 0.015;
+  /** Running minimum of (localNow - sentAtMs): the wall-clock skew estimate.
+   *  Null until the first marker; reset when the room authority changes. */
+  var musicClockBaselineMs = null;
+  // ── Per-participant volume (2.42.0, owner-directed) ────────────────
+  // A slider from 0 (off) to 10, because a fixed level meant ambient sound
+  // competed with the voices of the people you are touring WITH. Deliberately
+  // LOCAL and never broadcast: the servo synchronises the play POSITION so
+  // everyone hears the same moment of the track, while how loud that is
+  // belongs to each listener and their room. Level 4 reproduces the previous
+  // fixed 0.4 exactly, so nobody's existing experience changes on upgrade.
+  var MUSIC_LEVEL_MAX = 10;
+  var MUSIC_LEVEL_DEFAULT = 4;
+  var MUSIC_LEVEL_KEY = "f3d:music-level";
+  var musicLevel = MUSIC_LEVEL_DEFAULT;
+  var soundSlider = null;
+  var musicLevelBeforeMute = MUSIC_LEVEL_DEFAULT;
+  try {
+    var storedLevel = window.localStorage ? window.localStorage.getItem(MUSIC_LEVEL_KEY) : null;
+    if (storedLevel !== null) {
+      var parsedLevel = parseInt(storedLevel, 10);
+      if (isFinite(parsedLevel) && parsedLevel >= 0 && parsedLevel <= MUSIC_LEVEL_MAX) {
+        musicLevel = parsedLevel;
+      }
+    }
+  } catch (_e) {}
+  // Level 0 IS off, so the slider subsumes the old toggle rather than sitting
+  // beside it as a second source of truth. Playback still starts silent
+  // regardless: browsers refuse un-gestured autoplay, so the stored level
+  // decides how loud the first tap will be, not whether one is needed.
+
+  function musicVolumeFromLevel(level) {
+    if (!(level > 0)) return 0;
+    return Math.min(1, level / MUSIC_LEVEL_MAX);
+  }
+
+  function applyMusicVolume() {
+    try {
+      var el = bgAudio;
+      if (el) el.volume = musicVolumeFromLevel(musicLevel);
+    } catch (_e) {}
+  }
+
+  function setMusicLevel(level, fromSlider) {
+    var next = parseInt(level, 10);
+    if (!isFinite(next)) return;
+    if (next < 0) next = 0;
+    if (next > MUSIC_LEVEL_MAX) next = MUSIC_LEVEL_MAX;
+    var wasAudible = musicLevel > 0;
+    musicLevel = next;
+    try {
+      if (window.localStorage) window.localStorage.setItem(MUSIC_LEVEL_KEY, String(musicLevel));
+    } catch (_e) {}
+    soundEnabled = musicLevel > 0;
+    // Dragging the slider up IS the user gesture a blocked autoplay was
+    // waiting for, so it resumes rather than needing a second tap.
+    if (soundEnabled && musicBlocked) musicBlocked = false;
+    applyMusicVolume();
+    applyMusicState();
+    // The AUTHORITY's own level must not move the room: only on/off is shared
+    // state. What counts is the CROSSING, in both directions — 0 stops
+    // playback and 0 -> audible starts it — while a drag between two audible
+    // levels stays this listener's business.
+    if (!fromSlider || wasAudible !== (musicLevel > 0)) broadcastMusicState();
+    refreshSoundButton();
+  }
 
   function ensureBgAudio() {
     if (!MUSIC_URL) return null;
@@ -3634,7 +3856,7 @@ function annoBindViewportEvents(win, cb) {
       bgAudio.id = "bg-audio";
       bgAudio.loop = true;
       bgAudio.preload = "auto";
-      bgAudio.volume = 0.4;
+      bgAudio.volume = musicVolumeFromLevel(musicLevel);
       bgAudio.src = MUSIC_URL;
       bgAudio.style.display = "none";
       (document.body || document.documentElement).appendChild(bgAudio);
@@ -3688,23 +3910,72 @@ function annoBindViewportEvents(win, cb) {
     }
   };
 
-  // The host said play-from-here / stop. Seek math is the Builder's own:
-  // compensate the marker's transit time, wrap on duration, and only seek on
-  // a real divergence — re-seeking on every keepalive would stutter.
+  // The host said play-from-here / stop — and this is the servo that keeps
+  // every participant on the host clock (2.42.0).
+  //
+  // ── The two defects this replaces ────────────────────────────────────
+  // Owner, after a live room: the music "eventually drifts into misaligned
+  // play timing by a quarter second, then within a few minutes half a
+  // second, then a bit later by 1 second." Two independent causes, and the
+  // old math had both.
+  //
+  // 1. WALL-CLOCK SKEW, constant from the first note. sentAtMs is the HOST
+  //    Date.now(); we subtracted the GUEST one. Two devices routinely
+  //    disagree by hundreds of milliseconds, and that error was inherited by
+  //    every correction forever. Fixed WITHOUT any new message — and so
+  //    against existing hosts too — by a minimum filter: localNow - sentAtMs
+  //    equals (transit - skew), so its running MINIMUM over the session is
+  //    the best estimate of -skew (the sample with least queuing delay).
+  //    Subtracting that baseline cancels the skew and leaves only jitter.
+  //
+  // 2. A 1.5s DEAD ZONE, which is where the growing error lived. Corrections
+  //    fired only ABOVE 1.5s, so audio-hardware clock differences piled up
+  //    underneath it — 0.25s, 0.5s, 1s — until a hard seek jumped audibly
+  //    and the cycle restarted. Replaced by a two-tier servo: a big gap
+  //    still seeks (a jump IS right when you are far out), but everything
+  //    smaller is dissolved by trimming playbackRate a fraction of a
+  //    percent. Browsers preserve pitch across playbackRate, so that is a
+  //    tempo nudge with no pitch shift — inaudible, and continuous rather
+  //    than letting the streams separate. Inside the deadband the rate
+  //    returns to exactly 1 so it never hunts.
   function applyHostMusicLocal(on, atSec, sentAtMs) {
     hostMusicAllowed = on === true;
     var el = ensureBgAudio();
     if (el && hostMusicAllowed && typeof atSec === "number" && isFinite(atSec)) {
       try {
-        var elapsed =
-          typeof sentAtMs === "number" && isFinite(sentAtMs)
-            ? Math.max(0, (Date.now() - sentAtMs) / 1000)
-            : 0;
+        var elapsed = 0;
+        if (typeof sentAtMs === "number" && isFinite(sentAtMs)) {
+          var apparent = Date.now() - sentAtMs;
+          if (musicClockBaselineMs === null || apparent < musicClockBaselineMs) {
+            musicClockBaselineMs = apparent;
+          }
+          elapsed = Math.max(0, (apparent - musicClockBaselineMs) / 1000);
+        }
         var target = atSec + elapsed;
         var dur = el.duration;
-        if (typeof dur === "number" && isFinite(dur) && dur > 0) target = target % dur;
-        if (Math.abs((el.currentTime || 0) - target) > MUSIC_DRIFT_TOLERANCE_SEC) {
-          el.currentTime = target;
+        if (typeof dur === "number" && isFinite(dur) && dur > 0) {
+          target = target % dur;
+          // Nearest image across the loop seam: 0.2s into a track is 0.3s
+          // from 59.9s of a 60s loop, not 59.7s away from it.
+          var here = el.currentTime || 0;
+          if (target - here > dur / 2) target -= dur;
+          else if (here - target > dur / 2) target += dur;
+        }
+        var errSec = target - (el.currentTime || 0);
+        var absErr = Math.abs(errSec);
+        if (absErr > MUSIC_SEEK_TOLERANCE_SEC) {
+          // Too far out to glide back — jump, and restart the servo clean.
+          el.currentTime = ((target % dur) + dur) % dur || Math.max(0, target);
+          el.playbackRate = 1;
+        } else if (absErr > MUSIC_SYNC_DEADBAND_SEC) {
+          // Glide: rate proportional to the error, hard-clamped so the pitch
+          // shift stays under a cent or two and nobody can hear the fix.
+          var adj = errSec / MUSIC_SERVO_WINDOW_SEC;
+          if (adj > MUSIC_RATE_TRIM_MAX) adj = MUSIC_RATE_TRIM_MAX;
+          else if (adj < -MUSIC_RATE_TRIM_MAX) adj = -MUSIC_RATE_TRIM_MAX;
+          el.playbackRate = 1 + adj;
+        } else if (el.playbackRate !== 1) {
+          el.playbackRate = 1;
         }
       } catch (_e) {}
     }
@@ -3714,6 +3985,10 @@ function annoBindViewportEvents(win, cb) {
 
   function releaseHostMusicLocal() {
     hostMusicAllowed = true;
+    // A new room means a new authority and a new clock to estimate against;
+    // a baseline carried over from the last host would bias every correction.
+    musicClockBaselineMs = null;
+    try { var el = ensureBgAudio(); if (el) el.playbackRate = 1; } catch (_e) {}
     applyMusicState();
   }
   window.__releaseHostMusic = releaseHostMusicLocal;
@@ -3751,10 +4026,14 @@ function annoBindViewportEvents(win, cb) {
       applyMusicState();
       return;
     }
-    soundEnabled = !soundEnabled;
-    musicBlocked = false;
-    applyMusicState();
-    broadcastMusicState();
+    // One source of truth: muting drops the level to 0 and un-muting restores
+    // the last audible one, so the icon and the slider can never disagree.
+    if (musicLevel > 0) {
+      musicLevelBeforeMute = musicLevel;
+      setMusicLevel(0);
+    } else {
+      setMusicLevel(musicLevelBeforeMute > 0 ? musicLevelBeforeMute : MUSIC_LEVEL_DEFAULT);
+    }
   }
 
   function refreshSoundButton() {
@@ -3768,8 +4047,16 @@ function annoBindViewportEvents(win, cb) {
         musicBlocked && musicPlayable()
           ? "Tap to hear sound in this space"
           : on
-            ? "Turn ambient sound off"
+            ? "Ambient sound " + musicLevel + " of " + MUSIC_LEVEL_MAX + " — click to mute"
             : "Turn ambient sound on";
+      if (soundSlider) {
+        if (soundSlider.value !== String(musicLevel)) soundSlider.value = String(musicLevel);
+        soundSlider.setAttribute("aria-valuenow", String(musicLevel));
+        soundSlider.setAttribute(
+          "aria-valuetext",
+          musicLevel === 0 ? "Off" : musicLevel + " of " + MUSIC_LEVEL_MAX,
+        );
+      }
       if (soundIconOn) soundIconOn.style.display = on ? "" : "none";
       if (soundIconOff) soundIconOff.style.display = on ? "none" : "";
     } catch (_e) {}
@@ -3798,7 +4085,36 @@ function annoBindViewportEvents(win, cb) {
       soundBtn.appendChild(soundIconOn);
       soundBtn.appendChild(soundIconOff);
       soundBtn.addEventListener("click", toggleSound);
-      actions.insertBefore(soundBtn, actions.firstChild);
+      // The slider the owner asked for: 0 (off) to 10, reachable without
+      // leaving the tour, so ambient sound can be pulled under the voices of
+      // the people you are touring with instead of being an all-or-nothing
+      // choice. The icon stays as the one-tap mute and the state readout.
+      var wrap = document.createElement("div");
+      wrap.className = "lt-sound-wrap";
+      soundSlider = document.createElement("input");
+      soundSlider.type = "range";
+      soundSlider.className = "lt-sound-range";
+      soundSlider.id = "lt-sound-level";
+      soundSlider.min = "0";
+      soundSlider.max = String(MUSIC_LEVEL_MAX);
+      soundSlider.step = "1";
+      soundSlider.value = String(musicLevel);
+      soundSlider.setAttribute("aria-label", "Ambient sound volume");
+      soundSlider.setAttribute("aria-valuemin", "0");
+      soundSlider.setAttribute("aria-valuemax", String(MUSIC_LEVEL_MAX));
+      // `input` rather than `change`: the level must follow the thumb, or a
+      // host lowering the music mid-sentence hears it a drag-end too late.
+      soundSlider.addEventListener("input", function () {
+        setMusicLevel(soundSlider.value, true);
+      });
+      // The slider lives inside the tour chrome, where a stray key would
+      // otherwise reach the viewer's own shortcuts.
+      soundSlider.addEventListener("keydown", function (ev) {
+        if (ev && typeof ev.stopPropagation === "function") ev.stopPropagation();
+      });
+      wrap.appendChild(soundBtn);
+      wrap.appendChild(soundSlider);
+      actions.insertBefore(wrap, actions.firstChild);
       refreshSoundButton();
     } catch (_e) {
       soundBtn = null;
@@ -3874,6 +4190,7 @@ function annoBindViewportEvents(win, cb) {
           lastClearSeq = null;
           lastNavLockSeq = null;
           lastStrokeDeleteSeq = null;
+          lastTextSeq = null;
         }
         // Grants can flip mid-room (the host ticking the roster): the
         // affordances re-derive from the flags on every attach.
@@ -3914,6 +4231,7 @@ function annoBindViewportEvents(win, cb) {
           lastClearSeq = null;
           lastNavLockSeq = null;
           lastStrokeDeleteSeq = null;
+          lastTextSeq = null;
         }
         // Standalone default is permissive annotation (2.26.0) — restore it,
         // or a guest whose room ended would keep the room's revocation.
@@ -3938,7 +4256,8 @@ function annoBindViewportEvents(win, cb) {
           slot !== "incomingStrokeEvent" &&
           slot !== "incomingClearEvent" &&
           slot !== "incomingNavLockEvent" &&
-          slot !== "incomingStrokeDeleteEvent"
+          slot !== "incomingStrokeDeleteEvent" &&
+          slot !== "incomingTextEvent"
         )
           return;
         var ev = d.ev;
@@ -4333,6 +4652,8 @@ function annoBindViewportEvents(win, cb) {
       sendClear: relay("clear"),
       sendNavLock: relay("navLock"),
       sendStrokeDelete: relay("strokeDelete"),
+      sendTextSet: relay("textSet"),
+      sendTextDelete: relay("textDelete"),
       teleportVisitor: view,
       shareLocationWithAgent: view,
       // The ONE ctl marker that crosses the frame boundary (2.41.0): music.
@@ -4496,6 +4817,34 @@ function annoBindViewportEvents(win, cb) {
   var lastCanvasDpr = 0;
   var canvasResizeScheduled = false;
 
+  // ── Text annotations (2.43.0) — state ───────────────────────────────
+  // Screen-aligned plain-text labels on a DOM layer above the ink canvas.
+  // Authority is the ink model verbatim (owner-approved 2026-08-05): any
+  // participant with the Annotate grant may edit, move, resize, or delete
+  // ANY text object — objects carry no author, exactly like strokes.
+  var ANNO_TEXT_MAX_CHARS = 500;
+  var ANNO_TEXT_MAX_LINES = 8;
+  var ANNO_TEXT_MAX_COUNT = 24;
+  var ANNO_TEXT_FONT_MIN = 0.012;
+  var ANNO_TEXT_FONT_MAX = 0.06;
+  var ANNO_TEXT_FONT_DEFAULT = 0.022;
+  var ANNO_TEXT_W_MIN = 0.05;
+  var ANNO_TEXT_W_MAX = 0.9;
+  var ANNO_TEXT_W_DEFAULT = 0.25;
+  var ANNO_TEXT_DELETED_TRACK_MAX = 64;
+  var localTexts = [];
+  var lastTextSeq = 0;
+  var selectedTextId = null;
+  var textEditorEl = null;
+  var textEditorFor = null;
+  var textEditorOpen = false;
+  var textDragState = null;
+  // Terminal deletes: a removed id stays dead for the session so a stale
+  // text_set arriving late cannot resurrect it (delete wins regardless of
+  // rev). Bounded like eraserDeletedIds.
+  var deletedTextIds = {};
+  var deletedTextIdOrder = [];
+
   // Single-owner pointer guard (anno-input.mjs, injected just above this
   // glue). FAIL CLOSED if script assembly ever regresses (Codex review
   // 2026-06-06): a permissive fallback would silently restore the unsafe
@@ -4651,17 +5000,26 @@ function annoBindViewportEvents(win, cb) {
       }
     }
     if (mode === "draw" || mode === "rope") ensureAnnoCanvasAllocated();
-    if (mode === "pointer" || mode === "draw" || mode === "rope" || mode === "eraser") emitInteractionActive();
+    if (mode === "pointer" || mode === "draw" || mode === "rope" || mode === "eraser" || mode === "text") emitInteractionActive();
     try {
       document.body.classList.toggle("anno-rope-active", mode === "rope");
+      // The text layer takes pointer events ONLY in text mode — every other
+      // mode leaves it inert so the ink canvas and Matterport are untouched.
+      document.body.classList.toggle("anno-text-mode", mode === "text");
       // Stage gesture hardening (wrapper touch-action/user-select, the
       // stage-event kills) engages ONLY while a tool is active so
       // Matterport navigation is untouched otherwise (2.0.2 wrapper fix).
       document.body.classList.toggle(
         "anno-tool-active",
-        mode === "pointer" || mode === "draw" || mode === "rope" || mode === "eraser",
+        mode === "pointer" || mode === "draw" || mode === "rope" || mode === "eraser" || mode === "text",
       );
     } catch (_e) {}
+    if (prev === "text" && mode !== "text") {
+      // Leaving the tool commits any open editor and drops the selection —
+      // the same "seal on exit" contract commitActiveRope keeps for ropes.
+      commitTextEditor();
+      if (selectedTextId) setSelectedText(null);
+    }
     if (prev !== "rope" && mode === "rope") {
       try {
         var sel = document.getElementById("anno-shape-select");
@@ -5015,6 +5373,396 @@ function annoBindViewportEvents(win, cb) {
     else if (toolMode === "rope") finishActiveRopeDrag();
   }
 
+  // ── Text annotations (2.43.0) — helpers ─────────────────────────────
+  function makeTextId() {
+    try {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return "t_" + window.crypto.randomUUID();
+      }
+    } catch (_e) {}
+    return "t_" + String(Date.now()) + "_" + Math.random().toString(36).slice(2, 10);
+  }
+
+  // Strip C0/C1 control characters except newline and reject Unicode
+  // bidi-override controls (label spoofing), then apply the char/line
+  // caps. Returns "" when nothing legible remains.
+  function sanitizeAnnoText(raw) {
+    var s = String(raw == null ? "" : raw);
+    var out = "";
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (c === 10) {
+        out += "\n";
+        continue;
+      }
+      if (c < 32 || (c >= 127 && c <= 159)) continue;
+      if ((c >= 8234 && c <= 8238) || (c >= 8294 && c <= 8297)) continue;
+      out += s.charAt(i);
+    }
+    if (out.length > ANNO_TEXT_MAX_CHARS) out = out.slice(0, ANNO_TEXT_MAX_CHARS);
+    var lines = out.split("\n");
+    if (lines.length > ANNO_TEXT_MAX_LINES) out = lines.slice(0, ANNO_TEXT_MAX_LINES).join("\n");
+    return out.replace(/^\s+|\s+$/g, "");
+  }
+
+  function annoTextNum(v, lo, hi, dflt) {
+    var n = +v;
+    if (!isFinite(n)) return dflt;
+    if (n < lo) return lo;
+    if (n > hi) return hi;
+    return n;
+  }
+
+  // Strict clamp of a text object from ANY source (local edit, wire,
+  // scene apply). Null when it cannot be a valid object at all.
+  function clampTextObj(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    var id = String(raw.id || "");
+    if (!id || id.length > 64) return null;
+    var txt = sanitizeAnnoText(raw.text);
+    if (!txt) return null;
+    var color = String(raw.color || "").toLowerCase();
+    if (!ANNO_COLOR_WHITELIST[color]) color = "#ffffff";
+    return {
+      id: id,
+      rev: Math.max(1, Math.floor(+raw.rev || 1)),
+      text: txt,
+      x: annoTextNum(raw.x, 0, 1, 0),
+      y: annoTextNum(raw.y, 0, 1, 0),
+      w: annoTextNum(raw.w, ANNO_TEXT_W_MIN, ANNO_TEXT_W_MAX, ANNO_TEXT_W_DEFAULT),
+      fontScale: annoTextNum(raw.fontScale, ANNO_TEXT_FONT_MIN, ANNO_TEXT_FONT_MAX, ANNO_TEXT_FONT_DEFAULT),
+      color: color,
+      bg: raw.bg !== false,
+      createdAt: +raw.createdAt || Date.now(),
+      updatedAt: +raw.updatedAt || Date.now(),
+    };
+  }
+
+  function findLocalTextIndex(id) {
+    for (var i = 0; i < localTexts.length; i++) {
+      if (localTexts[i].id === id) return i;
+    }
+    return -1;
+  }
+
+  function markTextDeleted(id) {
+    if (deletedTextIds[id]) return;
+    deletedTextIds[id] = 1;
+    deletedTextIdOrder.push(id);
+    while (deletedTextIdOrder.length > ANNO_TEXT_DELETED_TRACK_MAX) {
+      var old = deletedTextIdOrder.shift();
+      delete deletedTextIds[old];
+    }
+  }
+
+  function getTextLayer() {
+    return document.getElementById("anno-text-layer");
+  }
+
+  // Full re-render of the layer. Positions are % of the wrap (stable across
+  // resizes); only the font size is px and is rebaked from the wrap width —
+  // the same fraction-of-wrap convention as ANNO_STROKE_WIDTH. textContent
+  // ONLY — user text never meets innerHTML.
+  function renderTextLayer() {
+    var layer = getTextLayer();
+    if (!layer || !letterboxWrap) return;
+    while (layer.firstChild && layer.firstChild !== textEditorEl) {
+      layer.removeChild(layer.firstChild);
+    }
+    // The editor (when open) is kept; remove any stragglers after it.
+    if (textEditorEl) {
+      while (textEditorEl.nextSibling) layer.removeChild(textEditorEl.nextSibling);
+    }
+    var rect = letterboxWrap.getBoundingClientRect();
+    for (var i = 0; i < localTexts.length; i++) {
+      var t = localTexts[i];
+      var el = document.createElement("div");
+      el.className =
+        "anno-text-item" + (t.bg ? " has-bg" : "") + (t.id === selectedTextId ? " selected" : "");
+      el.setAttribute("data-text-id", t.id);
+      el.style.left = t.x * 100 + "%";
+      el.style.top = t.y * 100 + "%";
+      el.style.width = t.w * 100 + "%";
+      el.style.fontSize = Math.max(10, Math.round(t.fontScale * rect.width)) + "px";
+      el.style.color = t.color;
+      el.textContent = t.text;
+      if (t.id === selectedTextId) {
+        var xBtn = document.createElement("button");
+        xBtn.type = "button";
+        xBtn.className = "anno-text-x";
+        xBtn.setAttribute("data-text-x", t.id);
+        xBtn.setAttribute("aria-label", "Delete text");
+        xBtn.textContent = "×";
+        el.appendChild(xBtn);
+        var rsBtn = document.createElement("button");
+        rsBtn.type = "button";
+        rsBtn.className = "anno-text-resize";
+        rsBtn.setAttribute("data-text-resize", t.id);
+        rsBtn.setAttribute("aria-label", "Resize text");
+        el.appendChild(rsBtn);
+      }
+      layer.insertBefore(el, textEditorEl);
+    }
+  }
+
+  var textRenderScheduled = false;
+  function scheduleTextRender() {
+    if (textRenderScheduled) return;
+    textRenderScheduled = true;
+    var raf =
+      typeof window.requestAnimationFrame === "function"
+        ? window.requestAnimationFrame
+        : function (fn) {
+            return setTimeout(fn, 16);
+          };
+    raf(function () {
+      textRenderScheduled = false;
+      renderTextLayer();
+    });
+  }
+
+  function setSelectedText(id) {
+    selectedTextId = id;
+    renderTextLayer();
+  }
+
+  function broadcastTextSet(t) {
+    var s = session.getState();
+    if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+      session.sendTextSet(currentViewKey, t);
+    }
+  }
+
+  function deleteTextsLocal(ids) {
+    if (!ids || !ids.length) return;
+    var byId = {};
+    for (var i = 0; i < ids.length; i++) {
+      byId[ids[i]] = 1;
+      markTextDeleted(ids[i]);
+    }
+    var next = [];
+    for (var j = 0; j < localTexts.length; j++) {
+      if (!byId[localTexts[j].id]) next.push(localTexts[j]);
+    }
+    localTexts = next;
+    if (selectedTextId && byId[selectedTextId]) selectedTextId = null;
+    var s = session.getState();
+    if ((s.role === "agent" || s.role === "visitor") && s.isConnected) {
+      session.sendTextDelete(currentViewKey, ids);
+    }
+    renderTextLayer();
+  }
+
+  // Editor lifecycle. Nulling the refs BEFORE removing the element matters:
+  // removal blurs a focused textarea, and the blur handler would otherwise
+  // re-enter commit.
+  function discardTextEditor() {
+    var el = textEditorEl;
+    textEditorEl = null;
+    textEditorFor = null;
+    textEditorOpen = false;
+    if (el) {
+      try {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      } catch (_e) {}
+    }
+  }
+
+  function commitTextEditor() {
+    if (!textEditorEl || !textEditorFor) return;
+    var val = sanitizeAnnoText(textEditorEl.value);
+    var info = textEditorFor;
+    discardTextEditor();
+    if (!val) {
+      // Empty commit: a brand-new object is simply discarded; an existing
+      // one is deleted (typing everything away IS the delete gesture).
+      if (!info.isNew) deleteTextsLocal([info.base.id]);
+      renderTextLayer();
+      return;
+    }
+    var t = clampTextObj({
+      id: info.base.id,
+      rev: info.isNew ? 1 : info.base.rev + 1,
+      text: val,
+      x: info.base.x,
+      y: info.base.y,
+      w: info.base.w,
+      fontScale: info.base.fontScale,
+      color: info.base.color,
+      bg: info.base.bg,
+      createdAt: info.base.createdAt,
+      updatedAt: Date.now(),
+    });
+    if (!t) {
+      renderTextLayer();
+      return;
+    }
+    var idx = findLocalTextIndex(t.id);
+    if (idx >= 0) {
+      localTexts[idx] = t;
+    } else {
+      if (localTexts.length >= ANNO_TEXT_MAX_COUNT) {
+        renderTextLayer();
+        return;
+      }
+      localTexts.push(t);
+    }
+    broadcastTextSet(t);
+    setSelectedText(t.id);
+  }
+
+  function openTextEditor(base, isNew) {
+    if (textEditorEl) commitTextEditor();
+    var layer = getTextLayer();
+    if (!layer || !letterboxWrap) return;
+    var rect = letterboxWrap.getBoundingClientRect();
+    if (rect.width < 1) return;
+    var ta = document.createElement("textarea");
+    ta.className = "anno-text-editor";
+    ta.setAttribute("aria-label", "Text annotation");
+    ta.setAttribute("maxlength", String(ANNO_TEXT_MAX_CHARS));
+    ta.value = base.text || "";
+    ta.style.left = base.x * 100 + "%";
+    ta.style.top = base.y * 100 + "%";
+    ta.style.width = base.w * 100 + "%";
+    ta.style.fontSize = Math.max(10, Math.round(base.fontScale * rect.width)) + "px";
+    ta.rows = 1;
+    layer.appendChild(ta);
+    textEditorEl = ta;
+    textEditorFor = { isNew: !!isNew, base: base };
+    textEditorOpen = true;
+    var autosize = function () {
+      try {
+        ta.style.height = "auto";
+        ta.style.height = Math.min(rect.height * 0.6, ta.scrollHeight) + "px";
+      } catch (_e) {}
+    };
+    ta.addEventListener("input", autosize);
+    ta.addEventListener("keydown", function (e) {
+      // Escape commits and closes the editor without exiting the Text tool.
+      // stopPropagation is the belt to the global handler's TEXTAREA-bail
+      // suspender.
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        commitTextEditor();
+      }
+    });
+    ta.addEventListener("blur", function () {
+      commitTextEditor();
+    });
+    try {
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+    } catch (_e) {}
+    autosize();
+  }
+
+  // Remote text events (the incomingTextEvent slot). Upsert respects
+  // last-writer-wins by rev; deletes are terminal (deletedTextIds).
+  function applyIncomingTextEvent(tev) {
+    if (tev.kind === "delete") {
+      var ids = Array.isArray(tev.textIds) ? tev.textIds : [];
+      if (!ids.length) return;
+      var byId = {};
+      for (var i = 0; i < ids.length; i++) {
+        var idv = String(ids[i] || "");
+        if (idv) {
+          byId[idv] = 1;
+          markTextDeleted(idv);
+        }
+      }
+      var next = [];
+      for (var j = 0; j < localTexts.length; j++) {
+        if (!byId[localTexts[j].id]) next.push(localTexts[j]);
+      }
+      var changed = next.length !== localTexts.length;
+      localTexts = next;
+      if (selectedTextId && byId[selectedTextId]) selectedTextId = null;
+      if (changed) renderTextLayer();
+      return;
+    }
+    if (tev.kind === "set") {
+      var t = clampTextObj(tev.text);
+      if (!t) return;
+      if (deletedTextIds[t.id]) return;
+      var idx = findLocalTextIndex(t.id);
+      if (idx >= 0) {
+        if (t.rev < localTexts[idx].rev) return;
+        localTexts[idx] = t;
+      } else {
+        if (localTexts.length >= ANNO_TEXT_MAX_COUNT) return;
+        localTexts.push(t);
+      }
+      renderTextLayer();
+    }
+  }
+
+  // ── Typed scene (2.43.0): serialize + atomic apply ──────────────────
+  // The scene is the complete annotation state as data: committed strokes
+  // (ropes travel flattened, as on the wire) plus text objects. applyAnnoScene
+  // validates EVERYTHING first and only then replaces — invalid input leaves
+  // the existing scene untouched (never wipe-then-fail).
+  function serializeAnnoScene() {
+    var strokes = [];
+    for (var i = 0; i < localStrokes.length; i++) {
+      var s = localStrokes[i];
+      if (s.committed !== true) continue;
+      var src = s.points || [];
+      var pts = [];
+      for (var j = 0; j < src.length; j++) pts.push([src[j][0], src[j][1]]);
+      strokes.push({ strokeId: s.strokeId, color: s.color, width: s.width, points: pts, committed: true });
+    }
+    var texts = [];
+    for (var k = 0; k < localTexts.length; k++) {
+      var t = clampTextObj(localTexts[k]);
+      if (t) texts.push(t);
+    }
+    return { v: 1, strokes: strokes, texts: texts };
+  }
+
+  function applyAnnoScene(scene) {
+    if (!scene || typeof scene !== "object" || scene.v !== 1) return false;
+    var inStrokes = Array.isArray(scene.strokes) ? scene.strokes : [];
+    var inTexts = Array.isArray(scene.texts) ? scene.texts : [];
+    if (inStrokes.length > 256 || inTexts.length > ANNO_TEXT_MAX_COUNT) return false;
+    var strokes = [];
+    for (var i = 0; i < inStrokes.length; i++) {
+      var s = inStrokes[i];
+      if (!s || typeof s !== "object") return false;
+      var sid = String(s.strokeId || "");
+      if (!sid || sid.length > 64) return false;
+      var color = String(s.color || "").toLowerCase();
+      if (!ANNO_COLOR_WHITELIST[color]) return false;
+      var width = +s.width;
+      if (!isFinite(width) || width <= 0 || width > 0.05) return false;
+      var srcPts = Array.isArray(s.points) ? s.points : [];
+      if (srcPts.length > 4096) return false;
+      var pts = [];
+      for (var j = 0; j < srcPts.length; j++) {
+        var p = srcPts[j];
+        if (!p || p.length < 2) return false;
+        var px = +p[0];
+        var py = +p[1];
+        if (!isFinite(px) || !isFinite(py)) return false;
+        pts.push([Math.min(1, Math.max(0, px)), Math.min(1, Math.max(0, py))]);
+      }
+      strokes.push({ strokeId: sid, color: color, width: width, points: pts, committed: true });
+    }
+    var texts = [];
+    for (var k = 0; k < inTexts.length; k++) {
+      var t = clampTextObj(inTexts[k]);
+      if (!t) return false;
+      texts.push(t);
+    }
+    wipeAnnotations();
+    localStrokes = strokes;
+    localTexts = texts;
+    redrawAllStrokes();
+    renderTextLayer();
+    return true;
+  }
+
   function wipeAnnotations() {
     localStrokes = [];
     activeStroke = null;
@@ -5027,6 +5775,12 @@ function annoBindViewportEvents(win, cb) {
     ropeMoveLast = null;
     eraserActive = false;
     eraserDeletedIds = null;
+    discardTextEditor();
+    localTexts = [];
+    selectedTextId = null;
+    textDragState = null;
+    deletedTextIds = {};
+    deletedTextIdOrder = [];
     if (annoGuard) annoGuard.reset();
     if (remotePointer) remotePointer.style.display = "none";
     if (remotePointerHideTimer) {
@@ -5036,6 +5790,7 @@ function annoBindViewportEvents(win, cb) {
       remotePointerHideTimer = null;
     }
     redrawAllStrokes();
+    renderTextLayer();
   }
 
   function applyNavLock(locked) {
@@ -5117,7 +5872,7 @@ function annoBindViewportEvents(win, cb) {
   // benefit. Draw / Focus Rope / Eraser are the tools whose output is pinned
   // to an exact view, which is what the freeze exists to protect.
   function isAnnotatingMode(mode) {
-    return mode === "draw" || mode === "rope" || mode === "eraser";
+    return mode === "draw" || mode === "rope" || mode === "eraser" || mode === "text";
   }
 
   function acquireLocalFloor() {
@@ -6032,7 +6787,7 @@ function annoBindViewportEvents(win, cb) {
       var btn = e.target && e.target.closest ? e.target.closest(".anno-tool-btn") : null;
       if (!btn) return;
       var t = btn.getAttribute("data-tool");
-      if (t === "pointer" || t === "draw" || t === "rope" || t === "eraser") {
+      if (t === "pointer" || t === "draw" || t === "rope" || t === "eraser" || t === "text") {
         setToolMode(t);
         return;
       }
@@ -6083,6 +6838,153 @@ function annoBindViewportEvents(win, cb) {
         adBtn.setAttribute("title", "Annotation drawing unavailable in this session");
       }
     }
+  }
+
+  // ── Text layer wiring (2.43.0) ───────────────────────────────────────
+  // Inert unless the Text tool is armed (CSS gates pointer-events on
+  // body.anno-text-mode). Click empty stage = create + edit; click an item
+  // = select; click the selected item = edit; drag = move; corner handle =
+  // resize; × = delete. The canvas is never armed in text mode, so none of
+  // the pointer-capture/gesture-abort machinery is in play here.
+  var annoTextLayer = getTextLayer();
+  if (annoTextLayer) {
+    annoTextLayer.addEventListener("pointerdown", function (e) {
+      if (toolMode !== "text") return;
+      if (!canAnnotateLocal()) return;
+      var tgt = e.target;
+      if (textEditorEl && (tgt === textEditorEl || textEditorEl.contains(tgt))) return;
+      var xid = tgt && tgt.getAttribute ? tgt.getAttribute("data-text-x") : null;
+      if (xid) {
+        e.preventDefault();
+        deleteTextsLocal([xid]);
+        return;
+      }
+      var rid = tgt && tgt.getAttribute ? tgt.getAttribute("data-text-resize") : null;
+      if (rid) {
+        var ri = findLocalTextIndex(rid);
+        if (ri < 0) return;
+        e.preventDefault();
+        acquireLocalFloor();
+        textDragState = { id: rid, mode: "resize", startY: e.clientY, origFont: localTexts[ri].fontScale };
+        try {
+          annoTextLayer.setPointerCapture(e.pointerId);
+        } catch (_e) {}
+        return;
+      }
+      var itemEl = null;
+      var n = tgt;
+      while (n && n !== annoTextLayer) {
+        if (n.getAttribute && n.getAttribute("data-text-id")) {
+          itemEl = n;
+          break;
+        }
+        n = n.parentNode;
+      }
+      if (itemEl) {
+        var tid = itemEl.getAttribute("data-text-id");
+        var idx = findLocalTextIndex(tid);
+        if (idx < 0) return;
+        e.preventDefault();
+        if (selectedTextId === tid && !textEditorOpen) {
+          openTextEditor(localTexts[idx], false);
+          return;
+        }
+        if (textEditorOpen) commitTextEditor();
+        setSelectedText(tid);
+        acquireLocalFloor();
+        textDragState = {
+          id: tid,
+          mode: "move",
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: localTexts[idx].x,
+          origY: localTexts[idx].y,
+          moved: false,
+        };
+        try {
+          annoTextLayer.setPointerCapture(e.pointerId);
+        } catch (_e) {}
+        return;
+      }
+      // Empty stage. An open editor commits first (that click was "I'm
+      // done typing", not "new label here").
+      if (textEditorOpen) {
+        commitTextEditor();
+        return;
+      }
+      var rect = letterboxWrap ? letterboxWrap.getBoundingClientRect() : null;
+      if (!rect || rect.width < 1) return;
+      if (localTexts.length >= ANNO_TEXT_MAX_COUNT) return;
+      e.preventDefault();
+      acquireLocalFloor();
+      setSelectedText(null);
+      openTextEditor(
+        {
+          id: makeTextId(),
+          rev: 1,
+          text: "",
+          x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
+          y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
+          w: ANNO_TEXT_W_DEFAULT,
+          fontScale: ANNO_TEXT_FONT_DEFAULT,
+          color: "#ffffff",
+          bg: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        true,
+      );
+    });
+    annoTextLayer.addEventListener("pointermove", function (e) {
+      if (!textDragState) return;
+      var idx = findLocalTextIndex(textDragState.id);
+      if (idx < 0) {
+        textDragState = null;
+        return;
+      }
+      var rect = letterboxWrap ? letterboxWrap.getBoundingClientRect() : null;
+      if (!rect || rect.width < 1) return;
+      var t = localTexts[idx];
+      if (textDragState.mode === "move") {
+        if (
+          Math.abs(e.clientX - textDragState.startX) + Math.abs(e.clientY - textDragState.startY) >
+          3
+        ) {
+          textDragState.moved = true;
+        }
+        t.x = annoTextNum(textDragState.origX + (e.clientX - textDragState.startX) / rect.width, 0, 1, t.x);
+        t.y = annoTextNum(textDragState.origY + (e.clientY - textDragState.startY) / rect.height, 0, 1, t.y);
+      } else {
+        // Resize: vertical drag scales the font, the same axis a corner
+        // drag reads most naturally at a fixed wrap width.
+        t.fontScale = annoTextNum(
+          textDragState.origFont + (e.clientY - textDragState.startY) / rect.width,
+          ANNO_TEXT_FONT_MIN,
+          ANNO_TEXT_FONT_MAX,
+          t.fontScale,
+        );
+      }
+      renderTextLayer();
+    });
+    var endTextDrag = function (e) {
+      if (!textDragState) return;
+      var st = textDragState;
+      textDragState = null;
+      try {
+        annoTextLayer.releasePointerCapture(e.pointerId);
+      } catch (_e) {}
+      var idx = findLocalTextIndex(st.id);
+      if (idx < 0) return;
+      if ((st.mode === "move" && st.moved) || st.mode === "resize") {
+        var t = localTexts[idx];
+        t.rev = t.rev + 1;
+        t.updatedAt = Date.now();
+        broadcastTextSet(t);
+      }
+      renderTextLayer();
+    };
+    annoTextLayer.addEventListener("pointerup", endTextDrag);
+    annoTextLayer.addEventListener("pointercancel", endTextDrag);
   }
 
   // Stroke color picker (whitelist-guarded).
@@ -6136,7 +7038,7 @@ function annoBindViewportEvents(win, cb) {
     // A tool hotkey is an explicit request for the tools, so it opens the bar
     // that 2.30.0 now keeps closed — otherwise D would arm Draw behind a hidden
     // toolbar, with no visible way to see which tool is live or to put it away.
-    if (k === "p" || k === "d" || k === "r" || k === "e") {
+    if (k === "p" || k === "d" || k === "r" || k === "e" || k === "t") {
       ensureBarToggle();
       if (!annoBarOpen) setAnnoBarOpen(true);
       refreshBarToggleVisibility();
@@ -6153,6 +7055,12 @@ function annoBindViewportEvents(win, cb) {
     } else if (k === "e") {
       setToolMode("eraser");
       e.preventDefault();
+    } else if (k === "t") {
+      setToolMode("text");
+      e.preventDefault();
+    } else if ((e.key === "Delete" || e.key === "Backspace") && toolMode === "text" && selectedTextId && !textEditorOpen) {
+      deleteTextsLocal([selectedTextId]);
+      e.preventDefault();
     } else if (k === "c") {
       handleClearLocallyAndBroadcast();
       e.preventDefault();
@@ -6162,24 +7070,33 @@ function annoBindViewportEvents(win, cb) {
     }
   });
 
+  // Text labels position by % but their font size is px-from-wrap-width, so
+  // a geometry change re-renders the layer too. Separate from the canvas
+  // path on purpose: text must rebake even when the canvas was never
+  // allocated (a text-only scene), which resizeAnnoCanvas's lazy guard
+  // would skip.
+  function handleStageGeometryChange() {
+    scheduleCanvasResize();
+    scheduleTextRender();
+  }
   if (typeof ResizeObserver === "function" && letterboxWrap) {
     try {
       var ro = new ResizeObserver(function () {
-        scheduleCanvasResize();
+        handleStageGeometryChange();
       });
       ro.observe(letterboxWrap);
     } catch (_e) {
-      window.addEventListener("resize", scheduleCanvasResize);
+      window.addEventListener("resize", handleStageGeometryChange);
     }
   } else if (letterboxWrap) {
-    window.addEventListener("resize", scheduleCanvasResize);
+    window.addEventListener("resize", handleStageGeometryChange);
   }
   // visualViewport + orientation: geometry changes the ResizeObserver /
   // window-resize paths can miss on mobile (iOS URL-bar collapse,
   // rotation, keyboard). All triggers coalesce through one rAF in
   // scheduleCanvasResize and no-op until the canvas is lazily allocated.
   if (typeof annoBindViewportEvents === "function") {
-    annoBindViewportEvents(window, scheduleCanvasResize);
+    annoBindViewportEvents(window, handleStageGeometryChange);
   }
 
   // ── Location sync (clipboard auto-share, both roles) ─────────────────
@@ -8690,6 +9607,18 @@ function annoBindViewportEvents(win, cb) {
         if (localStrokes.length !== beforeLen) redrawAllStrokes();
       }
     }
+
+    // Text annotations (2.43.0): one slot for both wire kinds. Remote text
+    // activity re-arms the floor watchdog like stroke activity does — a
+    // peer mid-typing is a peer mid-annotation.
+    var tev = state.incomingTextEvent;
+    if (tev && tev.seq !== lastTextSeq) {
+      lastTextSeq = tev.seq;
+      if (canReceive) {
+        refreshRemoteFloor();
+        applyIncomingTextEvent(tev);
+      }
+    }
   }
 
   function onState(state) {
@@ -9027,7 +9956,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-08-04";
+    var RUNTIME_RELEASED="2026-08-05";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
