@@ -8,7 +8,7 @@
 <meta property="og:title" content="Wonderland Dreams by Alexa Meade — Frontiers|3D" />
 <meta property="og:description" content="Step inside a living masterpiece with Wonderland Dreams by world-renowned artist Alexa Meade. Spanning a 14,000-square-foot space in Midtown Manhattan, this enchanting installation transforms scenes from Alice&amp;#39;s Adventures in Wonderland into hand-painted 3D vignettes, blurring the boundaries between art and reality as visitors become part of the canvas itself." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.45.0" />
+<meta name="f3d-runtime" content="2.46.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -104,6 +104,25 @@ body.anno-tool-active #anno-letterbox-wrap{touch-action:none;-webkit-touch-callo
 .anno-exit-save{border-color:var(--lt-accent,#818cf8);background:rgba(129,140,248,0.22)}
 .anno-exit-go{border-color:rgba(255,107,107,0.5);background:rgba(255,107,107,0.18);color:#ffd9d9}
 .anno-exit-go:hover{background:rgba(255,107,107,0.32)}
+/* ── First-visit sound choice (2.46.0) ─────────────────────────────────
+   Asks once, before the tour begins, whether to start with the ambient
+   soundtrack on — the Builder family's welcome gate, brought to curated
+   showcases. Built by the glue and only when a soundtrack exists, so a
+   package with no music (or no JS) never renders it. Fixed rather than
+   absolute: it covers the whole frame, including the header actions row
+   that carries the speaker button it is asking about, and it therefore sits
+   above the exit confirm (1500) rather than beside it. */
+.lt-sound-gate[hidden]{display:none}
+.lt-sound-gate{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(6,8,14,0.62);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.lt-sound-gate-card{max-width:min(94%,400px);padding:20px 20px 16px;border-radius:14px;background:rgba(12,15,24,0.97);border:1px solid rgba(255,255,255,0.16);box-shadow:0 20px 56px rgba(0,0,0,0.55);color:#fff;font-family:inherit;text-align:center}
+.lt-sound-gate-title{font:700 16px/1.3 inherit;margin-bottom:8px}
+.lt-sound-gate-body{font:500 13px/1.5 inherit;color:rgba(255,255,255,0.82);margin-bottom:16px}
+.lt-sound-gate-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.lt-sound-gate-act{appearance:none;border-radius:9px;padding:10px 14px;font:600 13px/1 inherit;font-family:inherit;cursor:pointer;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.08);color:#fff;transition:background .15s,border-color .15s}
+.lt-sound-gate-act:hover{background:rgba(255,255,255,0.16)}
+.lt-sound-gate-on{border-color:var(--lt-accent,#818cf8);background:rgba(129,140,248,0.26)}
+.lt-sound-gate-on:hover{background:rgba(129,140,248,0.38)}
+
 /* Load View dialog (2.44.0) — same overlay/card/button family as the exit
    confirm; only the file/paste/status affordances are new. */
 .anno-load-file{display:none}
@@ -702,7 +721,7 @@ body.live-tour-active #loc-sync-tips:not([hidden]),body.room-attached #loc-sync-
 </div>
 <audio id="lt-audio" autoplay playsinline></audio>
 <!-- f3d:runtime-markup:panel END -->
-<script>window.__ATLAS_LT_CONFIG={"accent":"#818cf8","matterportBaseUrl":"https://my.matterport.com/show/?m=3bTtXVExAx9\u0026play=1","viewerProvider":"matterport","shareTitle":"Wonderland Dreams by Alexa Meade","stops":[],"musicUrl":""};</script>
+<script>window.__ATLAS_LT_CONFIG={"accent":"#818cf8","matterportBaseUrl":"https://my.matterport.com/show/?m=3bTtXVExAx9\u0026play=1","viewerProvider":"matterport","shareTitle":"Wonderland Dreams by Alexa Meade","stops":[],"musicUrl":"https://cdn.pixabay.com/audio/2022/10/07/audio_73e9c7ffbc.mp3"};</script>
 <script>
 (function(){
 // f3d:runtime-js:kernel BEGIN v=1 family=atlas
@@ -3880,12 +3899,20 @@ function annoBindViewportEvents(win, cb) {
   var soundSlider = null;
   var soundPop = null;
   var musicLevelBeforeMute = MUSIC_LEVEL_DEFAULT;
+  // Has this visitor EVER expressed a sound preference in this browser? The
+  // stored level doubles as that record (2.46.0) — it is written by the
+  // slider, by the mute icon, and by the first-visit choice below — so the
+  // question is asked once and then never again, across every space that
+  // shares this origin. A malformed stored value is treated as unanswered:
+  // it cannot be honored, so pretending it was is the worse of the two.
+  var musicChoiceMade = false;
   try {
     var storedLevel = window.localStorage ? window.localStorage.getItem(MUSIC_LEVEL_KEY) : null;
     if (storedLevel !== null) {
       var parsedLevel = parseInt(storedLevel, 10);
       if (isFinite(parsedLevel) && parsedLevel >= 0 && parsedLevel <= MUSIC_LEVEL_MAX) {
         musicLevel = parsedLevel;
+        musicChoiceMade = true;
       }
     }
   } catch (_e) {}
@@ -3913,6 +3940,10 @@ function annoBindViewportEvents(win, cb) {
     if (next > MUSIC_LEVEL_MAX) next = MUSIC_LEVEL_MAX;
     var wasAudible = musicLevel > 0;
     musicLevel = next;
+    // Any deliberate level change IS the answer to the first-visit question,
+    // whichever control expressed it — so a visitor who reaches straight for
+    // the speaker button is never asked afterwards.
+    musicChoiceMade = true;
     try {
       if (window.localStorage) window.localStorage.setItem(MUSIC_LEVEL_KEY, String(musicLevel));
     } catch (_e) {}
@@ -4606,9 +4637,126 @@ function annoBindViewportEvents(win, cb) {
     });
   } catch (_e) {}
 
+  // ── First-visit sound choice (2.46.0, owner-directed) ────────────────
+  //
+  // The Builder family has asked this since its first export: its welcome
+  // gate offers "Start with Sound" or "(No Sound)" before the tour begins.
+  // Curated Atlas showcases never got that question, so a visitor who never
+  // noticed the speaker button toured a scored space in silence and had no
+  // reason to think there was anything to miss.
+  //
+  // The question is not only courtesy — it is the mechanism. Browsers refuse
+  // un-gestured audio, so SOMETHING must be clicked before play() is legal;
+  // asking makes that click intentional instead of accidental.
+  //
+  // Deliberate boundaries:
+  //   • Only when this space HAS a soundtrack. Offering sound that does not
+  //     exist is the roster-arrow failure — a control promising a capability
+  //     the package cannot deliver.
+  //   • Only when this visitor has never answered (see musicChoiceMade). The
+  //     answer is stored as the level, so it survives to every other space.
+  //   • Escape or a backdrop click dismisses WITHOUT recording an answer:
+  //     an accidental click must not mute every space silently and forever.
+  //   • Built lazily in JS, never baked into the HTML shell, so a package
+  //     whose runtime fails to load can never strand a visitor behind an
+  //     overlay nothing is left to dismiss.
+  var soundGateEl = null;
+
+  function closeSoundGate() {
+    var el = soundGateEl;
+    soundGateEl = null;
+    if (!el) return;
+    try {
+      el.hidden = true;
+      if (el.parentNode) el.parentNode.removeChild(el);
+    } catch (_e) {}
+  }
+
+  function answerSoundGate(on) {
+    // This click is the user gesture a blocked autoplay is waiting for, so
+    // the level change runs while the gesture is still live — setMusicLevel
+    // both stores the answer and starts (or refuses) playback right here.
+    try {
+      setMusicLevel(on ? MUSIC_LEVEL_DEFAULT : 0, false);
+    } catch (_e) {}
+    closeSoundGate();
+  }
+
+  function maybeShowSoundGate() {
+    if (!MUSIC_URL || musicChoiceMade || soundGateEl) return null;
+    try {
+      var host = document.body || document.documentElement;
+      if (!host || typeof host.appendChild !== "function") return null;
+      var el = document.createElement("div");
+      el.className = "lt-sound-gate";
+      el.id = "lt-sound-gate";
+      el.setAttribute("role", "dialog");
+      el.setAttribute("aria-modal", "true");
+      el.setAttribute("aria-label", "Start with sound?");
+      var card = document.createElement("div");
+      card.className = "lt-sound-gate-card";
+      var title = document.createElement("div");
+      title.className = "lt-sound-gate-title";
+      title.textContent = "This space has ambient sound";
+      var body = document.createElement("div");
+      body.className = "lt-sound-gate-body";
+      body.textContent =
+        "Would you like to start with the sound on? You can change it at any time with the speaker button.";
+      var row = document.createElement("div");
+      row.className = "lt-sound-gate-row";
+      var onBtn = document.createElement("button");
+      onBtn.type = "button";
+      onBtn.className = "lt-sound-gate-act lt-sound-gate-on";
+      onBtn.id = "lt-sound-gate-on";
+      onBtn.textContent = "Start with sound";
+      onBtn.addEventListener("click", function () {
+        answerSoundGate(true);
+      });
+      var offBtn = document.createElement("button");
+      offBtn.type = "button";
+      offBtn.className = "lt-sound-gate-act lt-sound-gate-off";
+      offBtn.id = "lt-sound-gate-off";
+      offBtn.textContent = "Start silent";
+      offBtn.addEventListener("click", function () {
+        answerSoundGate(false);
+      });
+      row.appendChild(onBtn);
+      row.appendChild(offBtn);
+      card.appendChild(title);
+      card.appendChild(body);
+      card.appendChild(row);
+      el.appendChild(card);
+      // A click on the backdrop — the overlay itself, never the card — leaves
+      // without answering.
+      el.addEventListener("click", function (e) {
+        if (e && e.target === el) closeSoundGate();
+      });
+      host.appendChild(el);
+      soundGateEl = el;
+      try {
+        onBtn.focus();
+      } catch (_e) {}
+      return el;
+    } catch (_e) {
+      soundGateEl = null;
+      return null;
+    }
+  }
+
+  try {
+    document.addEventListener("keydown", function (e) {
+      if (!soundGateEl) return;
+      if (e && e.key === "Escape") {
+        closeSoundGate();
+        if (e.stopPropagation) e.stopPropagation();
+      }
+    });
+  } catch (_e) {}
+
   function initMusic() {
     if (!MUSIC_URL) return;
     ensureSoundButton();
+    maybeShowSoundGate();
     // ONE keepalive covers tour start, late joiners and drift on both
     // transports: while this participant is the authority, the current state
     // — ON with position, or OFF — re-asserts every few seconds. The Builder
