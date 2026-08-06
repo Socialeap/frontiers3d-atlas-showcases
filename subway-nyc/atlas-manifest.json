@@ -1,0 +1,17 @@
+{
+  "service": "frontiers3d-atlas",
+  "version": 1,
+  "kind": "curated_showcase",
+  "package_schema": 2,
+  "runtime_version": "2.45.0",
+  "runtime_released": "2026-08-05",
+  "capabilities": [],
+  "package_family": "atlas",
+  "curation_job_id": "2bb52d53-9294-4510-835e-f91baddc6bc1",
+  "matterport_id": "cbGhJgtRa1S",
+  "viewer": {
+    "kind": "matterport",
+    "model_id": "cbGhJgtRa1S"
+  },
+  "issued_at": "2026-08-06T04:41:57.703Z"
+}
