@@ -8,7 +8,7 @@
 <meta property="og:title" content="Alice Austen House — Frontiers|3D" />
 <meta property="og:description" content="Originally built in 1690 as a one-room Dutch Colonial home, this historic Staten Island cottage was the home and studio of pioneering photographer Alice Austen. Today, it serves as a National Historic Landmark and vibrant museum celebrating her vast photographic work and NYC LGBTQ history. The site features preserved rooms, exhibition galleries, and panoramic views of New York Harbor." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.48.0" />
+<meta name="f3d-runtime" content="2.49.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -131,6 +131,15 @@ body.anno-tool-active #anno-letterbox-wrap{touch-action:none;-webkit-touch-callo
 .anno-load-status{font:600 12px/1.4 inherit;margin:0 0 10px;color:#fca5a5}
 .anno-load-status:empty{margin:0}
 .anno-load-status.ok{color:#86efac}
+
+/* Save View capture flow (2.49.0). The name field matches the paste box's
+   family, single-line. The dock is step 2's card: bottom-docked and
+   backdrop-free ON PURPOSE — its job is to direct clicks INTO the tour, so
+   unlike .anno-exit-confirm it must never stand between the visitor and the
+   stage. Same z-band as the dialogs so it still sits above the sync pill. */
+.anno-save-name{width:100%;margin:2px 0 10px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;font:500 12px/1.4 inherit;font-family:inherit}
+.anno-capture-dock[hidden]{display:none}
+.anno-capture-dock{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:1500;width:min(92%,420px);padding:14px 16px 12px;border-radius:12px;background:rgba(12,15,24,0.97);border:1px solid rgba(255,255,255,0.16);box-shadow:0 18px 48px rgba(0,0,0,0.5);color:#fff;font-family:inherit;pointer-events:auto}
 
 /* ── Text annotations (2.43.0) ─────────────────────────────────────────
    A transparent DOM layer above the ink canvas (5) and remote pointer (6).
@@ -4414,7 +4423,7 @@ function annoBindViewportEvents(win, cb) {
     return { provider: "matterport", ss: ss, sr: sr };
   }
 
-  // ── Capturing a viewpoint OUTSIDE a live session (2.47.0) ────────────
+  // ── Capturing a viewpoint OUTSIDE a live session (2.47.0, reworked 2.49.0) ─
   //
   // Owner-reported 2026-08-06: a solo annotation was saved with Save View and
   // reloaded in the same space, and the camera did not return — the exported
@@ -4434,12 +4443,27 @@ function annoBindViewportEvents(win, cb) {
   // not the same as TELLING the room. captureLocalView does the first without
   // the second, so it works with no session, no room and no peers.
   //
-  // Deliberately NOT done here: reading the clipboard ambiently while solo.
-  // A visitor who never asked to share anything should not get a clipboard
-  // permission prompt, iOS refuses ambient reads permanently anyway, and a
-  // clipboard can hold a Matterport URL copied from a DIFFERENT space. The
-  // capture below is an explicit paste, which needs no permission, works on
-  // every platform, and is checked against this space before it is believed.
+  // 2.49.0, owner-directed 2026-08-08: the capture became a TWO-STEP flow and
+  // the paste box left the main path. The 2.47.0 dialog asked the visitor to
+  // press U inside the tour while the annotation surface still had the tour
+  // blocked — the instruction could not be followed without abandoning the
+  // dialog that gave it. Now: step 1 freezes the annotation data (and takes an
+  // optional name for the file), step 2 RELEASES the tour (tool mode off, so
+  // the canvas passes pointer events through) and a docked, non-blocking card
+  // directs the press-U-and-Copy gesture; the copied link is then read off the
+  // clipboard and merged into the frozen payload automatically.
+  //
+  // The clipboard read here is NOT the ambient read #415 ruled out, and the
+  // distinction is load-bearing: every read is gated on captureWindowActive —
+  // a window that exists only after the visitor clicked "Capture viewpoint",
+  // which IS asking for the clipboard to be looked at. iOS additionally only
+  // reads inside the visitor's own tap (its native Paste callout must never
+  // appear uninvited — the preGrantClipboard rule, kept). The session-gated
+  // ambient machinery (readClipboardAndSend / schedulePoll) is untouched.
+  // Browsers that cannot hand the link over (no readText, or a denied read)
+  // fall back to the old paste box INSIDE the dock, so nobody is stranded —
+  // it is a fallback now, not the instruction.
+  // Every caught link is checked against THIS space before it is believed.
   // Provenance for viewMeta.source. Narrow on purpose: it flips ON only in
   // captureLocalView and OFF wherever the room genuinely settled the view, so
   // a reader can tell "this visitor pasted their own viewpoint" from "the
@@ -4480,7 +4504,37 @@ function annoBindViewportEvents(win, cb) {
   var loadViewPasteEl = null;
   var saveViewEl = null;
   var saveViewStatusEl = null;
-  var saveViewPasteEl = null;
+  var saveViewNameEl = null;
+  // Step 2 of the capture flow: the docked card, its status line, and the
+  // paste fallback that stays hidden until an automatic read has failed.
+  var captureDockEl = null;
+  var captureDockStatusEl = null;
+  var captureDockPasteEl = null;
+  var captureDockPasteWrapEl = null;
+  // The capture window: true only between "Capture viewpoint" and the save /
+  // cancel that ends it. EVERY clipboard read this flow performs is gated on
+  // it — that is what keeps this from being the ambient read #415 ruled out.
+  var captureWindowActive = false;
+  var captureSuspendedTool = "none";
+  // Frozen at step 1 so nothing that happens while the tour is unlocked can
+  // change what gets saved — the owner's "captures the annotations data
+  // first" is a property here, not a hope.
+  var pendingCaptureSegment = null;
+  var pendingCaptureName = "";
+
+  // The visitor's own words for the name field, made safe for a JSON field
+  // and readable in a dialog: control characters out, whitespace collapsed,
+  // length capped. The FILENAME half goes through segmentSlug separately.
+  function cleanSegmentName(raw) {
+    var t = String(raw == null ? "" : raw);
+    var out = "";
+    for (var i = 0; i < t.length && out.length < 60; i++) {
+      var code = t.charCodeAt(i);
+      if (code < 32 || code === 127) continue;
+      out += t.charAt(i);
+    }
+    return out.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+  }
 
   function setLoadViewStatus(msg, ok) {
     if (!loadViewStatusEl) return;
@@ -4588,13 +4642,15 @@ function annoBindViewportEvents(win, cb) {
     // read its own camera is not obvious, and without it this reads as a
     // pointless extra step.
     p.textContent =
-      "Your drawings are ready to save. This tour cannot read the camera by itself, so to save WHERE you are looking: click into the tour, press U, click Copy in the panel Matterport opens, then paste it below.";
-    var pasteLabel = document.createElement("div");
-    pasteLabel.className = "anno-exit-body anno-load-paste-label";
-    pasteLabel.textContent = "Paste the copied link:";
-    var paste = document.createElement("textarea");
-    paste.className = "anno-load-paste";
-    paste.setAttribute("aria-label", "Copied Matterport view link");
+      "Your drawings are ready. This tour cannot read the camera by itself, so the tour will unlock for a moment: click into it, press U, then click Copy in the panel Matterport opens — the copied link is picked up automatically and saved with your drawings.";
+    var nameLabel = document.createElement("div");
+    nameLabel.className = "anno-exit-body anno-load-paste-label";
+    nameLabel.textContent = "Name this save (optional):";
+    var nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.className = "anno-save-name";
+    nameInput.setAttribute("maxlength", "60");
+    nameInput.setAttribute("aria-label", "Name for this saved view");
     var status = document.createElement("div");
     status.className = "anno-load-status";
     var row = document.createElement("div");
@@ -4605,27 +4661,7 @@ function annoBindViewportEvents(win, cb) {
     captureBtn.id = "lt-save-capture-btn";
     captureBtn.textContent = "Capture viewpoint & save";
     captureBtn.addEventListener("click", function () {
-      var parsed = parseViewUrlForThisSpace(paste.value);
-      if (parsed === "foreign") {
-        setSaveViewStatus(
-          "That link is from a different space — copy the view from THIS tour instead.",
-          false,
-        );
-        return;
-      }
-      if (!parsed) {
-        setSaveViewStatus(
-          "That does not look like a Matterport view link. Press U in the tour, then click Copy.",
-          false,
-        );
-        return;
-      }
-      captureLocalView(parsed);
-      try {
-        downloadCurrentViewSegment();
-      } catch (_e) {}
-      paste.value = "";
-      closeSaveViewDialog();
+      beginViewpointCapture();
     });
     var plainBtn = document.createElement("button");
     plainBtn.type = "button";
@@ -4634,7 +4670,7 @@ function annoBindViewportEvents(win, cb) {
     plainBtn.textContent = "Save drawings only";
     plainBtn.addEventListener("click", function () {
       try {
-        downloadCurrentViewSegment();
+        downloadCurrentViewSegment(cleanSegmentName(nameInput.value));
       } catch (_e) {}
       closeSaveViewDialog();
     });
@@ -4648,16 +4684,245 @@ function annoBindViewportEvents(win, cb) {
     row.appendChild(cancelBtn);
     card.appendChild(h);
     card.appendChild(p);
-    card.appendChild(pasteLabel);
-    card.appendChild(paste);
+    card.appendChild(nameLabel);
+    card.appendChild(nameInput);
     card.appendChild(status);
     card.appendChild(row);
     el.appendChild(card);
     host.appendChild(el);
     saveViewEl = el;
     saveViewStatusEl = status;
-    saveViewPasteEl = paste;
+    saveViewNameEl = nameInput;
     return el;
+  }
+
+  // ── The capture window (2.49.0): step 2 of the two-step save ─────────
+  //
+  // Between beginViewpointCapture and the save/cancel that ends it, the tour
+  // is INTERACTIVE again — tool mode goes to "none", so the annotation canvas
+  // stops taking pointer events and Matterport receives them (the same
+  // release a closed toolbar performs). The card below is docked at the
+  // bottom edge rather than centered with a backdrop, because its whole job
+  // is to NOT stand between the visitor and the tour it is asking them to
+  // click into.
+  function setCaptureDockStatus(msg, ok) {
+    if (!captureDockStatusEl) return;
+    captureDockStatusEl.textContent = msg || "";
+    captureDockStatusEl.className = ok ? "anno-load-status ok" : "anno-load-status";
+  }
+
+  function ensureCaptureDock() {
+    if (captureDockEl) return captureDockEl;
+    var host = letterboxWrap || document.body;
+    if (!host) return null;
+    var el = document.createElement("div");
+    el.className = "anno-capture-dock";
+    el.hidden = true;
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "false");
+    el.setAttribute("aria-label", "Capture the viewpoint");
+    var h = document.createElement("div");
+    h.className = "anno-exit-title";
+    h.textContent = "The tour is unlocked — grab the viewpoint";
+    var p = document.createElement("div");
+    p.className = "anno-exit-body";
+    p.textContent =
+      "Click into the tour, press U, then click Copy in the panel that opens. The copied link is picked up automatically when you come back — or use the Save button below.";
+    var pasteWrap = document.createElement("div");
+    pasteWrap.hidden = true;
+    var pasteLabel = document.createElement("div");
+    pasteLabel.className = "anno-exit-body anno-load-paste-label";
+    pasteLabel.textContent = "…or paste the copied link:";
+    var paste = document.createElement("textarea");
+    paste.className = "anno-load-paste";
+    paste.setAttribute("aria-label", "Copied Matterport view link");
+    pasteWrap.appendChild(pasteLabel);
+    pasteWrap.appendChild(paste);
+    var status = document.createElement("div");
+    status.className = "anno-load-status";
+    var row = document.createElement("div");
+    row.className = "anno-exit-row";
+    var saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "anno-exit-act anno-exit-save";
+    saveBtn.id = "lt-capture-save-btn";
+    saveBtn.textContent = "I copied it — Save";
+    saveBtn.addEventListener("click", function () {
+      // A visible fallback box with content in it wins over the clipboard:
+      // the visitor only sees that box after an automatic read already
+      // failed, so what they typed there IS their answer.
+      if (pasteWrap.hidden === false && paste.value) {
+        handleCaughtViewText(paste.value, true);
+        return;
+      }
+      attemptClipboardCatch(true);
+    });
+    var plainBtn = document.createElement("button");
+    plainBtn.type = "button";
+    plainBtn.className = "anno-exit-act";
+    plainBtn.id = "lt-capture-plain-btn";
+    plainBtn.textContent = "Save without viewpoint";
+    plainBtn.addEventListener("click", function () {
+      writePendingCaptureSegment();
+    });
+    var cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "anno-exit-act anno-exit-cancel";
+    cancelBtn.id = "lt-capture-cancel-btn";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", function () {
+      endViewpointCapture();
+    });
+    row.appendChild(saveBtn);
+    row.appendChild(plainBtn);
+    row.appendChild(cancelBtn);
+    el.appendChild(h);
+    el.appendChild(p);
+    el.appendChild(pasteWrap);
+    el.appendChild(status);
+    el.appendChild(row);
+    host.appendChild(el);
+    captureDockEl = el;
+    captureDockStatusEl = status;
+    captureDockPasteEl = paste;
+    captureDockPasteWrapEl = pasteWrap;
+    return el;
+  }
+
+  function beginViewpointCapture() {
+    pendingCaptureName = cleanSegmentName(saveViewNameEl ? saveViewNameEl.value : "");
+    // Step 1 of the owner's two-step design: freeze the annotation payload
+    // BEFORE the tour is released, so nothing the visitor does while it is
+    // unlocked can change what gets saved.
+    pendingCaptureSegment = buildCurrentViewSegment(pendingCaptureName);
+    closeSaveViewDialog();
+    // When this arrived via the annotation-bar exit guard, that overlay is
+    // still up — and its backdrop covers the very tour step 2 needs clicked.
+    closeExitConfirm();
+    var dock = ensureCaptureDock();
+    if (!dock) {
+      // Nowhere to mount step 2. Saving the drawings beats saving nothing.
+      writePendingCaptureSegment();
+      return;
+    }
+    captureSuspendedTool = toolMode;
+    setToolMode("none");
+    captureWindowActive = true;
+    setCaptureDockStatus("", false);
+    if (captureDockPasteWrapEl) captureDockPasteWrapEl.hidden = true;
+    if (captureDockPasteEl) captureDockPasteEl.value = "";
+    dock.hidden = false;
+    // Hand focus to the tour so "press U" works without a hunt for where to
+    // click first. Best effort — a browser that refuses changes nothing.
+    try {
+      if (frame) frame.focus({ preventScroll: true });
+    } catch (_e) {
+      try {
+        if (frame) frame.focus();
+      } catch (_e2) {}
+    }
+  }
+
+  function endViewpointCapture() {
+    captureWindowActive = false;
+    pendingCaptureSegment = null;
+    pendingCaptureName = "";
+    if (captureDockEl) captureDockEl.hidden = true;
+    if (captureDockPasteEl) captureDockPasteEl.value = "";
+    // Give the annotation surface back exactly as it was suspended.
+    setToolMode(captureSuspendedTool);
+  }
+
+  // Save whatever step 1 froze — with the viewpoint if one was merged in,
+  // without it on the explicit "Save without viewpoint" escape.
+  function writePendingCaptureSegment() {
+    var payload = pendingCaptureSegment;
+    var label = pendingCaptureName;
+    endViewpointCapture();
+    if (!payload) return;
+    try {
+      downloadSegmentPayload(payload, label);
+    } catch (_e) {}
+  }
+
+  function finishViewpointCapture(parsed) {
+    captureLocalView(parsed);
+    if (pendingCaptureSegment && pendingCaptureSegment.segments && pendingCaptureSegment.segments[0]) {
+      var seg = pendingCaptureSegment.segments[0];
+      // currentViewState reads the key captureLocalView just recorded, so the
+      // frozen payload gains exactly the view the next one-click save would.
+      seg.view = currentViewState();
+      seg.viewMeta = { capturedAt: Date.now(), source: "local-capture", possiblyStale: false };
+    }
+    writePendingCaptureSegment();
+  }
+
+  function handleCaughtViewText(text, fromGesture) {
+    var parsed = parseViewUrlForThisSpace(text);
+    if (parsed === "foreign") {
+      setCaptureDockStatus(
+        "That link is from a different space — press U and click Copy in THIS tour.",
+        false,
+      );
+      return;
+    }
+    if (!parsed) {
+      // Ambient attempts stay silent on junk — the visitor may simply not
+      // have copied yet. Only their own button press earns a correction.
+      if (fromGesture) {
+        setCaptureDockStatus(
+          "No view link on the clipboard yet — click into the tour, press U, then click Copy.",
+          false,
+        );
+      }
+      return;
+    }
+    finishViewpointCapture(parsed);
+  }
+
+  function revealCapturePasteFallback(msg) {
+    if (captureDockPasteWrapEl) captureDockPasteWrapEl.hidden = false;
+    setCaptureDockStatus(msg, false);
+    try {
+      if (captureDockPasteEl) captureDockPasteEl.focus();
+    } catch (_e) {}
+  }
+
+  function attemptClipboardCatch(fromGesture) {
+    if (!captureWindowActive) return;
+    // iOS surfaces its native Paste callout on every read — only a tap the
+    // visitor just made may summon it (the preGrantClipboard rule, kept).
+    if (IS_IOS_WEBKIT && !fromGesture) return;
+    var fallbackMsg =
+      "This browser will not hand the link over automatically — paste it below instead.";
+    if (!navigator || !navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
+      if (fromGesture) revealCapturePasteFallback(fallbackMsg);
+      return;
+    }
+    var p;
+    try {
+      p = navigator.clipboard.readText();
+    } catch (_e) {
+      if (fromGesture) revealCapturePasteFallback(fallbackMsg);
+      return;
+    }
+    if (!p || typeof p.then !== "function") return;
+    p.then(
+      function (text) {
+        if (!captureWindowActive) return;
+        handleCaughtViewText(typeof text === "string" ? text : "", fromGesture);
+      },
+      function () {
+        // Denied, or the document was not focused. The visitor's own press
+        // gets the paste fallback; a background attempt just waits.
+        if (!captureWindowActive) return;
+        if (fromGesture) {
+          revealCapturePasteFallback(
+            "Could not read the clipboard — paste the copied link below instead.",
+          );
+        }
+      },
+    );
   }
 
   /** Every Save View entry point routes through here, so no button can write a
@@ -4681,7 +4946,7 @@ function annoBindViewportEvents(win, cb) {
     setSaveViewStatus("", false);
     el.hidden = false;
     try {
-      if (saveViewPasteEl) saveViewPasteEl.focus();
+      if (saveViewNameEl) saveViewNameEl.focus();
     } catch (_e) {}
   }
 
@@ -6791,10 +7056,14 @@ function annoBindViewportEvents(win, cb) {
 
   // Build the portable envelope. One segment, schema 1, no URLs, no
   // credentials, no participant identity — the same shape the spec pins.
-  function buildCurrentViewSegment() {
+  // `label` (2.49.0) is the visitor's own name for this save; when present it
+  // becomes the segment title so the import side shows their words rather
+  // than a timestamp. Absent, the title keeps its original stamped form.
+  function buildCurrentViewSegment(label) {
     var view = currentViewState();
     var stamp = new Date().toISOString();
     var title = CONFIG && CONFIG.shareTitle ? String(CONFIG.shareTitle) : "Presentation";
+    var named = cleanSegmentName(label);
     return {
       format: "f3d-review-segments",
       schema: 1,
@@ -6806,7 +7075,7 @@ function annoBindViewportEvents(win, cb) {
           id: makeTextId().replace("t_", "seg_"),
           schema: 1,
           rev: 1,
-          title: title + " \u2014 " + stamp.slice(0, 16).replace("T", " "),
+          title: named ? named : title + " \u2014 " + stamp.slice(0, 16).replace("T", " "),
           presentation: { kind: "atlas", title: title },
           view: view,
           viewMeta: {
@@ -6823,10 +7092,22 @@ function annoBindViewportEvents(win, cb) {
     };
   }
 
-  function downloadCurrentViewSegment() {
-    var payload = buildCurrentViewSegment();
+  function downloadCurrentViewSegment(label) {
+    return downloadSegmentPayload(buildCurrentViewSegment(label), label);
+  }
+
+  // Writes an already-built envelope. Split from the builder (2.49.0) so the
+  // capture flow can freeze the payload at step 1 and write it later, after
+  // the caught viewpoint is merged in — the one-click and drawings-only paths
+  // still build-and-write in a single call above.
+  function downloadSegmentPayload(payload, label) {
     var json = JSON.stringify(payload, null, 2);
+    // The visitor's name leads the filename so their Downloads folder reads
+    // in their own words; slugged with the same allowlist the parent-side
+    // save handler rebuilds names from, so the stem survives the hand-up.
+    var labelSlug = segmentSlug(cleanSegmentName(label)).replace(/-+$/, "").slice(0, 32);
     var name =
+      (labelSlug ? labelSlug + "-" : "") +
       segmentSlug(payload.presentation.title) +
       "-review-segments-" +
       payload.exportedAt.slice(0, 19).replace(/[:]/g, "-") +
@@ -8767,6 +9048,14 @@ function annoBindViewportEvents(win, cb) {
     tipsEl.addEventListener("mouseleave", scheduleHideTips);
   }
   window.addEventListener("focus", schedulePoll);
+  // The capture window's automatic catch (2.49.0): focus returning from the
+  // iframe is the earliest moment a clipboard read can succeed after the
+  // visitor clicks Copy inside the tour — reads while the iframe holds focus
+  // are refused by the browser. Gated hard inside on captureWindowActive, so
+  // outside an explicit capture this listener never touches the clipboard.
+  window.addEventListener("focus", function () {
+    attemptClipboardCatch(false);
+  });
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) schedulePoll();
   });
@@ -11149,7 +11438,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-08-07";
+    var RUNTIME_RELEASED="2026-08-08";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
