@@ -8,7 +8,7 @@
 <meta property="og:title" content="Hit Central Studios — Frontiers|3D" />
 <meta property="og:description" content="Founded by Grammy-nominated producer Arty Skye, Hit Central Studios is a premier 7,000-square-foot creative hub and event venue in Brooklyn. Bringing over 30 years of major-label music production experience to Avenue U, the facility features top-tier recording and podcast studios alongside an all-inclusive event space. It offers state-of-the-art technology and youth programs designed to empower the next generation of media creators." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.49.0" />
+<meta name="f3d-runtime" content="2.50.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -4453,6 +4453,21 @@ function annoBindViewportEvents(win, cb) {
   // directs the press-U-and-Copy gesture; the copied link is then read off the
   // clipboard and merged into the frozen payload automatically.
   //
+  // 2.50.0, owner-reported 2026-08-08 (same day, first live test): the
+  // released tour was ENTERED BY CLICKING, because the copy said to — and
+  // that click steers the camera away from the exact view the capture exists
+  // to record. The iframe never needed the click: focus is handed over
+  // programmatically (focusTourForCapture; the 2.22.0 lesson is that
+  // Matterport handles U inside the iframe, so the iframe must hold focus).
+  // The copy now forbids the click, a keydown net catches a press-U the
+  // parent document received — proof the hand-off failed — and repairs
+  // focus, and pointerenter re-arms it during the window. Full pointer
+  // isolation of the canvas is NOT possible from out here: Matterport's own
+  // Copy button lives on the same cross-origin pane as the canvas, so glass
+  // over one is glass over both — the design instead removes every reason
+  // to click before U, and the one click after U lands on Matterport's
+  // panel, which does not move the camera.
+  //
   // The clipboard read here is NOT the ambient read #415 ruled out, and the
   // distinction is load-bearing: every read is gated on captureWindowActive —
   // a window that exists only after the visitor clicked "Capture viewpoint",
@@ -4516,6 +4531,10 @@ function annoBindViewportEvents(win, cb) {
   // it — that is what keeps this from being the ambient read #415 ruled out.
   var captureWindowActive = false;
   var captureSuspendedTool = "none";
+  // Consecutive press-U keystrokes the PARENT document saw during a capture
+  // window — each one a press the iframe should have received and did not.
+  // Reset when a window opens; read by the keydown net beside requestSaveView.
+  var captureFocusMisses = 0;
   // Frozen at step 1 so nothing that happens while the tour is unlocked can
   // change what gets saved — the owner's "captures the annotations data
   // first" is a property here, not a hope.
@@ -4584,7 +4603,21 @@ function annoBindViewportEvents(win, cb) {
       setLoadViewStatus("The annotations in that file are invalid \u2014 nothing was changed.", false);
       return;
     }
-    if (view) applyTeleport(view.ss, view.sr);
+    if (view) {
+      // A loaded file is a navigation ORDER, not a sync echo. The quiet-sync
+      // guard in applyTeleport trusts currentViewKey to mean "the view the
+      // iframe is showing", and solo that trust is blind: this runtime cannot
+      // see the camera, so a visitor who captured this very view and then
+      // panned away still carries the matching key — and the load compared
+      // equal and moved nothing (owner-reported 2026-08-08, the exported file
+      // attached: drawings restored, camera stayed put). Divergence is
+      // ASSUMED here; being taken to the saved view is the point of loading,
+      // and the cost when the visitor truly is there already is one quiet
+      // startup-chrome replay — the same trade 2.30.0 made for the freeze
+      // release, for the same reason.
+      viewDivergedLocally = true;
+      applyTeleport(view.ss, view.sr);
+    }
     if (parsed.count > 1) {
       setLoadViewStatus("Loaded the first of " + parsed.count + " saved views in this file.", true);
       return;
@@ -4642,7 +4675,7 @@ function annoBindViewportEvents(win, cb) {
     // read its own camera is not obvious, and without it this reads as a
     // pointless extra step.
     p.textContent =
-      "Your drawings are ready. This tour cannot read the camera by itself, so the tour will unlock for a moment: click into it, press U, then click Copy in the panel Matterport opens — the copied link is picked up automatically and saved with your drawings.";
+      "Your drawings are ready. This tour cannot read the camera by itself, so it will unlock for a moment and listen for your keyboard: just press U — do not click the tour, clicking steers the camera away from your drawings — then click Copy in the panel Matterport opens. The copied link is picked up automatically and saved with your drawings.";
     var nameLabel = document.createElement("div");
     nameLabel.className = "anno-exit-body anno-load-paste-label";
     nameLabel.textContent = "Name this save (optional):";
@@ -4703,8 +4736,9 @@ function annoBindViewportEvents(win, cb) {
   // stops taking pointer events and Matterport receives them (the same
   // release a closed toolbar performs). The card below is docked at the
   // bottom edge rather than centered with a backdrop, because its whole job
-  // is to NOT stand between the visitor and the tour it is asking them to
-  // click into.
+  // is to NOT stand between the visitor and the tour whose keyboard focus it
+  // just handed over (2.50.0: handed — never clicked-into; see the capture
+  // section header above).
   function setCaptureDockStatus(msg, ok) {
     if (!captureDockStatusEl) return;
     captureDockStatusEl.textContent = msg || "";
@@ -4727,7 +4761,7 @@ function annoBindViewportEvents(win, cb) {
     var p = document.createElement("div");
     p.className = "anno-exit-body";
     p.textContent =
-      "Click into the tour, press U, then click Copy in the panel that opens. The copied link is picked up automatically when you come back — or use the Save button below.";
+      "Press U now — the tour is already listening, no click needed, and clicking it would move the camera. Then click Copy in the panel that opens. The copied link is picked up automatically when you come back — or use the Save button below.";
     var pasteWrap = document.createElement("div");
     pasteWrap.hidden = true;
     var pasteLabel = document.createElement("div");
@@ -4797,7 +4831,8 @@ function annoBindViewportEvents(win, cb) {
     pendingCaptureSegment = buildCurrentViewSegment(pendingCaptureName);
     closeSaveViewDialog();
     // When this arrived via the annotation-bar exit guard, that overlay is
-    // still up — and its backdrop covers the very tour step 2 needs clicked.
+    // still up — and its backdrop sits over the very tour step 2 is about to
+    // hand the keyboard to.
     closeExitConfirm();
     var dock = ensureCaptureDock();
     if (!dock) {
@@ -4807,20 +4842,25 @@ function annoBindViewportEvents(win, cb) {
     }
     captureSuspendedTool = toolMode;
     setToolMode("none");
+    // The release above frees the camera, and from here until the copied
+    // link is believed this runtime cannot see where it points — the exact
+    // "released and may have moved" state the 2.30.0 flag was declared for.
+    // captureLocalView re-converges key and iframe at the capture instant;
+    // a cancel leaves the flag raised, which is the honest reading of a
+    // visitor who toured freely and saved nothing.
+    viewDivergedLocally = true;
     captureWindowActive = true;
+    captureFocusMisses = 0;
     setCaptureDockStatus("", false);
     if (captureDockPasteWrapEl) captureDockPasteWrapEl.hidden = true;
     if (captureDockPasteEl) captureDockPasteEl.value = "";
     dock.hidden = false;
-    // Hand focus to the tour so "press U" works without a hunt for where to
-    // click first. Best effort — a browser that refuses changes nothing.
-    try {
-      if (frame) frame.focus({ preventScroll: true });
-    } catch (_e) {
-      try {
-        if (frame) frame.focus();
-      } catch (_e2) {}
-    }
+    // Hand focus to the tour so "press U" works with NO click at all —
+    // clicking the canvas is the one gesture that must never be the way in,
+    // because it steers the camera away from the exact view this capture
+    // exists to record (owner-reported 2026-08-08). Best effort — a browser
+    // that refuses is caught by the keydown net below.
+    focusTourForCapture();
   }
 
   function endViewpointCapture() {
@@ -4871,7 +4911,7 @@ function annoBindViewportEvents(win, cb) {
       // have copied yet. Only their own button press earns a correction.
       if (fromGesture) {
         setCaptureDockStatus(
-          "No view link on the clipboard yet — click into the tour, press U, then click Copy.",
+          "No view link on the clipboard yet — press U (no click needed), then click Copy in the panel that opens.",
           false,
         );
       }
@@ -4924,6 +4964,49 @@ function annoBindViewportEvents(win, cb) {
       },
     );
   }
+
+  // Hand the tour keyboard focus without a single click. Matterport handles U
+  // INSIDE the iframe, so the iframe must hold focus — the 2.22.0 lesson —
+  // and 2.49.0 already focused it programmatically, but its dialog copy STILL
+  // said "click into the tour" first. The owner followed the words, and the
+  // click steered the camera off the exact view the capture was meant to
+  // record (owner-reported 2026-08-08). The copy now forbids the click; this
+  // helper is the whole way in. Best effort — a refusal is caught by the
+  // keydown net below, never punished.
+  function focusTourForCapture() {
+    try {
+      if (frame) frame.focus({ preventScroll: true });
+    } catch (_e) {
+      try {
+        if (frame) frame.focus();
+      } catch (_e2) {}
+    }
+  }
+
+  // The capture window's keyboard net. Seeing U up HERE is itself the
+  // diagnosis: when the tour holds focus the keystroke lands inside the
+  // iframe and never reaches this document, so a U on this listener means
+  // the press that was meant for Matterport fell on deaf ears. Answer it by
+  // fixing focus and asking for one more press instead of doing nothing.
+  // Typing fields are exempt (a name or pasted URL may contain a u). Two
+  // misses in a row mean this browser is refusing programmatic iframe focus
+  // and would miss forever — reveal the paste fallback with the one honest
+  // last resort spelled out, re-aim included.
+  document.addEventListener("keydown", function (e) {
+    if (!captureWindowActive || !e) return;
+    if (e.key !== "u" && e.key !== "U") return;
+    var ae = document.activeElement;
+    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
+    captureFocusMisses += 1;
+    focusTourForCapture();
+    if (captureFocusMisses >= 2) {
+      revealCapturePasteFallback(
+        "This browser will not hand the tour the keyboard. Click the tour once to wake it, line the view back up if it moved, press U, then paste the copied link below.",
+      );
+      return;
+    }
+    setCaptureDockStatus("Almost — the tour was not listening yet. Press U once more.", false);
+  });
 
   /** Every Save View entry point routes through here, so no button can write a
    *  viewless file without having offered to fix it first. */
@@ -9070,8 +9153,11 @@ function annoBindViewportEvents(win, cb) {
       schedulePoll();
     });
     letterboxWrap.addEventListener("pointerenter", function () {
+      // Live roles need the tour focused so press-U sync works; a solo
+      // capture window (2.50.0) needs it for the same key. Everyone else
+      // keeps their focus — stealing it outside those states breaks typing.
       var st = session.getState();
-      if (st.role !== "visitor" && st.role !== "agent") return;
+      if (!captureWindowActive && st.role !== "visitor" && st.role !== "agent") return;
       var ae = document.activeElement;
       if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
       if (frame) {
