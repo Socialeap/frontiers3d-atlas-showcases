@@ -8,7 +8,7 @@
 <meta property="og:title" content="The Donald J. Trump Presidential Twitter Library — Frontiers|3D" />
 <meta property="og:description" content="Created by Comedy Central&amp;#39;s The Daily Show, this satirical 4,000-square-foot pop-up exhibition in Manhattan brought Donald Trump&amp;#39;s Twitter feed into the physical world. Highlights include gold-framed tweets arranged by historical themes, interactive timelines, and an Oval Office replica featuring a golden toilet. The hilarious installation drew over 7,500 visitors during its opening weekend near Trump Tower." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.51.0" />
+<meta name="f3d-runtime" content="2.52.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -3861,10 +3861,9 @@ function annoBindViewportEvents(win, cb) {
   // package's own peer session is parked.
   //
   // Two switches AND together into "audible":
-  //   soundEnabled     — THIS viewer's choice, OFF until their first tap.
-  //                      Browsers refuse un-gestured audio, so the tap is not
-  //                      just consent — it is the gesture that makes play()
-  //                      legal at all.
+  //   soundEnabled     — THIS viewer's choice. A game launch requests the
+  //                      default audible level for that game; browsers may
+  //                      still require a tap before honoring play().
   //   hostMusicAllowed — the room's choice, host-authoritative. Guests start
   //                      true standalone (no host yet) and are silenced on
   //                      attach until the host's state arrives.
@@ -3947,9 +3946,8 @@ function annoBindViewportEvents(win, cb) {
     }
   } catch (_e) {}
   // Level 0 IS off, so the slider subsumes the old toggle rather than sitting
-  // beside it as a second source of truth. Playback still starts silent
-  // regardless: browsers refuse un-gestured autoplay, so the stored level
-  // decides how loud the first tap will be, not whether one is needed.
+  // beside it as a second source of truth. Outside an active game, playback
+  // still starts silent because browsers may refuse un-gestured autoplay.
 
   function musicVolumeFromLevel(level) {
     if (!(level > 0)) return 0;
@@ -3961,6 +3959,20 @@ function annoBindViewportEvents(win, cb) {
       var el = bgAudio;
       if (el) el.volume = musicVolumeFromLevel(musicLevel);
     } catch (_e) {}
+  }
+
+  // A game launch is a deliberate room-level start signal, unlike a normal
+  // room attach. It restores only an accidentally muted listener to the
+  // default level; a listener who already chose a non-zero level keeps that
+  // independent preference. This automatic start is intentionally not saved
+  // to localStorage, so it cannot overwrite a person's lasting choice.
+  function enableGameMusicDefault() {
+    if (!MUSIC_URL) return;
+    if (!(musicLevel > 0)) musicLevel = MUSIC_LEVEL_DEFAULT;
+    musicLevelBeforeMute = musicLevel;
+    soundEnabled = true;
+    musicBlocked = false;
+    applyMusicVolume();
   }
 
   function setMusicLevel(level, fromSlider) {
@@ -4087,7 +4099,8 @@ function annoBindViewportEvents(win, cb) {
   //    tempo nudge with no pitch shift — inaudible, and continuous rather
   //    than letting the streams separate. Inside the deadband the rate
   //    returns to exactly 1 so it never hunts.
-  function applyHostMusicLocal(on, atSec, sentAtMs) {
+  function applyHostMusicLocal(on, atSec, sentAtMs, gameStart) {
+    if (gameStart === true && on === true) enableGameMusicDefault();
     hostMusicAllowed = on === true;
     var el = ensureBgAudio();
     if (el && hostMusicAllowed && typeof atSec === "number" && isFinite(atSec)) {
@@ -5530,12 +5543,16 @@ function annoBindViewportEvents(win, cb) {
       // same applyHostMusicLocal every transport uses.
       if (d.type === "f3d:room-music") {
         if (!roomAttached) return;
-        // The authority never obeys its own echo — its element IS the truth.
-        if (roomRole === "host") return;
+        // The authority never obeys its own ordinary echo — its element IS
+        // the truth. A game launch is the deliberate exception: the parent
+        // sends one local start command so the host hears the same soundtrack
+        // as the guests from the opening view.
+        if (roomRole === "host" && d.gameStart !== true) return;
         applyHostMusicLocal(
           d.on === true,
           typeof d.atSec === "number" && isFinite(d.atSec) ? d.atSec : undefined,
-          typeof d.sentAtMs === "number" && isFinite(d.sentAtMs) ? d.sentAtMs : undefined
+          typeof d.sentAtMs === "number" && isFinite(d.sentAtMs) ? d.sentAtMs : undefined,
+          d.gameStart === true
         );
         return;
       }
