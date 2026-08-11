@@ -8,7 +8,7 @@
 <meta property="og:title" content="Hit Central Studios — Frontiers|3D" />
 <meta property="og:description" content="Founded by Grammy-nominated producer Arty Skye, Hit Central Studios is a premier 7,000-square-foot creative hub and event venue in Brooklyn. Bringing over 30 years of major-label music production experience to Avenue U, the facility features top-tier recording and podcast studios alongside an all-inclusive event space. It offers state-of-the-art technology and youth programs designed to empower the next generation of media creators." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.50.0" />
+<meta name="f3d-runtime" content="2.52.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -3861,10 +3861,9 @@ function annoBindViewportEvents(win, cb) {
   // package's own peer session is parked.
   //
   // Two switches AND together into "audible":
-  //   soundEnabled     — THIS viewer's choice, OFF until their first tap.
-  //                      Browsers refuse un-gestured audio, so the tap is not
-  //                      just consent — it is the gesture that makes play()
-  //                      legal at all.
+  //   soundEnabled     — THIS viewer's choice. A game launch requests the
+  //                      default audible level for that game; browsers may
+  //                      still require a tap before honoring play().
   //   hostMusicAllowed — the room's choice, host-authoritative. Guests start
   //                      true standalone (no host yet) and are silenced on
   //                      attach until the host's state arrives.
@@ -3908,49 +3907,35 @@ function annoBindViewportEvents(win, cb) {
   var soundSlider = null;
   var soundPop = null;
   var musicLevelBeforeMute = MUSIC_LEVEL_DEFAULT;
-  // ── Two DIFFERENT facts, deliberately kept in two different keys (2.48.0)
+  // ── ONE fact is stored, and it is not an answer (2.51.0, owner-directed)
   //
-  // 2.46.0 stored only one and made it serve both: the level doubled as the
-  // record of "has been asked", so the question was asked once per BROWSER
-  // and never again on any space sharing this origin — and, because the
-  // slider and the mute icon write the level too, a visitor who merely
-  // adjusted the volume somewhere had silently "answered" a question no one
-  // had put to them. Owner-directed change: ask once per SPACE.
+  // Owner, verbatim: *"The Sound option popup should open anytime a 3D
+  // presentation is loaded. The popup should not rely on any previous decision
+  // to have the presentation load without sound."*
   //
-  //   f3d:music-level        — HOW LOUD, global. One preference that follows
-  //                            the visitor between spaces, so answering "sound
-  //                            on" in a second space respects the volume they
-  //                            chose in the first.
-  //   f3d:music-asked:<path> — WHETHER THIS SPACE ASKED. Per space, because
-  //                            "have you met this presentation" is a fact
-  //                            about the presentation, not about the browser.
+  // This retires the "asked" record entirely — first the origin-wide one
+  // (2.46.0), then its per-space successor (2.48.0). Both were attempts to
+  // remember an answer, and remembering was itself the defect: the record was
+  // written by the SLIDER and the MUTE ICON as well as by the dialog, so a
+  // visitor who nudged the volume once was opted out of a question nobody had
+  // put to them — permanently, and invisibly, with no way back short of
+  // clearing site data. It also could not notice that the presentation had
+  // CHANGED: a soundtrack added to a listing after someone's first visit
+  // reached them never, because their browser had already "answered" about a
+  // space that had no music to offer at the time.
   //
-  // Keying on the path is what makes it per-space without a config change or
-  // a new baked field: every curated showcase is served from its own
-  // `/<slug>/` folder on one origin, and inside Live Mode the destination
-  // iframe's own location is that same folder.
-  var MUSIC_ASKED_PREFIX = "f3d:music-asked:";
-  var musicChoiceMade = false;
-
-  function spaceSoundKey() {
-    try {
-      var loc = (typeof window !== "undefined" && window.location) || null;
-      if (!loc) return "";
-      var p = typeof loc.pathname === "string" ? loc.pathname : "";
-      if (!p && typeof loc.href === "string") {
-        p = loc.href.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]*/i, "");
-      }
-      p = String(p || "").split("?")[0].split("#")[0].replace(/index\.html?$/i, "");
-      if (!p) return "";
-      if (p.charAt(p.length - 1) !== "/") p += "/";
-      return MUSIC_ASKED_PREFIX + p;
-    } catch (_e) {
-      return "";
-    }
-  }
-
-  // The level is read for its own sake only — it no longer implies an answer.
-  // A malformed stored value is ignored rather than honored.
+  //   f3d:music-level — HOW LOUD, and nothing else. A volume preference that
+  //                     follows the visitor between spaces, so "Sound on"
+  //                     opens at the level they last chose rather than
+  //                     resetting. A stored 0 is not a volume and not a
+  //                     standing "no" — see answerSoundGate.
+  //
+  // The question is now asked on EVERY load of a space that has a soundtrack.
+  // That is deliberate and it is cheap: two buttons, one line of copy, and the
+  // click is load-bearing anyway (browsers refuse un-gestured audio, so
+  // something must be pressed before play() is legal at all).
+  //
+  // A malformed stored level is ignored rather than honored.
   try {
     var storedLevel = window.localStorage ? window.localStorage.getItem(MUSIC_LEVEL_KEY) : null;
     if (storedLevel !== null) {
@@ -3960,21 +3945,9 @@ function annoBindViewportEvents(win, cb) {
       }
     }
   } catch (_e) {}
-  // …and the answer is read from THIS space's own key. An unkeyable location
-  // (no path at all) falls back to "already asked" rather than asking on every
-  // load: a question that cannot record its answer would repeat forever.
-  try {
-    var askedKey = spaceSoundKey();
-    if (!askedKey) {
-      musicChoiceMade = true;
-    } else if (window.localStorage && window.localStorage.getItem(askedKey) !== null) {
-      musicChoiceMade = true;
-    }
-  } catch (_e) {}
   // Level 0 IS off, so the slider subsumes the old toggle rather than sitting
-  // beside it as a second source of truth. Playback still starts silent
-  // regardless: browsers refuse un-gestured autoplay, so the stored level
-  // decides how loud the first tap will be, not whether one is needed.
+  // beside it as a second source of truth. Outside an active game, playback
+  // still starts silent because browsers may refuse un-gestured autoplay.
 
   function musicVolumeFromLevel(level) {
     if (!(level > 0)) return 0;
@@ -3988,6 +3961,20 @@ function annoBindViewportEvents(win, cb) {
     } catch (_e) {}
   }
 
+  // A game launch is a deliberate room-level start signal, unlike a normal
+  // room attach. It restores only an accidentally muted listener to the
+  // default level; a listener who already chose a non-zero level keeps that
+  // independent preference. This automatic start is intentionally not saved
+  // to localStorage, so it cannot overwrite a person's lasting choice.
+  function enableGameMusicDefault() {
+    if (!MUSIC_URL) return;
+    if (!(musicLevel > 0)) musicLevel = MUSIC_LEVEL_DEFAULT;
+    musicLevelBeforeMute = musicLevel;
+    soundEnabled = true;
+    musicBlocked = false;
+    applyMusicVolume();
+  }
+
   function setMusicLevel(level, fromSlider) {
     var next = parseInt(level, 10);
     if (!isFinite(next)) return;
@@ -3995,17 +3982,14 @@ function annoBindViewportEvents(win, cb) {
     if (next > MUSIC_LEVEL_MAX) next = MUSIC_LEVEL_MAX;
     var wasAudible = musicLevel > 0;
     musicLevel = next;
-    // Any deliberate level change IS the answer to the question for THIS
-    // space, whichever control expressed it — so a visitor who reaches
-    // straight for the speaker button is not asked afterwards here. It no
-    // longer answers for every OTHER space: that conflation is what made a
-    // volume nudge in one showcase silence the question in all of them.
-    musicChoiceMade = true;
+    // The level is stored as a VOLUME and nothing more (2.51.0). It used to
+    // double as the record that the question had been answered, which is why
+    // moving the slider — or muting — could retire the question for good; the
+    // question no longer consults any record, so this write means only "play
+    // it this loud next time".
     try {
       if (window.localStorage) {
         window.localStorage.setItem(MUSIC_LEVEL_KEY, String(musicLevel));
-        var levelKey = spaceSoundKey();
-        if (levelKey) window.localStorage.setItem(levelKey, "1");
       }
     } catch (_e) {}
     soundEnabled = musicLevel > 0;
@@ -4115,7 +4099,8 @@ function annoBindViewportEvents(win, cb) {
   //    tempo nudge with no pitch shift — inaudible, and continuous rather
   //    than letting the streams separate. Inside the deadband the rate
   //    returns to exactly 1 so it never hunts.
-  function applyHostMusicLocal(on, atSec, sentAtMs) {
+  function applyHostMusicLocal(on, atSec, sentAtMs, gameStart) {
+    if (gameStart === true && on === true) enableGameMusicDefault();
     hostMusicAllowed = on === true;
     var el = ensureBgAudio();
     if (el && hostMusicAllowed && typeof atSec === "number" && isFinite(atSec)) {
@@ -5267,10 +5252,13 @@ function annoBindViewportEvents(win, cb) {
   //   • Only when this space HAS a soundtrack. Offering sound that does not
   //     exist is the roster-arrow failure — a control promising a capability
   //     the package cannot deliver.
-  //   • Only when this visitor has never answered (see musicChoiceMade). The
-  //     answer is stored as the level, so it survives to every other space.
-  //   • Escape or a backdrop click dismisses WITHOUT recording an answer:
-  //     an accidental click must not mute every space silently and forever.
+  //   • EVERY load of such a space, with no memory consulted (2.51.0,
+  //     owner-directed). A remembered answer is what made this question
+  //     disappear for the people most likely to have touched the volume once,
+  //     and it could never notice that a listing had GAINED a soundtrack since
+  //     their last visit.
+  //   • Escape or a backdrop click dismisses without starting playback, and
+  //     changes nothing that outlives this page load.
   //   • Built lazily in JS, never baked into the HTML shell, so a package
   //     whose runtime fails to load can never strand a visitor behind an
   //     overlay nothing is left to dismiss.
@@ -5291,11 +5279,11 @@ function annoBindViewportEvents(win, cb) {
     // the level change runs while the gesture is still live — setMusicLevel
     // both stores the answer and starts (or refuses) playback right here.
     //
-    // "On" restores the visitor's OWN volume when they have an audible one,
-    // which is the point of keeping the level global while the question went
-    // per-space: someone who set 7 in the last showcase gets 7 here, not a
-    // reset to the default. A stored 0 is not a volume, it is last time's
-    // "no" — so answering "yes" after it opens at the default.
+    // "On" restores the visitor's OWN volume when they have an audible one:
+    // someone who set 7 in the last showcase gets 7 here, not a reset to the
+    // default. A stored 0 is not a volume — it is the residue of a previous
+    // "off" — so answering "yes" after it opens at the default instead of
+    // turning sound "on" at silence.
     try {
       setMusicLevel(on ? (musicLevel > 0 ? musicLevel : MUSIC_LEVEL_DEFAULT) : 0, false);
     } catch (_e) {}
@@ -5303,7 +5291,7 @@ function annoBindViewportEvents(win, cb) {
   }
 
   function maybeShowSoundGate() {
-    if (!MUSIC_URL || musicChoiceMade || soundGateEl) return null;
+    if (!MUSIC_URL || soundGateEl) return null;
     try {
       var host = document.body || document.documentElement;
       if (!host || typeof host.appendChild !== "function") return null;
@@ -5555,12 +5543,16 @@ function annoBindViewportEvents(win, cb) {
       // same applyHostMusicLocal every transport uses.
       if (d.type === "f3d:room-music") {
         if (!roomAttached) return;
-        // The authority never obeys its own echo — its element IS the truth.
-        if (roomRole === "host") return;
+        // The authority never obeys its own ordinary echo — its element IS
+        // the truth. A game launch is the deliberate exception: the parent
+        // sends one local start command so the host hears the same soundtrack
+        // as the guests from the opening view.
+        if (roomRole === "host" && d.gameStart !== true) return;
         applyHostMusicLocal(
           d.on === true,
           typeof d.atSec === "number" && isFinite(d.atSec) ? d.atSec : undefined,
-          typeof d.sentAtMs === "number" && isFinite(d.sentAtMs) ? d.sentAtMs : undefined
+          typeof d.sentAtMs === "number" && isFinite(d.sentAtMs) ? d.sentAtMs : undefined,
+          d.gameStart === true
         );
         return;
       }
@@ -11524,7 +11516,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-08-08";
+    var RUNTIME_RELEASED="2026-08-09";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
