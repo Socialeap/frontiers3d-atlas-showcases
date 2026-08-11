@@ -8,7 +8,7 @@
 <meta property="og:title" content="The Towers of the Waldorf Astoria — Frontiers|3D" />
 <meta property="og:description" content="Originally opened in 1931 as the world&amp;#39;s first Art Deco skyscraper hotel, this iconic landmark has hosted every U.S. president from Hoover to Obama alongside world royalty and cultural legends. Composer Cole Porter lived in suite 33A for nearly 30 years—later occupied by Frank Sinatra—where he composed classic hits on his 1907 Steinway piano. The landmark is artfully restored to feature 375 luxury condominium residences complete with private concierge closets and over 50,000 square feet of private amenities." />
 <meta name="f3d-package-schema" content="2" />
-<meta name="f3d-runtime" content="2.47.0" />
+<meta name="f3d-runtime" content="2.52.0" />
 <meta name="f3d-capabilities" content="" />
 <meta name="f3d-package-family" content="atlas" />
 <style>
@@ -131,6 +131,15 @@ body.anno-tool-active #anno-letterbox-wrap{touch-action:none;-webkit-touch-callo
 .anno-load-status{font:600 12px/1.4 inherit;margin:0 0 10px;color:#fca5a5}
 .anno-load-status:empty{margin:0}
 .anno-load-status.ok{color:#86efac}
+
+/* Save View capture flow (2.49.0). The name field matches the paste box's
+   family, single-line. The dock is step 2's card: bottom-docked and
+   backdrop-free ON PURPOSE — its job is to direct clicks INTO the tour, so
+   unlike .anno-exit-confirm it must never stand between the visitor and the
+   stage. Same z-band as the dialogs so it still sits above the sync pill. */
+.anno-save-name{width:100%;margin:2px 0 10px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.18);background:rgba(255,255,255,0.06);color:#fff;font:500 12px/1.4 inherit;font-family:inherit}
+.anno-capture-dock[hidden]{display:none}
+.anno-capture-dock{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);z-index:1500;width:min(92%,420px);padding:14px 16px 12px;border-radius:12px;background:rgba(12,15,24,0.97);border:1px solid rgba(255,255,255,0.16);box-shadow:0 18px 48px rgba(0,0,0,0.5);color:#fff;font-family:inherit;pointer-events:auto}
 
 /* ── Text annotations (2.43.0) ─────────────────────────────────────────
    A transparent DOM layer above the ink canvas (5) and remote pointer (6).
@@ -3852,10 +3861,9 @@ function annoBindViewportEvents(win, cb) {
   // package's own peer session is parked.
   //
   // Two switches AND together into "audible":
-  //   soundEnabled     — THIS viewer's choice, OFF until their first tap.
-  //                      Browsers refuse un-gestured audio, so the tap is not
-  //                      just consent — it is the gesture that makes play()
-  //                      legal at all.
+  //   soundEnabled     — THIS viewer's choice. A game launch requests the
+  //                      default audible level for that game; browsers may
+  //                      still require a tap before honoring play().
   //   hostMusicAllowed — the room's choice, host-authoritative. Guests start
   //                      true standalone (no host yet) and are silenced on
   //                      attach until the host's state arrives.
@@ -3899,27 +3907,47 @@ function annoBindViewportEvents(win, cb) {
   var soundSlider = null;
   var soundPop = null;
   var musicLevelBeforeMute = MUSIC_LEVEL_DEFAULT;
-  // Has this visitor EVER expressed a sound preference in this browser? The
-  // stored level doubles as that record (2.46.0) — it is written by the
-  // slider, by the mute icon, and by the first-visit choice below — so the
-  // question is asked once and then never again, across every space that
-  // shares this origin. A malformed stored value is treated as unanswered:
-  // it cannot be honored, so pretending it was is the worse of the two.
-  var musicChoiceMade = false;
+  // ── ONE fact is stored, and it is not an answer (2.51.0, owner-directed)
+  //
+  // Owner, verbatim: *"The Sound option popup should open anytime a 3D
+  // presentation is loaded. The popup should not rely on any previous decision
+  // to have the presentation load without sound."*
+  //
+  // This retires the "asked" record entirely — first the origin-wide one
+  // (2.46.0), then its per-space successor (2.48.0). Both were attempts to
+  // remember an answer, and remembering was itself the defect: the record was
+  // written by the SLIDER and the MUTE ICON as well as by the dialog, so a
+  // visitor who nudged the volume once was opted out of a question nobody had
+  // put to them — permanently, and invisibly, with no way back short of
+  // clearing site data. It also could not notice that the presentation had
+  // CHANGED: a soundtrack added to a listing after someone's first visit
+  // reached them never, because their browser had already "answered" about a
+  // space that had no music to offer at the time.
+  //
+  //   f3d:music-level — HOW LOUD, and nothing else. A volume preference that
+  //                     follows the visitor between spaces, so "Sound on"
+  //                     opens at the level they last chose rather than
+  //                     resetting. A stored 0 is not a volume and not a
+  //                     standing "no" — see answerSoundGate.
+  //
+  // The question is now asked on EVERY load of a space that has a soundtrack.
+  // That is deliberate and it is cheap: two buttons, one line of copy, and the
+  // click is load-bearing anyway (browsers refuse un-gestured audio, so
+  // something must be pressed before play() is legal at all).
+  //
+  // A malformed stored level is ignored rather than honored.
   try {
     var storedLevel = window.localStorage ? window.localStorage.getItem(MUSIC_LEVEL_KEY) : null;
     if (storedLevel !== null) {
       var parsedLevel = parseInt(storedLevel, 10);
       if (isFinite(parsedLevel) && parsedLevel >= 0 && parsedLevel <= MUSIC_LEVEL_MAX) {
         musicLevel = parsedLevel;
-        musicChoiceMade = true;
       }
     }
   } catch (_e) {}
   // Level 0 IS off, so the slider subsumes the old toggle rather than sitting
-  // beside it as a second source of truth. Playback still starts silent
-  // regardless: browsers refuse un-gestured autoplay, so the stored level
-  // decides how loud the first tap will be, not whether one is needed.
+  // beside it as a second source of truth. Outside an active game, playback
+  // still starts silent because browsers may refuse un-gestured autoplay.
 
   function musicVolumeFromLevel(level) {
     if (!(level > 0)) return 0;
@@ -3933,6 +3961,20 @@ function annoBindViewportEvents(win, cb) {
     } catch (_e) {}
   }
 
+  // A game launch is a deliberate room-level start signal, unlike a normal
+  // room attach. It restores only an accidentally muted listener to the
+  // default level; a listener who already chose a non-zero level keeps that
+  // independent preference. This automatic start is intentionally not saved
+  // to localStorage, so it cannot overwrite a person's lasting choice.
+  function enableGameMusicDefault() {
+    if (!MUSIC_URL) return;
+    if (!(musicLevel > 0)) musicLevel = MUSIC_LEVEL_DEFAULT;
+    musicLevelBeforeMute = musicLevel;
+    soundEnabled = true;
+    musicBlocked = false;
+    applyMusicVolume();
+  }
+
   function setMusicLevel(level, fromSlider) {
     var next = parseInt(level, 10);
     if (!isFinite(next)) return;
@@ -3940,12 +3982,15 @@ function annoBindViewportEvents(win, cb) {
     if (next > MUSIC_LEVEL_MAX) next = MUSIC_LEVEL_MAX;
     var wasAudible = musicLevel > 0;
     musicLevel = next;
-    // Any deliberate level change IS the answer to the first-visit question,
-    // whichever control expressed it — so a visitor who reaches straight for
-    // the speaker button is never asked afterwards.
-    musicChoiceMade = true;
+    // The level is stored as a VOLUME and nothing more (2.51.0). It used to
+    // double as the record that the question had been answered, which is why
+    // moving the slider — or muting — could retire the question for good; the
+    // question no longer consults any record, so this write means only "play
+    // it this loud next time".
     try {
-      if (window.localStorage) window.localStorage.setItem(MUSIC_LEVEL_KEY, String(musicLevel));
+      if (window.localStorage) {
+        window.localStorage.setItem(MUSIC_LEVEL_KEY, String(musicLevel));
+      }
     } catch (_e) {}
     soundEnabled = musicLevel > 0;
     // Dragging the slider up IS the user gesture a blocked autoplay was
@@ -4054,7 +4099,8 @@ function annoBindViewportEvents(win, cb) {
   //    tempo nudge with no pitch shift — inaudible, and continuous rather
   //    than letting the streams separate. Inside the deadband the rate
   //    returns to exactly 1 so it never hunts.
-  function applyHostMusicLocal(on, atSec, sentAtMs) {
+  function applyHostMusicLocal(on, atSec, sentAtMs, gameStart) {
+    if (gameStart === true && on === true) enableGameMusicDefault();
     hostMusicAllowed = on === true;
     var el = ensureBgAudio();
     if (el && hostMusicAllowed && typeof atSec === "number" && isFinite(atSec)) {
@@ -4362,7 +4408,7 @@ function annoBindViewportEvents(win, cb) {
     return { provider: "matterport", ss: ss, sr: sr };
   }
 
-  // ── Capturing a viewpoint OUTSIDE a live session (2.47.0) ────────────
+  // ── Capturing a viewpoint OUTSIDE a live session (2.47.0, reworked 2.49.0) ─
   //
   // Owner-reported 2026-08-06: a solo annotation was saved with Save View and
   // reloaded in the same space, and the camera did not return — the exported
@@ -4382,12 +4428,42 @@ function annoBindViewportEvents(win, cb) {
   // not the same as TELLING the room. captureLocalView does the first without
   // the second, so it works with no session, no room and no peers.
   //
-  // Deliberately NOT done here: reading the clipboard ambiently while solo.
-  // A visitor who never asked to share anything should not get a clipboard
-  // permission prompt, iOS refuses ambient reads permanently anyway, and a
-  // clipboard can hold a Matterport URL copied from a DIFFERENT space. The
-  // capture below is an explicit paste, which needs no permission, works on
-  // every platform, and is checked against this space before it is believed.
+  // 2.49.0, owner-directed 2026-08-08: the capture became a TWO-STEP flow and
+  // the paste box left the main path. The 2.47.0 dialog asked the visitor to
+  // press U inside the tour while the annotation surface still had the tour
+  // blocked — the instruction could not be followed without abandoning the
+  // dialog that gave it. Now: step 1 freezes the annotation data (and takes an
+  // optional name for the file), step 2 RELEASES the tour (tool mode off, so
+  // the canvas passes pointer events through) and a docked, non-blocking card
+  // directs the press-U-and-Copy gesture; the copied link is then read off the
+  // clipboard and merged into the frozen payload automatically.
+  //
+  // 2.50.0, owner-reported 2026-08-08 (same day, first live test): the
+  // released tour was ENTERED BY CLICKING, because the copy said to — and
+  // that click steers the camera away from the exact view the capture exists
+  // to record. The iframe never needed the click: focus is handed over
+  // programmatically (focusTourForCapture; the 2.22.0 lesson is that
+  // Matterport handles U inside the iframe, so the iframe must hold focus).
+  // The copy now forbids the click, a keydown net catches a press-U the
+  // parent document received — proof the hand-off failed — and repairs
+  // focus, and pointerenter re-arms it during the window. Full pointer
+  // isolation of the canvas is NOT possible from out here: Matterport's own
+  // Copy button lives on the same cross-origin pane as the canvas, so glass
+  // over one is glass over both — the design instead removes every reason
+  // to click before U, and the one click after U lands on Matterport's
+  // panel, which does not move the camera.
+  //
+  // The clipboard read here is NOT the ambient read #415 ruled out, and the
+  // distinction is load-bearing: every read is gated on captureWindowActive —
+  // a window that exists only after the visitor clicked "Capture viewpoint",
+  // which IS asking for the clipboard to be looked at. iOS additionally only
+  // reads inside the visitor's own tap (its native Paste callout must never
+  // appear uninvited — the preGrantClipboard rule, kept). The session-gated
+  // ambient machinery (readClipboardAndSend / schedulePoll) is untouched.
+  // Browsers that cannot hand the link over (no readText, or a denied read)
+  // fall back to the old paste box INSIDE the dock, so nobody is stranded —
+  // it is a fallback now, not the instruction.
+  // Every caught link is checked against THIS space before it is believed.
   // Provenance for viewMeta.source. Narrow on purpose: it flips ON only in
   // captureLocalView and OFF wherever the room genuinely settled the view, so
   // a reader can tell "this visitor pasted their own viewpoint" from "the
@@ -4428,7 +4504,41 @@ function annoBindViewportEvents(win, cb) {
   var loadViewPasteEl = null;
   var saveViewEl = null;
   var saveViewStatusEl = null;
-  var saveViewPasteEl = null;
+  var saveViewNameEl = null;
+  // Step 2 of the capture flow: the docked card, its status line, and the
+  // paste fallback that stays hidden until an automatic read has failed.
+  var captureDockEl = null;
+  var captureDockStatusEl = null;
+  var captureDockPasteEl = null;
+  var captureDockPasteWrapEl = null;
+  // The capture window: true only between "Capture viewpoint" and the save /
+  // cancel that ends it. EVERY clipboard read this flow performs is gated on
+  // it — that is what keeps this from being the ambient read #415 ruled out.
+  var captureWindowActive = false;
+  var captureSuspendedTool = "none";
+  // Consecutive press-U keystrokes the PARENT document saw during a capture
+  // window — each one a press the iframe should have received and did not.
+  // Reset when a window opens; read by the keydown net beside requestSaveView.
+  var captureFocusMisses = 0;
+  // Frozen at step 1 so nothing that happens while the tour is unlocked can
+  // change what gets saved — the owner's "captures the annotations data
+  // first" is a property here, not a hope.
+  var pendingCaptureSegment = null;
+  var pendingCaptureName = "";
+
+  // The visitor's own words for the name field, made safe for a JSON field
+  // and readable in a dialog: control characters out, whitespace collapsed,
+  // length capped. The FILENAME half goes through segmentSlug separately.
+  function cleanSegmentName(raw) {
+    var t = String(raw == null ? "" : raw);
+    var out = "";
+    for (var i = 0; i < t.length && out.length < 60; i++) {
+      var code = t.charCodeAt(i);
+      if (code < 32 || code === 127) continue;
+      out += t.charAt(i);
+    }
+    return out.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+  }
 
   function setLoadViewStatus(msg, ok) {
     if (!loadViewStatusEl) return;
@@ -4478,7 +4588,21 @@ function annoBindViewportEvents(win, cb) {
       setLoadViewStatus("The annotations in that file are invalid \u2014 nothing was changed.", false);
       return;
     }
-    if (view) applyTeleport(view.ss, view.sr);
+    if (view) {
+      // A loaded file is a navigation ORDER, not a sync echo. The quiet-sync
+      // guard in applyTeleport trusts currentViewKey to mean "the view the
+      // iframe is showing", and solo that trust is blind: this runtime cannot
+      // see the camera, so a visitor who captured this very view and then
+      // panned away still carries the matching key — and the load compared
+      // equal and moved nothing (owner-reported 2026-08-08, the exported file
+      // attached: drawings restored, camera stayed put). Divergence is
+      // ASSUMED here; being taken to the saved view is the point of loading,
+      // and the cost when the visitor truly is there already is one quiet
+      // startup-chrome replay — the same trade 2.30.0 made for the freeze
+      // release, for the same reason.
+      viewDivergedLocally = true;
+      applyTeleport(view.ss, view.sr);
+    }
     if (parsed.count > 1) {
       setLoadViewStatus("Loaded the first of " + parsed.count + " saved views in this file.", true);
       return;
@@ -4536,13 +4660,15 @@ function annoBindViewportEvents(win, cb) {
     // read its own camera is not obvious, and without it this reads as a
     // pointless extra step.
     p.textContent =
-      "Your drawings are ready to save. This tour cannot read the camera by itself, so to save WHERE you are looking: click into the tour, press U, click Copy in the panel Matterport opens, then paste it below.";
-    var pasteLabel = document.createElement("div");
-    pasteLabel.className = "anno-exit-body anno-load-paste-label";
-    pasteLabel.textContent = "Paste the copied link:";
-    var paste = document.createElement("textarea");
-    paste.className = "anno-load-paste";
-    paste.setAttribute("aria-label", "Copied Matterport view link");
+      "Your drawings are ready. This tour cannot read the camera by itself, so it will unlock for a moment and listen for your keyboard: just press U — do not click the tour, clicking steers the camera away from your drawings — then click Copy in the panel Matterport opens. The copied link is picked up automatically and saved with your drawings.";
+    var nameLabel = document.createElement("div");
+    nameLabel.className = "anno-exit-body anno-load-paste-label";
+    nameLabel.textContent = "Name this save (optional):";
+    var nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.className = "anno-save-name";
+    nameInput.setAttribute("maxlength", "60");
+    nameInput.setAttribute("aria-label", "Name for this saved view");
     var status = document.createElement("div");
     status.className = "anno-load-status";
     var row = document.createElement("div");
@@ -4553,27 +4679,7 @@ function annoBindViewportEvents(win, cb) {
     captureBtn.id = "lt-save-capture-btn";
     captureBtn.textContent = "Capture viewpoint & save";
     captureBtn.addEventListener("click", function () {
-      var parsed = parseViewUrlForThisSpace(paste.value);
-      if (parsed === "foreign") {
-        setSaveViewStatus(
-          "That link is from a different space — copy the view from THIS tour instead.",
-          false,
-        );
-        return;
-      }
-      if (!parsed) {
-        setSaveViewStatus(
-          "That does not look like a Matterport view link. Press U in the tour, then click Copy.",
-          false,
-        );
-        return;
-      }
-      captureLocalView(parsed);
-      try {
-        downloadCurrentViewSegment();
-      } catch (_e) {}
-      paste.value = "";
-      closeSaveViewDialog();
+      beginViewpointCapture();
     });
     var plainBtn = document.createElement("button");
     plainBtn.type = "button";
@@ -4582,7 +4688,7 @@ function annoBindViewportEvents(win, cb) {
     plainBtn.textContent = "Save drawings only";
     plainBtn.addEventListener("click", function () {
       try {
-        downloadCurrentViewSegment();
+        downloadCurrentViewSegment(cleanSegmentName(nameInput.value));
       } catch (_e) {}
       closeSaveViewDialog();
     });
@@ -4596,17 +4702,296 @@ function annoBindViewportEvents(win, cb) {
     row.appendChild(cancelBtn);
     card.appendChild(h);
     card.appendChild(p);
-    card.appendChild(pasteLabel);
-    card.appendChild(paste);
+    card.appendChild(nameLabel);
+    card.appendChild(nameInput);
     card.appendChild(status);
     card.appendChild(row);
     el.appendChild(card);
     host.appendChild(el);
     saveViewEl = el;
     saveViewStatusEl = status;
-    saveViewPasteEl = paste;
+    saveViewNameEl = nameInput;
     return el;
   }
+
+  // ── The capture window (2.49.0): step 2 of the two-step save ─────────
+  //
+  // Between beginViewpointCapture and the save/cancel that ends it, the tour
+  // is INTERACTIVE again — tool mode goes to "none", so the annotation canvas
+  // stops taking pointer events and Matterport receives them (the same
+  // release a closed toolbar performs). The card below is docked at the
+  // bottom edge rather than centered with a backdrop, because its whole job
+  // is to NOT stand between the visitor and the tour whose keyboard focus it
+  // just handed over (2.50.0: handed — never clicked-into; see the capture
+  // section header above).
+  function setCaptureDockStatus(msg, ok) {
+    if (!captureDockStatusEl) return;
+    captureDockStatusEl.textContent = msg || "";
+    captureDockStatusEl.className = ok ? "anno-load-status ok" : "anno-load-status";
+  }
+
+  function ensureCaptureDock() {
+    if (captureDockEl) return captureDockEl;
+    var host = letterboxWrap || document.body;
+    if (!host) return null;
+    var el = document.createElement("div");
+    el.className = "anno-capture-dock";
+    el.hidden = true;
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "false");
+    el.setAttribute("aria-label", "Capture the viewpoint");
+    var h = document.createElement("div");
+    h.className = "anno-exit-title";
+    h.textContent = "The tour is unlocked — grab the viewpoint";
+    var p = document.createElement("div");
+    p.className = "anno-exit-body";
+    p.textContent =
+      "Press U now — the tour is already listening, no click needed, and clicking it would move the camera. Then click Copy in the panel that opens. The copied link is picked up automatically when you come back — or use the Save button below.";
+    var pasteWrap = document.createElement("div");
+    pasteWrap.hidden = true;
+    var pasteLabel = document.createElement("div");
+    pasteLabel.className = "anno-exit-body anno-load-paste-label";
+    pasteLabel.textContent = "…or paste the copied link:";
+    var paste = document.createElement("textarea");
+    paste.className = "anno-load-paste";
+    paste.setAttribute("aria-label", "Copied Matterport view link");
+    pasteWrap.appendChild(pasteLabel);
+    pasteWrap.appendChild(paste);
+    var status = document.createElement("div");
+    status.className = "anno-load-status";
+    var row = document.createElement("div");
+    row.className = "anno-exit-row";
+    var saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "anno-exit-act anno-exit-save";
+    saveBtn.id = "lt-capture-save-btn";
+    saveBtn.textContent = "I copied it — Save";
+    saveBtn.addEventListener("click", function () {
+      // A visible fallback box with content in it wins over the clipboard:
+      // the visitor only sees that box after an automatic read already
+      // failed, so what they typed there IS their answer.
+      if (pasteWrap.hidden === false && paste.value) {
+        handleCaughtViewText(paste.value, true);
+        return;
+      }
+      attemptClipboardCatch(true);
+    });
+    var plainBtn = document.createElement("button");
+    plainBtn.type = "button";
+    plainBtn.className = "anno-exit-act";
+    plainBtn.id = "lt-capture-plain-btn";
+    plainBtn.textContent = "Save without viewpoint";
+    plainBtn.addEventListener("click", function () {
+      writePendingCaptureSegment();
+    });
+    var cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "anno-exit-act anno-exit-cancel";
+    cancelBtn.id = "lt-capture-cancel-btn";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", function () {
+      endViewpointCapture();
+    });
+    row.appendChild(saveBtn);
+    row.appendChild(plainBtn);
+    row.appendChild(cancelBtn);
+    el.appendChild(h);
+    el.appendChild(p);
+    el.appendChild(pasteWrap);
+    el.appendChild(status);
+    el.appendChild(row);
+    host.appendChild(el);
+    captureDockEl = el;
+    captureDockStatusEl = status;
+    captureDockPasteEl = paste;
+    captureDockPasteWrapEl = pasteWrap;
+    return el;
+  }
+
+  function beginViewpointCapture() {
+    pendingCaptureName = cleanSegmentName(saveViewNameEl ? saveViewNameEl.value : "");
+    // Step 1 of the owner's two-step design: freeze the annotation payload
+    // BEFORE the tour is released, so nothing the visitor does while it is
+    // unlocked can change what gets saved.
+    pendingCaptureSegment = buildCurrentViewSegment(pendingCaptureName);
+    closeSaveViewDialog();
+    // When this arrived via the annotation-bar exit guard, that overlay is
+    // still up — and its backdrop sits over the very tour step 2 is about to
+    // hand the keyboard to.
+    closeExitConfirm();
+    var dock = ensureCaptureDock();
+    if (!dock) {
+      // Nowhere to mount step 2. Saving the drawings beats saving nothing.
+      writePendingCaptureSegment();
+      return;
+    }
+    captureSuspendedTool = toolMode;
+    setToolMode("none");
+    // The release above frees the camera, and from here until the copied
+    // link is believed this runtime cannot see where it points — the exact
+    // "released and may have moved" state the 2.30.0 flag was declared for.
+    // captureLocalView re-converges key and iframe at the capture instant;
+    // a cancel leaves the flag raised, which is the honest reading of a
+    // visitor who toured freely and saved nothing.
+    viewDivergedLocally = true;
+    captureWindowActive = true;
+    captureFocusMisses = 0;
+    setCaptureDockStatus("", false);
+    if (captureDockPasteWrapEl) captureDockPasteWrapEl.hidden = true;
+    if (captureDockPasteEl) captureDockPasteEl.value = "";
+    dock.hidden = false;
+    // Hand focus to the tour so "press U" works with NO click at all —
+    // clicking the canvas is the one gesture that must never be the way in,
+    // because it steers the camera away from the exact view this capture
+    // exists to record (owner-reported 2026-08-08). Best effort — a browser
+    // that refuses is caught by the keydown net below.
+    focusTourForCapture();
+  }
+
+  function endViewpointCapture() {
+    captureWindowActive = false;
+    pendingCaptureSegment = null;
+    pendingCaptureName = "";
+    if (captureDockEl) captureDockEl.hidden = true;
+    if (captureDockPasteEl) captureDockPasteEl.value = "";
+    // Give the annotation surface back exactly as it was suspended.
+    setToolMode(captureSuspendedTool);
+  }
+
+  // Save whatever step 1 froze — with the viewpoint if one was merged in,
+  // without it on the explicit "Save without viewpoint" escape.
+  function writePendingCaptureSegment() {
+    var payload = pendingCaptureSegment;
+    var label = pendingCaptureName;
+    endViewpointCapture();
+    if (!payload) return;
+    try {
+      downloadSegmentPayload(payload, label);
+    } catch (_e) {}
+  }
+
+  function finishViewpointCapture(parsed) {
+    captureLocalView(parsed);
+    if (pendingCaptureSegment && pendingCaptureSegment.segments && pendingCaptureSegment.segments[0]) {
+      var seg = pendingCaptureSegment.segments[0];
+      // currentViewState reads the key captureLocalView just recorded, so the
+      // frozen payload gains exactly the view the next one-click save would.
+      seg.view = currentViewState();
+      seg.viewMeta = { capturedAt: Date.now(), source: "local-capture", possiblyStale: false };
+    }
+    writePendingCaptureSegment();
+  }
+
+  function handleCaughtViewText(text, fromGesture) {
+    var parsed = parseViewUrlForThisSpace(text);
+    if (parsed === "foreign") {
+      setCaptureDockStatus(
+        "That link is from a different space — press U and click Copy in THIS tour.",
+        false,
+      );
+      return;
+    }
+    if (!parsed) {
+      // Ambient attempts stay silent on junk — the visitor may simply not
+      // have copied yet. Only their own button press earns a correction.
+      if (fromGesture) {
+        setCaptureDockStatus(
+          "No view link on the clipboard yet — press U (no click needed), then click Copy in the panel that opens.",
+          false,
+        );
+      }
+      return;
+    }
+    finishViewpointCapture(parsed);
+  }
+
+  function revealCapturePasteFallback(msg) {
+    if (captureDockPasteWrapEl) captureDockPasteWrapEl.hidden = false;
+    setCaptureDockStatus(msg, false);
+    try {
+      if (captureDockPasteEl) captureDockPasteEl.focus();
+    } catch (_e) {}
+  }
+
+  function attemptClipboardCatch(fromGesture) {
+    if (!captureWindowActive) return;
+    // iOS surfaces its native Paste callout on every read — only a tap the
+    // visitor just made may summon it (the preGrantClipboard rule, kept).
+    if (IS_IOS_WEBKIT && !fromGesture) return;
+    var fallbackMsg =
+      "This browser will not hand the link over automatically — paste it below instead.";
+    if (!navigator || !navigator.clipboard || typeof navigator.clipboard.readText !== "function") {
+      if (fromGesture) revealCapturePasteFallback(fallbackMsg);
+      return;
+    }
+    var p;
+    try {
+      p = navigator.clipboard.readText();
+    } catch (_e) {
+      if (fromGesture) revealCapturePasteFallback(fallbackMsg);
+      return;
+    }
+    if (!p || typeof p.then !== "function") return;
+    p.then(
+      function (text) {
+        if (!captureWindowActive) return;
+        handleCaughtViewText(typeof text === "string" ? text : "", fromGesture);
+      },
+      function () {
+        // Denied, or the document was not focused. The visitor's own press
+        // gets the paste fallback; a background attempt just waits.
+        if (!captureWindowActive) return;
+        if (fromGesture) {
+          revealCapturePasteFallback(
+            "Could not read the clipboard — paste the copied link below instead.",
+          );
+        }
+      },
+    );
+  }
+
+  // Hand the tour keyboard focus without a single click. Matterport handles U
+  // INSIDE the iframe, so the iframe must hold focus — the 2.22.0 lesson —
+  // and 2.49.0 already focused it programmatically, but its dialog copy STILL
+  // said "click into the tour" first. The owner followed the words, and the
+  // click steered the camera off the exact view the capture was meant to
+  // record (owner-reported 2026-08-08). The copy now forbids the click; this
+  // helper is the whole way in. Best effort — a refusal is caught by the
+  // keydown net below, never punished.
+  function focusTourForCapture() {
+    try {
+      if (frame) frame.focus({ preventScroll: true });
+    } catch (_e) {
+      try {
+        if (frame) frame.focus();
+      } catch (_e2) {}
+    }
+  }
+
+  // The capture window's keyboard net. Seeing U up HERE is itself the
+  // diagnosis: when the tour holds focus the keystroke lands inside the
+  // iframe and never reaches this document, so a U on this listener means
+  // the press that was meant for Matterport fell on deaf ears. Answer it by
+  // fixing focus and asking for one more press instead of doing nothing.
+  // Typing fields are exempt (a name or pasted URL may contain a u). Two
+  // misses in a row mean this browser is refusing programmatic iframe focus
+  // and would miss forever — reveal the paste fallback with the one honest
+  // last resort spelled out, re-aim included.
+  document.addEventListener("keydown", function (e) {
+    if (!captureWindowActive || !e) return;
+    if (e.key !== "u" && e.key !== "U") return;
+    var ae = document.activeElement;
+    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
+    captureFocusMisses += 1;
+    focusTourForCapture();
+    if (captureFocusMisses >= 2) {
+      revealCapturePasteFallback(
+        "This browser will not hand the tour the keyboard. Click the tour once to wake it, line the view back up if it moved, press U, then paste the copied link below.",
+      );
+      return;
+    }
+    setCaptureDockStatus("Almost — the tour was not listening yet. Press U once more.", false);
+  });
 
   /** Every Save View entry point routes through here, so no button can write a
    *  viewless file without having offered to fix it first. */
@@ -4629,7 +5014,7 @@ function annoBindViewportEvents(win, cb) {
     setSaveViewStatus("", false);
     el.hidden = false;
     try {
-      if (saveViewPasteEl) saveViewPasteEl.focus();
+      if (saveViewNameEl) saveViewNameEl.focus();
     } catch (_e) {}
   }
 
@@ -4867,10 +5252,13 @@ function annoBindViewportEvents(win, cb) {
   //   • Only when this space HAS a soundtrack. Offering sound that does not
   //     exist is the roster-arrow failure — a control promising a capability
   //     the package cannot deliver.
-  //   • Only when this visitor has never answered (see musicChoiceMade). The
-  //     answer is stored as the level, so it survives to every other space.
-  //   • Escape or a backdrop click dismisses WITHOUT recording an answer:
-  //     an accidental click must not mute every space silently and forever.
+  //   • EVERY load of such a space, with no memory consulted (2.51.0,
+  //     owner-directed). A remembered answer is what made this question
+  //     disappear for the people most likely to have touched the volume once,
+  //     and it could never notice that a listing had GAINED a soundtrack since
+  //     their last visit.
+  //   • Escape or a backdrop click dismisses without starting playback, and
+  //     changes nothing that outlives this page load.
   //   • Built lazily in JS, never baked into the HTML shell, so a package
   //     whose runtime fails to load can never strand a visitor behind an
   //     overlay nothing is left to dismiss.
@@ -4890,14 +5278,20 @@ function annoBindViewportEvents(win, cb) {
     // This click is the user gesture a blocked autoplay is waiting for, so
     // the level change runs while the gesture is still live — setMusicLevel
     // both stores the answer and starts (or refuses) playback right here.
+    //
+    // "On" restores the visitor's OWN volume when they have an audible one:
+    // someone who set 7 in the last showcase gets 7 here, not a reset to the
+    // default. A stored 0 is not a volume — it is the residue of a previous
+    // "off" — so answering "yes" after it opens at the default instead of
+    // turning sound "on" at silence.
     try {
-      setMusicLevel(on ? MUSIC_LEVEL_DEFAULT : 0, false);
+      setMusicLevel(on ? (musicLevel > 0 ? musicLevel : MUSIC_LEVEL_DEFAULT) : 0, false);
     } catch (_e) {}
     closeSoundGate();
   }
 
   function maybeShowSoundGate() {
-    if (!MUSIC_URL || musicChoiceMade || soundGateEl) return null;
+    if (!MUSIC_URL || soundGateEl) return null;
     try {
       var host = document.body || document.documentElement;
       if (!host || typeof host.appendChild !== "function") return null;
@@ -4909,20 +5303,25 @@ function annoBindViewportEvents(win, cb) {
       el.setAttribute("aria-label", "Start with sound?");
       var card = document.createElement("div");
       card.className = "lt-sound-gate-card";
+      // Owner-directed 2026-08-07: "a very brief and concise user query."
+      // The 2.46.0 wording ran to a headline plus a two-sentence paragraph —
+      // ~140 characters standing between a visitor and the space they came
+      // to see. This is the same question in a third of the words: the ask
+      // itself is the headline, and the only thing worth adding is that the
+      // choice is not final.
       var title = document.createElement("div");
       title.className = "lt-sound-gate-title";
-      title.textContent = "This space has ambient sound";
+      title.textContent = "Start with sound?";
       var body = document.createElement("div");
       body.className = "lt-sound-gate-body";
-      body.textContent =
-        "Would you like to start with the sound on? You can change it at any time with the speaker button.";
+      body.textContent = "You can change it any time.";
       var row = document.createElement("div");
       row.className = "lt-sound-gate-row";
       var onBtn = document.createElement("button");
       onBtn.type = "button";
       onBtn.className = "lt-sound-gate-act lt-sound-gate-on";
       onBtn.id = "lt-sound-gate-on";
-      onBtn.textContent = "Start with sound";
+      onBtn.textContent = "Sound on";
       onBtn.addEventListener("click", function () {
         answerSoundGate(true);
       });
@@ -4930,7 +5329,7 @@ function annoBindViewportEvents(win, cb) {
       offBtn.type = "button";
       offBtn.className = "lt-sound-gate-act lt-sound-gate-off";
       offBtn.id = "lt-sound-gate-off";
-      offBtn.textContent = "Start silent";
+      offBtn.textContent = "Sound off";
       offBtn.addEventListener("click", function () {
         answerSoundGate(false);
       });
@@ -5144,12 +5543,16 @@ function annoBindViewportEvents(win, cb) {
       // same applyHostMusicLocal every transport uses.
       if (d.type === "f3d:room-music") {
         if (!roomAttached) return;
-        // The authority never obeys its own echo — its element IS the truth.
-        if (roomRole === "host") return;
+        // The authority never obeys its own ordinary echo — its element IS
+        // the truth. A game launch is the deliberate exception: the parent
+        // sends one local start command so the host hears the same soundtrack
+        // as the guests from the opening view.
+        if (roomRole === "host" && d.gameStart !== true) return;
         applyHostMusicLocal(
           d.on === true,
           typeof d.atSec === "number" && isFinite(d.atSec) ? d.atSec : undefined,
-          typeof d.sentAtMs === "number" && isFinite(d.sentAtMs) ? d.sentAtMs : undefined
+          typeof d.sentAtMs === "number" && isFinite(d.sentAtMs) ? d.sentAtMs : undefined,
+          d.gameStart === true
         );
         return;
       }
@@ -6728,10 +7131,14 @@ function annoBindViewportEvents(win, cb) {
 
   // Build the portable envelope. One segment, schema 1, no URLs, no
   // credentials, no participant identity — the same shape the spec pins.
-  function buildCurrentViewSegment() {
+  // `label` (2.49.0) is the visitor's own name for this save; when present it
+  // becomes the segment title so the import side shows their words rather
+  // than a timestamp. Absent, the title keeps its original stamped form.
+  function buildCurrentViewSegment(label) {
     var view = currentViewState();
     var stamp = new Date().toISOString();
     var title = CONFIG && CONFIG.shareTitle ? String(CONFIG.shareTitle) : "Presentation";
+    var named = cleanSegmentName(label);
     return {
       format: "f3d-review-segments",
       schema: 1,
@@ -6743,7 +7150,7 @@ function annoBindViewportEvents(win, cb) {
           id: makeTextId().replace("t_", "seg_"),
           schema: 1,
           rev: 1,
-          title: title + " \u2014 " + stamp.slice(0, 16).replace("T", " "),
+          title: named ? named : title + " \u2014 " + stamp.slice(0, 16).replace("T", " "),
           presentation: { kind: "atlas", title: title },
           view: view,
           viewMeta: {
@@ -6760,10 +7167,22 @@ function annoBindViewportEvents(win, cb) {
     };
   }
 
-  function downloadCurrentViewSegment() {
-    var payload = buildCurrentViewSegment();
+  function downloadCurrentViewSegment(label) {
+    return downloadSegmentPayload(buildCurrentViewSegment(label), label);
+  }
+
+  // Writes an already-built envelope. Split from the builder (2.49.0) so the
+  // capture flow can freeze the payload at step 1 and write it later, after
+  // the caught viewpoint is merged in — the one-click and drawings-only paths
+  // still build-and-write in a single call above.
+  function downloadSegmentPayload(payload, label) {
     var json = JSON.stringify(payload, null, 2);
+    // The visitor's name leads the filename so their Downloads folder reads
+    // in their own words; slugged with the same allowlist the parent-side
+    // save handler rebuilds names from, so the stem survives the hand-up.
+    var labelSlug = segmentSlug(cleanSegmentName(label)).replace(/-+$/, "").slice(0, 32);
     var name =
+      (labelSlug ? labelSlug + "-" : "") +
       segmentSlug(payload.presentation.title) +
       "-review-segments-" +
       payload.exportedAt.slice(0, 19).replace(/[:]/g, "-") +
@@ -8704,6 +9123,14 @@ function annoBindViewportEvents(win, cb) {
     tipsEl.addEventListener("mouseleave", scheduleHideTips);
   }
   window.addEventListener("focus", schedulePoll);
+  // The capture window's automatic catch (2.49.0): focus returning from the
+  // iframe is the earliest moment a clipboard read can succeed after the
+  // visitor clicks Copy inside the tour — reads while the iframe holds focus
+  // are refused by the browser. Gated hard inside on captureWindowActive, so
+  // outside an explicit capture this listener never touches the clipboard.
+  window.addEventListener("focus", function () {
+    attemptClipboardCatch(false);
+  });
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) schedulePoll();
   });
@@ -8718,8 +9145,11 @@ function annoBindViewportEvents(win, cb) {
       schedulePoll();
     });
     letterboxWrap.addEventListener("pointerenter", function () {
+      // Live roles need the tour focused so press-U sync works; a solo
+      // capture window (2.50.0) needs it for the same key. Everyone else
+      // keeps their focus — stealing it outside those states breaks typing.
       var st = session.getState();
-      if (st.role !== "visitor" && st.role !== "agent") return;
+      if (!captureWindowActive && st.role !== "visitor" && st.role !== "agent") return;
       var ae = document.activeElement;
       if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable)) return;
       if (frame) {
@@ -11086,7 +11516,7 @@ function annoBindViewportEvents(win, cb) {
     var buildBtn=document.getElementById("f3d-build-btn");
     var buildPanel=document.getElementById("f3d-build-info");
     if(!buildBtn||!buildPanel) return;
-    var RUNTIME_RELEASED="2026-08-05";
+    var RUNTIME_RELEASED="2026-08-09";
     var on=false;
     try { on=/[?&]f3d-debug=1(&|$)/.test(window.location.search); } catch(_e){}
     // The flag gates VISIBILITY only. The wiring below runs regardless, so the
