@@ -3,11 +3,15 @@
   "version": 1,
   "kind": "curated_showcase",
   "package_schema": 2,
-  "runtime_version": "2.43.2",
-  "runtime_released": "2026-08-05",
+  "runtime_version": "2.52.0",
+  "runtime_released": "2026-08-09",
   "capabilities": [],
   "package_family": "atlas",
   "curation_job_id": "9c59a1c2-17b5-4fdc-8874-d2f8f9a9d0c5",
   "matterport_id": "rA1S5s4imf6",
-  "issued_at": "2026-08-05T17:01:15.914Z"
+  "viewer": {
+    "kind": "matterport",
+    "model_id": "rA1S5s4imf6"
+  },
+  "issued_at": "2026-08-11T23:09:10.814Z"
 }
