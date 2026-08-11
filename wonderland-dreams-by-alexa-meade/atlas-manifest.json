@@ -3,8 +3,8 @@
   "version": 1,
   "kind": "curated_showcase",
   "package_schema": 2,
-  "runtime_version": "2.46.0",
-  "runtime_released": "2026-08-05",
+  "runtime_version": "2.52.0",
+  "runtime_released": "2026-08-09",
   "capabilities": [],
   "package_family": "atlas",
   "curation_job_id": "5669ead7-4dfd-4686-b406-7b8c3d911aa8",
@@ -13,5 +13,5 @@
     "kind": "matterport",
     "model_id": "3bTtXVExAx9"
   },
-  "issued_at": "2026-08-06T06:59:24.135Z"
+  "issued_at": "2026-08-11T23:07:05.479Z"
 }
